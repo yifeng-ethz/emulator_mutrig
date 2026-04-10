@@ -12,7 +12,7 @@ package require -exact qsys 16.1
 # ========================================================================
 set_module_property NAME                    emulator_mutrig
 set_module_property DISPLAY_NAME            "MuTRiG Emulator"
-set_module_property VERSION                 1.0.0.0410
+set_module_property VERSION                 26.0.0.0410
 set_module_property DESCRIPTION             "MuTRiG Emulator Mu3e IP Core"
 set_module_property GROUP                   "Mu3e Emulators/Modules"
 set_module_property AUTHOR                  "Yifeng Wang"
@@ -45,7 +45,7 @@ set RUN_CONTROL_WIDTH_CONST     9
 
 # Identity defaults (no identity header in RTL — catalog tracking only)
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
-set VERSION_MAJOR_DEFAULT_CONST 1
+set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 0
 set VERSION_PATCH_DEFAULT_CONST 0
 set BUILD_DEFAULT_CONST         410
@@ -289,7 +289,7 @@ add_display_item $TAB_IDENTITY "Versioning" GROUP
 
 add_html_text "Delivered Profile" profile_html {<html>
 <b>Catalog revision</b><br/>
-This release is packaged as <b>1.0.0.0410</b>.  It provides an FPGA-internal
+This release is packaged as <b>26.0.0.0410</b>.  It provides an FPGA-internal
 MuTRiG&nbsp;3 emulator with configurable hit patterns, PRBS-15 LFSR timestamps,
 CRC-16 frame integrity, and Avalon-ST/MM system interfaces.<br/><br/>
 <b>Note</b><br/>
