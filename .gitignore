@@ -1,0 +1,13 @@
+# Questa / ModelSim simulation artifacts
+work/
+work_*/
+transcript
+vsim.wlf
+*.wlf
+modelsim.ini
+
+# Testbench build artifacts
+tb/work_*/
+tb/transcript
+tb/vsim.wlf
+tb/*.wlf
