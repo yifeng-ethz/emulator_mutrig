@@ -8,11 +8,46 @@
 package require -exact qsys 16.1
 
 # ========================================================================
+# Packaging constants
+# ========================================================================
+set SCRIPT_DIR [file dirname [file normalize [info script]]]
+
+set CSR_ADDR_W_CONST            4
+set TX8B1K_WIDTH_CONST          9
+set RUN_CONTROL_WIDTH_CONST     9
+
+# Identity defaults (no identity header in RTL — catalog tracking only)
+set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
+set VERSION_MAJOR_DEFAULT_CONST 26
+set VERSION_MINOR_DEFAULT_CONST 0
+set VERSION_PATCH_DEFAULT_CONST 1
+set BUILD_DEFAULT_CONST         412
+set VERSION_DATE_DEFAULT_CONST  20260412
+set VERSION_GIT_DEFAULT_CONST   0
+set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
+set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
+if {![catch {set VERSION_GIT_SHORT_DEFAULT_CONST [string trim [exec git -C $SCRIPT_DIR rev-parse --short HEAD]]}]} {
+    if {[regexp {^[0-9a-fA-F]+$} $VERSION_GIT_SHORT_DEFAULT_CONST]} {
+        scan $VERSION_GIT_SHORT_DEFAULT_CONST %x VERSION_GIT_DEFAULT_CONST
+    }
+}
+catch {
+    set VERSION_GIT_DESCRIBE_DEFAULT_CONST [string trim [exec git -C $SCRIPT_DIR describe --always --dirty --tags]]
+}
+set VERSION_GIT_HEX_DEFAULT_CONST [format "0x%08X" $VERSION_GIT_DEFAULT_CONST]
+set VERSION_STRING_DEFAULT_CONST  [format "%d.%d.%d.%04d" \
+    $VERSION_MAJOR_DEFAULT_CONST \
+    $VERSION_MINOR_DEFAULT_CONST \
+    $VERSION_PATCH_DEFAULT_CONST \
+    $BUILD_DEFAULT_CONST]
+set INSTANCE_ID_DEFAULT_CONST     0
+
+# ========================================================================
 # Module properties
 # ========================================================================
 set_module_property NAME                    emulator_mutrig
-set_module_property DISPLAY_NAME            "MuTRiG Emulator"
-set_module_property VERSION                 26.0.1.0410
+set_module_property DISPLAY_NAME            "MuTRiG Emulator Mu3e IP"
+set_module_property VERSION                 $VERSION_STRING_DEFAULT_CONST
 set_module_property DESCRIPTION             "MuTRiG Emulator Mu3e IP Core"
 set_module_property GROUP                   "Mu3e Emulators/Modules"
 set_module_property AUTHOR                  "Yifeng Wang"
@@ -37,23 +72,6 @@ proc add_html_text {group_name item_name html_text} {
 }
 
 # ========================================================================
-# Constants
-# ========================================================================
-set CSR_ADDR_W_CONST            4
-set TX8B1K_WIDTH_CONST          9
-set RUN_CONTROL_WIDTH_CONST     9
-
-# Identity defaults (no identity header in RTL — catalog tracking only)
-set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
-set VERSION_MAJOR_DEFAULT_CONST 26
-set VERSION_MINOR_DEFAULT_CONST 0
-set VERSION_PATCH_DEFAULT_CONST 0
-set BUILD_DEFAULT_CONST         410
-set VERSION_DATE_DEFAULT_CONST  20260410
-set VERSION_GIT_DEFAULT_CONST   0
-set INSTANCE_ID_DEFAULT_CONST   0
-
-# ========================================================================
 # CSR register map HTML
 # ========================================================================
 set CSR_TABLE_HTML {<html><table border="1" cellpadding="3" width="100%">
@@ -71,10 +89,29 @@ set CSR_TABLE_HTML {<html><table border="1" cellpadding="3" width="100%">
 # ========================================================================
 proc compute_derived_values {} {
     set fifo_depth [get_parameter_value FIFO_DEPTH]
+    set version_string [format "%d.%d.%d.%04d" \
+        [get_parameter_value VERSION_MAJOR] \
+        [get_parameter_value VERSION_MINOR] \
+        [get_parameter_value VERSION_PATCH] \
+        [get_parameter_value BUILD]]
+    set version_git_hex [format "0x%08X" [get_parameter_value VERSION_GIT]]
 
     # Storage estimate: 48-bit hit words × depth
     set storage_bits [expr {48 * $fifo_depth}]
 
+    catch {
+        set_display_item_property overview_html TEXT "<html>\
+<b>Function</b><br/>\
+Single-lane MuTRiG&nbsp;3 digital-output emulator for FPGA-internal verification.\
+The block synthesizes hit traffic, assembles MuTRiG-compatible frames, and drives\
+the decoded 8b/1k byte stream expected by <b>frame_rcv_ip</b>.<br/><br/>\
+<b>Data path</b><br/>\
+run-control + inject pulse + CSR config &rarr; <b>hit_generator</b> &rarr; internal\
+48-bit FIFO &rarr; <b>frame_assembler</b> &rarr; <b>tx8b1k</b><br/><br/>\
+<b>Clocking</b><br/>\
+Single synchronous <b>data_clock</b> domain. The emulator models the MuTRiG\
+625&nbsp;MHz datapath at the Mu3e 125&nbsp;MHz byte-clock boundary.</html>"
+    }
     catch {
         set_display_item_property hitgen_html TEXT "<html>\
 <b>Hit FIFO</b><br/>\
@@ -96,6 +133,19 @@ Short mode: <b>910</b> byte-clocks (~7.3 &micro;s at 125 MHz, datapath-matched)<
 Long: <b>48</b> bits (6 bytes per event)<br/>\
 Short: <b>28</b> bits (3.5 bytes, alternating 3/4 byte packing)</html>"
     }
+    catch {
+        set_display_item_property profile_html TEXT [format {<html><b>Catalog revision</b><br/>This release is packaged as <b>%s</b>.<br/><br/><b>Catalog provenance</b><br/>Packaged git stamp default <b>%s</b> (<b>%s</b>).<br/>Git describe: <b>%s</b>.<br/><br/><b>Runtime identity</b><br/>This revision still uses catalog-only identity tracking. The common UID + META header is not yet implemented in the RTL CSR window.</html>} \
+            $version_string \
+            $version_git_hex \
+            $::VERSION_GIT_SHORT_DEFAULT_CONST \
+            $::VERSION_GIT_DESCRIBE_DEFAULT_CONST]
+    }
+    catch {
+        set_display_item_property versioning_html TEXT [format {<html><b>VERSION encoding</b><br/>VERSION[31:24] = MAJOR, VERSION[23:16] = MINOR, VERSION[15:12] = PATCH, VERSION[11:0] = BUILD.<br/><br/><b>Catalog identity</b><br/>UID default is <b>EMUT</b> (0x454D5554).<br/>Default <b>VERSION_GIT</b> = <b>%s</b> (%s).<br/>Git describe = <b>%s</b>.<br/>Enable <b>Override Git Stamp</b> to enter a custom value.</html>} \
+            $version_git_hex \
+            $::VERSION_GIT_SHORT_DEFAULT_CONST \
+            $::VERSION_GIT_DESCRIBE_DEFAULT_CONST]
+    }
 }
 
 proc validate {} {
@@ -110,6 +160,7 @@ proc validate {} {
     set ver_date     [get_parameter_value VERSION_DATE]
     set ver_git      [get_parameter_value VERSION_GIT]
     set instance_id  [get_parameter_value INSTANCE_ID]
+    set debug_level  [get_parameter_value DEBUG]
 
     if {$fifo_depth < 16 || $fifo_depth > 256} {
         send_message error "FIFO_DEPTH must be in the range 16..256."
@@ -138,11 +189,21 @@ proc validate {} {
     if {$instance_id < 0 || $instance_id > 2147483647} {
         send_message error "INSTANCE_ID must stay in the signed 31-bit range."
     }
+    if {$debug_level < 0 || $debug_level > 2} {
+        send_message error "DEBUG must stay in the range 0..2."
+    }
 }
 
 proc elaborate {} {
     compute_derived_values
     set_parameter_property FIFO_DEPTH ALLOWED_RANGES {16 32 64 128 256}
+    set_parameter_property DEBUG ENABLED false
+    set_parameter_property VERSION_MAJOR ENABLED false
+    set_parameter_property VERSION_MINOR ENABLED false
+    set_parameter_property VERSION_PATCH ENABLED false
+    set_parameter_property BUILD ENABLED false
+    set_parameter_property VERSION_DATE ENABLED false
+    catch {set_parameter_property VERSION_GIT ENABLED [get_parameter_value GIT_STAMP_OVERRIDE]}
 }
 
 # ========================================================================
@@ -183,6 +244,14 @@ add_parameter CSR_ADDR_WIDTH INTEGER $CSR_ADDR_W_CONST
 set_parameter_property CSR_ADDR_WIDTH DISPLAY_NAME "CSR Address Width"
 set_parameter_property CSR_ADDR_WIDTH HDL_PARAMETER true
 set_parameter_property CSR_ADDR_WIDTH VISIBLE false
+
+add_parameter DEBUG NATURAL 0
+set_parameter_property DEBUG DISPLAY_NAME "Debug Level"
+set_parameter_property DEBUG UNITS None
+set_parameter_property DEBUG ALLOWED_RANGES 0:2
+set_parameter_property DEBUG HDL_PARAMETER false
+set_parameter_property DEBUG ENABLED false
+set_parameter_property DEBUG DESCRIPTION "Current packaged revision has no optional debug RTL. The field is kept to preserve the standard Mu3e Configuration/Debug GUI contract."
 
 # ========================================================================
 # Parameters — Identity (catalog tracking; no identity header in RTL)
@@ -238,7 +307,14 @@ set_parameter_property VERSION_GIT UNITS None
 set_parameter_property VERSION_GIT ALLOWED_RANGES 0:2147483647
 set_parameter_property VERSION_GIT HDL_PARAMETER false
 set_parameter_property VERSION_GIT DISPLAY_HINT hexadecimal
-set_parameter_property VERSION_GIT DESCRIPTION {Truncated git commit hash at packaging time.}
+set_parameter_property VERSION_GIT ENABLED false
+set_parameter_property VERSION_GIT DESCRIPTION {Truncated git commit hash captured at packaging time. This revision is catalog-only and is not exported to HDL.}
+
+add_parameter GIT_STAMP_OVERRIDE BOOLEAN false
+set_parameter_property GIT_STAMP_OVERRIDE DISPLAY_NAME "Override Git Stamp"
+set_parameter_property GIT_STAMP_OVERRIDE UNITS None
+set_parameter_property GIT_STAMP_OVERRIDE HDL_PARAMETER false
+set_parameter_property GIT_STAMP_OVERRIDE DESCRIPTION "When enabled, allows manual entry of VERSION_GIT. When disabled, the packaged git stamp remains read-only."
 
 add_parameter INSTANCE_ID NATURAL $INSTANCE_ID_DEFAULT_CONST
 set_parameter_property INSTANCE_ID DISPLAY_NAME "Instance ID"
@@ -259,26 +335,16 @@ add_display_item "" $TAB_CONFIGURATION GROUP tab
 add_display_item $TAB_CONFIGURATION "Overview" GROUP
 add_display_item $TAB_CONFIGURATION "Hit Generation" GROUP
 add_display_item $TAB_CONFIGURATION "Frame Assembly" GROUP
+add_display_item $TAB_CONFIGURATION "Debug" GROUP
 
-add_html_text "Overview" overview_html {<html>
-<b>Function</b><br/>
-FPGA emulator of the MuTRiG&nbsp;3 SiPM readout ASIC digital output.
-Generates 8b/1k parallel data frames bit-compatible with the real ASIC
-serial output (after 8b10b decoding), feeding <b>frame_rcv_ip</b> directly
-without requiring LVDS serialization.<br/><br/>
-<b>Clocking</b><br/>
-Single synchronous domain (<b>data_clock</b>) shared by CSR, run control,
-hit generation, frame assembly, and 8b/1k output.  Typical frequency is
-125&ndash;128&nbsp;MHz matching the MuTRiG byte clock.<br/><br/>
-<b>Run control</b><br/>
-The emulator activates on the <b>RUNNING</b> state (bit&nbsp;3) of the 9-bit
-one-hot run-control bus.  No frames are produced outside RUNNING.
-</html>}
+add_html_text "Overview" overview_html {<html><i>Overview text will appear after elaboration.</i></html>}
 
 add_display_item "Hit Generation" FIFO_DEPTH parameter
 add_html_text "Hit Generation" hitgen_html "<html><b>Hit FIFO</b><br/>Updated by the validation callback.</html>"
 
 add_html_text "Frame Assembly" frame_html "<html><b>Frame format</b><br/>Updated by the validation callback.</html>"
+add_display_item "Debug" DEBUG parameter
+add_html_text "Debug" debug_html {<html><b>Debug control</b><br/>This packaged revision does not expose optional debug RTL knobs. The fixed <b>DEBUG=0</b> entry is kept so the GUI layout matches the standard Mu3e IP packaging contract used by the upgraded wrappers.</html>}
 
 # ========================================================================
 # GUI — Tab 2: Identity
@@ -287,28 +353,15 @@ add_display_item "" $TAB_IDENTITY GROUP tab
 add_display_item $TAB_IDENTITY "Delivered Profile" GROUP
 add_display_item $TAB_IDENTITY "Versioning" GROUP
 
-add_html_text "Delivered Profile" profile_html {<html>
-<b>Catalog revision</b><br/>
-This release is packaged as <b>26.0.0.0410</b>.  It provides an FPGA-internal
-MuTRiG&nbsp;3 emulator with configurable hit patterns, PRBS-15 LFSR timestamps,
-CRC-16 frame integrity, and Avalon-ST/MM system interfaces.<br/><br/>
-<b>Note</b><br/>
-This IP does not implement the common CSR identity header in RTL.  The
-versioning parameters below are for Platform Designer catalog tracking only.
-</html>}
-
-add_html_text "Versioning" versioning_html {<html>
-<b>Catalog identity</b><br/>
-UID default is <b>EMUT</b> (0x454D5554).<br/>
-VERSION encoding: MAJOR[31:24], MINOR[23:16], PATCH[15:12], BUILD[11:0].<br/>
-These parameters are not exported to HDL.
-</html>}
+add_html_text "Delivered Profile" profile_html {<html><i>Delivered profile text will appear after elaboration.</i></html>}
+add_html_text "Versioning" versioning_html {<html><i>Versioning text will appear after elaboration.</i></html>}
 add_display_item "Versioning" IP_UID parameter
 add_display_item "Versioning" VERSION_MAJOR parameter
 add_display_item "Versioning" VERSION_MINOR parameter
 add_display_item "Versioning" VERSION_PATCH parameter
 add_display_item "Versioning" BUILD parameter
 add_display_item "Versioning" VERSION_DATE parameter
+add_display_item "Versioning" GIT_STAMP_OVERRIDE parameter
 add_display_item "Versioning" VERSION_GIT parameter
 add_display_item "Versioning" INSTANCE_ID parameter
 
@@ -319,6 +372,7 @@ add_display_item "" $TAB_INTERFACES GROUP tab
 add_display_item $TAB_INTERFACES "Clock / Reset" GROUP
 add_display_item $TAB_INTERFACES "Data Path" GROUP
 add_display_item $TAB_INTERFACES "Control Path" GROUP
+add_display_item $TAB_INTERFACES "Injection" GROUP
 
 add_html_text "Clock / Reset" clock_html {<html>
 <b>data_clock</b> and <b>data_reset</b><br/>
@@ -355,6 +409,13 @@ add_html_text "Control Path" control_html {<html>
 The emulator only responds to bit&nbsp;3 (<b>RUNNING</b>); ready is always asserted.<br/><br/>
 <b>csr</b> &mdash; Avalon-MM slave<br/>
 Word-addressed, 4-bit address, 32-bit data.  Read wait = 1 cycle, write wait = 0 cycles.
+</html>}
+
+add_html_text "Injection" inject_html {<html>
+<b>inject</b> &mdash; 1-bit conduit sink<br/>
+External pulse input used to trigger an immediate burst around the configured
+<b>burst_center</b> channel. The pulse is sampled in the <b>data_clock</b>
+domain and feeds the same burst path used by the normal hit modes.
 </html>}
 
 # ========================================================================
