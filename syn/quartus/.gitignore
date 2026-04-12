@@ -1,0 +1,10 @@
+db/
+incremental_db/
+gate_sim/
+a5_pin_model_dump.txt
+output_files/*.done
+output_files/*.jdi
+output_files/*.pin
+output_files/*.sld
+output_files/*.sof
+output_files/*.smsg

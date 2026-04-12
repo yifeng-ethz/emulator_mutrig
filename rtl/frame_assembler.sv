@@ -1,5 +1,8 @@
 // frame_assembler.sv
 // MuTRiG frame assembler — produces 8b/1k parallel output
+// Version : 26.0.1
+// Date    : 20260412
+// Change  : Document architect-correct short-hit semantics for downstream frame_rcv_ip compatibility.
 //
 // Generates frames matching the MuTRiG 3 ASIC serial output format:
 //   IDLE(K28.5) | K28.0(header) | frame_count[15:8] | frame_count[7:0] |
@@ -13,7 +16,7 @@ module frame_assembler
 #(
     parameter int MAX_EVENTS_PER_FRAME = 120  // max hits per frame (safety limit)
 )(
-    input  logic        clk,           // byte clock (~128 MHz)
+    input  logic        clk,           // byte clock (architect target: 125 MHz)
     input  logic        rst,
 
     // Configuration
@@ -38,11 +41,11 @@ module frame_assembler
     // ========================================
     // Frame interval counter
     // ========================================
-    logic [9:0] interval_cnt;
+    logic [10:0] interval_cnt;
     logic       interval_tick;
-    logic [9:0] max_interval;
+    logic [10:0] max_interval;
 
-    assign max_interval = cfg_short_mode ? FRAME_INTERVAL_SHORT[9:0] : FRAME_INTERVAL_LONG[9:0];
+    assign max_interval = cfg_short_mode ? 11'(FRAME_INTERVAL_SHORT) : 11'(FRAME_INTERVAL_LONG);
 
     always_ff @(posedge clk) begin
         if (rst) begin
@@ -51,10 +54,10 @@ module frame_assembler
         end else begin
             if (interval_cnt == '0) begin
                 interval_tick <= 1'b1;
-                interval_cnt  <= max_interval - 1;
+                interval_cnt  <= max_interval - 11'd1;
             end else begin
                 interval_tick <= 1'b0;
-                interval_cnt  <= interval_cnt - 1;
+                interval_cnt  <= interval_cnt - 11'd1;
             end
         end
     end
@@ -126,13 +129,13 @@ module frame_assembler
     // Short-mode hit packing
     // ========================================
     // In short mode, 28-bit hits are packed as:
-    //   event_data_short = {channel[4:0], E_BadHit, ECC[14:0], E_Fine[4:0], E_Flag, 1'b0}
+    //   event_data_short = {channel[4:0], E_BadHit, TCC[14:0], T_Fine[4:0], E_Flag, 1'b0}
     // From the 48-bit FIFO word (which stores data in long-mode positions):
     logic [27:0] short_hit;
     assign short_hit = {fifo_data[47:43],  // channel
                         fifo_data[42],     // E_BadHit (mapped from T_BadHit position in short storage)
-                        fifo_data[41:27],  // ECC (mapped from TCC position in short storage)
-                        fifo_data[26:22],  // E_Fine (mapped from T_Fine position in short storage)
+                        fifo_data[41:27],  // TCC
+                        fifo_data[26:22],  // T_Fine
                         fifo_data[20],     // E_Flag
                         1'b0};             // pad
 
@@ -186,11 +189,6 @@ module frame_assembler
                     byte_count <= 3'd2;
                     state      <= FS_FRAMECOUNT;
 
-                    // Pre-fetch first event if available
-                    if (evt_cnt_latch != 0 && !fifo_empty) begin
-                        fifo_rd_en    <= 1'b1;
-                        evt_remaining <= evt_cnt_latch - 1;
-                    end
                 end
 
                 // ----------------------------------------
@@ -224,24 +222,32 @@ module frame_assembler
                         end
                         3'd1: begin
                             out_byte   <= evt_count_ext[7:0];
-                            if (evt_cnt_latch != 0) begin
+                            if (evt_cnt_latch != 10'd0) begin
                                 state <= FS_PACK;
-                                // Load first event into shift register
+                                // Consume the current FIFO word first, then advance the
+                                // read pointer so fifo_data points at the following word.
                                 if (cfg_short_mode) begin
                                     shift_reg <= {short_hit, 20'b0};
                                     byte_count <= 3'd3;  // 3.5 bytes per short hit
-                                    if (evt_remaining != 0 && !fifo_empty) begin
+                                    if (evt_cnt_latch > 10'd1 && !fifo_empty) begin
                                         fifo_rd_en    <= 1'b1;
-                                        evt_remaining <= evt_remaining - 1;
+                                        evt_remaining <= evt_cnt_latch - 10'd1;
                                         last_event    <= 1'b0;
                                     end else begin
+                                        evt_remaining <= '0;
                                         last_event <= 1'b1;
                                     end
                                 end else begin
                                     shift_reg  <= fifo_data;
                                     byte_count <= 3'd6;
-                                    if (evt_remaining == 0)
+                                    if (evt_cnt_latch > 10'd1 && !fifo_empty) begin
+                                        fifo_rd_en    <= 1'b1;
+                                        evt_remaining <= evt_cnt_latch - 10'd1;
+                                        last_event    <= 1'b0;
+                                    end else begin
+                                        evt_remaining <= '0;
                                         last_event <= 1'b1;
+                                    end
                                 end
                             end else begin
                                 state <= FS_DELAY;
@@ -257,7 +263,7 @@ module frame_assembler
                     out_byte  <= shift_reg[47:40];
                     out_isk   <= 1'b0;
                     shift_reg <= {shift_reg[39:0], 8'b0};
-                    byte_count <= byte_count - 1;
+                    byte_count <= byte_count - 3'd1;
 
                     if (!cfg_short_mode) begin
                         // Long mode: 6 bytes per event
@@ -265,21 +271,16 @@ module frame_assembler
                             if (byte_count == 3'd1)
                                 state <= FS_DELAY;
                         end else begin
-                            if (byte_count == 3'd4 && evt_remaining != 0 && !fifo_empty) begin
-                                fifo_rd_en    <= 1'b1;
-                                evt_remaining <= evt_remaining - 1;
-                            end
                             if (byte_count == 3'd1) begin
-                                if (evt_remaining == 0 && fifo_rd_en == 1'b0) begin
-                                    // Last event was prefetched
-                                    shift_reg  <= fifo_data;
-                                    byte_count <= 3'd6;
-                                    last_event <= 1'b1;
+                                shift_reg  <= fifo_data;
+                                byte_count <= 3'd6;
+                                if (evt_remaining > 10'd1 && !fifo_empty) begin
+                                    fifo_rd_en    <= 1'b1;
+                                    evt_remaining <= evt_remaining - 10'd1;
+                                    last_event    <= 1'b0;
                                 end else begin
-                                    shift_reg  <= fifo_data;
-                                    byte_count <= 3'd6;
-                                    if (evt_remaining == 0)
-                                        last_event <= 1'b1;
+                                    evt_remaining <= '0;
+                                    last_event    <= 1'b1;
                                 end
                             end
                         end
@@ -297,11 +298,13 @@ module frame_assembler
                                     shift_reg[43:16] <= short_hit;
                                     shift_reg[15:0]  <= 16'b0;
                                     byte_count       <= 3'd3;
-                                    pack_evt_cnt     <= pack_evt_cnt + 1;
-                                    if (evt_remaining != 0 && !fifo_empty) begin
+                                    pack_evt_cnt     <= pack_evt_cnt + 10'd1;
+                                    if (evt_remaining > 10'd1 && !fifo_empty) begin
                                         fifo_rd_en    <= 1'b1;
-                                        evt_remaining <= evt_remaining - 1;
+                                        evt_remaining <= evt_remaining - 10'd1;
+                                        last_event    <= 1'b0;
                                     end else begin
+                                        evt_remaining <= '0;
                                         last_event <= 1'b1;
                                     end
                                 end else begin
@@ -325,12 +328,14 @@ module frame_assembler
                         shift_reg[47:20] <= short_hit;
                         shift_reg[19:0]  <= 20'b0;
                         byte_count       <= 3'd3;
-                        pack_evt_cnt     <= pack_evt_cnt + 1;
+                        pack_evt_cnt     <= pack_evt_cnt + 10'd1;
                         state            <= FS_PACK;
-                        if (evt_remaining != 0 && !fifo_empty) begin
+                        if (evt_remaining > 10'd1 && !fifo_empty) begin
                             fifo_rd_en    <= 1'b1;
-                            evt_remaining <= evt_remaining - 1;
+                            evt_remaining <= evt_remaining - 10'd1;
+                            last_event    <= 1'b0;
                         end else begin
+                            evt_remaining <= '0;
                             last_event <= 1'b1;
                         end
                     end
@@ -371,7 +376,7 @@ module frame_assembler
                         end
                         3'd1: begin
                             // Pseudo-trailer cycle (compensate CRC delay, same as real MuTRiG)
-                            frame_count <= frame_count + 1;
+                            frame_count <= frame_count + 16'd1;
                             out_byte    <= K28_5;
                             out_isk     <= 1'b1;
                             state       <= FS_IDLE;

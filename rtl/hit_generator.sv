@@ -1,5 +1,8 @@
 // hit_generator.sv
 // Configurable hit pattern generator for MuTRiG emulator
+// Version : 26.0.1
+// Date    : 20260412
+// Change  : Reduce PRNG arithmetic to the architecturally observed bit ranges while preserving emitted sequences.
 //
 // Generates hits continuously (like a real TDC), filling a FIFO.
 // The frame assembler drains the FIFO at frame boundaries.
@@ -28,6 +31,7 @@ module hit_generator
     input  logic [15:0] cfg_noise_rate,
     input  logic [31:0] cfg_prng_seed,
     input  logic        cfg_short_mode,
+    input  logic        inject_pulse,
 
     // Coarse time reference
     input  logic [14:0] tcc_lfsr,
@@ -47,11 +51,28 @@ module hit_generator
     // ========================================
     // LCG PRNG
     // ========================================
-    logic [31:0] prng_state, prng2_state;
-    logic [31:0] prng_next, prng2_next;
+    // Only the low 21 bits of prng_state and the low 5 bits of prng2_state are
+    // ever observed by this RTL. For an LCG modulo 2^N, those low bits evolve
+    // independently of the discarded higher bits, so these reduced-width states
+    // reproduce the exact visible sequences while removing an unnecessary timing
+    // cone from the standalone sign-off build.
+    localparam int PRNG1_WIDTH = 21;
+    localparam int PRNG2_WIDTH = 5;
+    localparam logic [PRNG1_WIDTH-1:0] PRNG1_MUL = 21'h064E6D;
+    localparam logic [PRNG1_WIDTH-1:0] PRNG1_INC = 21'h003039;
+    localparam logic [PRNG2_WIDTH-1:0] PRNG2_MUL = 5'h0D;
+    localparam logic [PRNG2_WIDTH-1:0] PRNG2_INC = 5'h15;
+    localparam logic [PRNG2_WIDTH-1:0] PRNG2_SEED_XOR = 5'h0F;
 
-    assign prng_next  = prng_state * 32'h41C6_4E6D + 32'h0000_3039;
-    assign prng2_next = prng2_state * 32'h0019_660D + 32'h0000_0D35;
+    logic [PRNG1_WIDTH-1:0] prng_state, prng_next;
+    logic [PRNG2_WIDTH-1:0] prng2_state, prng2_next;
+    logic [4:0]             burst_half_size;
+    logic [4:0]             burst_start_ch;
+
+    assign prng_next      = prng_state * PRNG1_MUL + PRNG1_INC;
+    assign prng2_next     = prng2_state * PRNG2_MUL + PRNG2_INC;
+    assign burst_half_size = {1'b0, cfg_burst_size[4:1]};
+    assign burst_start_ch  = (cfg_burst_center >= burst_half_size) ? (cfg_burst_center - burst_half_size) : 5'd0;
 
     // ========================================
     // FIFO
@@ -74,13 +95,13 @@ module hit_generator
         end else begin
             if (hit_wr_en && !fifo_full) begin
                 fifo_mem[fifo_wr_ptr[$clog2(FIFO_DEPTH)-1:0]] <= hit_wr_data;
-                fifo_wr_ptr <= fifo_wr_ptr + 1;
+                fifo_wr_ptr <= fifo_wr_ptr + 1'b1;
             end
             if (fifo_rd_en && !fifo_empty)
-                fifo_rd_ptr <= fifo_rd_ptr + 1;
+                fifo_rd_ptr <= fifo_rd_ptr + 1'b1;
             case ({hit_wr_en && !fifo_full, fifo_rd_en && !fifo_empty})
-                2'b10:   fifo_count <= fifo_count + 1;
-                2'b01:   fifo_count <= fifo_count - 1;
+                2'b10:   fifo_count <= fifo_count + 1'b1;
+                2'b01:   fifo_count <= fifo_count - 1'b1;
                 default: fifo_count <= fifo_count;
             endcase
         end
@@ -105,78 +126,100 @@ module hit_generator
     logic [4:0]  burst_remaining;
     logic [4:0]  burst_ch;
     logic [7:0]  burst_cooldown;  // cycles between burst events
-    logic        do_burst;
+    logic        inject_burst_pending;
 
     always_ff @(posedge clk) begin
         if (rst) begin
-            prng_state     <= cfg_prng_seed;
-            prng2_state    <= {cfg_prng_seed[15:0], cfg_prng_seed[31:16]} ^ 32'hDEAD_BEEF;
+            prng_state     <= cfg_prng_seed[PRNG1_WIDTH-1:0];
+            prng2_state    <= cfg_prng_seed[20:16] ^ PRNG2_SEED_XOR;
             scan_ch        <= '0;
             burst_remaining <= '0;
             burst_ch        <= '0;
             burst_cooldown  <= '0;
+            inject_burst_pending <= 1'b0;
             hit_wr_en      <= 1'b0;
             hit_wr_data    <= '0;
         end else begin
             hit_wr_en  <= 1'b0;
             prng_state <= prng_next;
             prng2_state <= prng2_next;
-            scan_ch    <= scan_ch + 1;  // wraps at 31→0
+            scan_ch    <= scan_ch + 5'd1;  // wraps at 31→0
 
             // Burst cooldown
             if (burst_cooldown > 0)
-                burst_cooldown <= burst_cooldown - 1;
+                burst_cooldown <= burst_cooldown - 8'd1;
 
-            // Determine if we should generate a hit this cycle
-            do_burst = 1'b0;
+            if (inject_pulse)
+                inject_burst_pending <= 1'b1;
 
             case (hit_mode_t'(cfg_hit_mode))
                 HIT_MODE_POISSON: begin
-                    if (prng_state[15:0] < cfg_hit_rate && !fifo_full) begin
+                    if (inject_burst_pending && (burst_remaining == 0)) begin
+                        burst_remaining      <= cfg_burst_size;
+                        burst_ch             <= burst_start_ch;
+                        inject_burst_pending <= 1'b0;
+                    end else if (burst_remaining > 0 && !fifo_full) begin
+                        hit_wr_en       <= 1'b1;
+                        hit_wr_data     <= make_hit(burst_ch);
+                        burst_ch        <= burst_ch + 5'd1;
+                        burst_remaining <= burst_remaining - 5'd1;
+                    end else if (prng_state[15:0] < cfg_hit_rate && !fifo_full) begin
                         hit_wr_en <= 1'b1;
                         hit_wr_data <= make_hit(scan_ch);
                     end
                 end
 
                 HIT_MODE_BURST: begin
-                    // Generate burst of cluster hits periodically
-                    if (burst_remaining > 0 && !fifo_full) begin
+                    if (inject_burst_pending && (burst_remaining == 0)) begin
+                        burst_remaining      <= cfg_burst_size;
+                        burst_ch             <= burst_start_ch;
+                        inject_burst_pending <= 1'b0;
+                    end else if (burst_remaining > 0 && !fifo_full) begin
                         hit_wr_en       <= 1'b1;
                         hit_wr_data     <= make_hit(burst_ch);
-                        burst_ch        <= burst_ch + 1;
-                        burst_remaining <= burst_remaining - 1;
+                        burst_ch        <= burst_ch + 5'd1;
+                        burst_remaining <= burst_remaining - 5'd1;
                     end else if (burst_cooldown == 0 && burst_remaining == 0) begin
                         // Start new burst
                         burst_remaining <= cfg_burst_size;
-                        burst_ch        <= (cfg_burst_center >= cfg_burst_size/2) ?
-                                           cfg_burst_center - cfg_burst_size/2 : 5'd0;
+                        burst_ch        <= burst_start_ch;
                         burst_cooldown  <= 8'd200;  // ~200 clocks between bursts
                     end
                 end
 
                 HIT_MODE_NOISE: begin
-                    if (prng_state[15:0] < cfg_noise_rate && !fifo_full) begin
+                    if (inject_burst_pending && (burst_remaining == 0)) begin
+                        burst_remaining      <= cfg_burst_size;
+                        burst_ch             <= burst_start_ch;
+                        inject_burst_pending <= 1'b0;
+                    end else if (burst_remaining > 0 && !fifo_full) begin
+                        hit_wr_en       <= 1'b1;
+                        hit_wr_data     <= make_hit(burst_ch);
+                        burst_ch        <= burst_ch + 5'd1;
+                        burst_remaining <= burst_remaining - 5'd1;
+                    end else if (prng_state[15:0] < cfg_noise_rate && !fifo_full) begin
                         hit_wr_en <= 1'b1;
                         hit_wr_data <= make_hit(prng_state[20:16]); // random channel
                     end
                 end
 
                 HIT_MODE_MIXED: begin
-                    // Poisson signal hits
-                    if (prng_state[15:0] < cfg_hit_rate && !fifo_full) begin
+                    if (inject_burst_pending && (burst_remaining == 0)) begin
+                        burst_remaining      <= cfg_burst_size;
+                        burst_ch             <= burst_start_ch;
+                        inject_burst_pending <= 1'b0;
+                    end else if (burst_remaining > 0 && !fifo_full) begin
+                        hit_wr_en       <= 1'b1;
+                        hit_wr_data     <= make_hit(burst_ch);
+                        burst_ch        <= burst_ch + 5'd1;
+                        burst_remaining <= burst_remaining - 5'd1;
+                    end else if (prng_state[15:0] < cfg_hit_rate && !fifo_full) begin
                         hit_wr_en <= 1'b1;
                         hit_wr_data <= make_hit(scan_ch);
                     end
-                    // Periodic burst (independent of Poisson)
-                    else if (burst_remaining > 0 && !fifo_full) begin
-                        hit_wr_en       <= 1'b1;
-                        hit_wr_data     <= make_hit(burst_ch);
-                        burst_ch        <= burst_ch + 1;
-                        burst_remaining <= burst_remaining - 1;
-                    end else if (burst_cooldown == 0 && burst_remaining == 0) begin
+                    else if (burst_cooldown == 0 && burst_remaining == 0) begin
                         burst_remaining <= cfg_burst_size;
-                        burst_ch        <= (cfg_burst_center >= cfg_burst_size/2) ?
-                                           cfg_burst_center - cfg_burst_size/2 : 5'd0;
+                        burst_ch        <= burst_start_ch;
                         burst_cooldown  <= 8'd200;
                     end
                 end
@@ -189,8 +232,11 @@ module hit_generator
     // ========================================
     function automatic logic [47:0] make_hit(input logic [4:0] ch);
         if (cfg_short_mode) begin
-            // Short: {channel, E_BadHit, ECC, E_Fine, E_Flag, pad, zeros}
-            return {ch, 1'b0, ecc_lfsr, prng2_state[4:0], 1'b0, 1'b1, 15'b0, 5'b0};
+            // Short: {channel, E_BadHit, TCC, T_Fine, E_Flag, pad}
+            // The short frame omits the energy coarse/fine payload. When
+            // replayed through frame_rcv_ip, the upper payload bits are
+            // normalized into T_CC/T_Fine.
+            return {ch, 1'b0, tcc_lfsr, prng_state[4:0], 1'b0, 1'b1, 15'b0, 5'b0};
         end else begin
             // Long: {channel, T_BadHit, TCC, T_Fine, E_BadHit, E_Flag, ECC, E_Fine}
             return pack_hit_long(

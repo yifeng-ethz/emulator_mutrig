@@ -33,7 +33,7 @@ directly without LVDS serialization.
 
 | Interface | Type | Width | Description |
 |-----------|------|-------|-------------|
-| `data_clock` | Clock sink | 1-bit | Byte clock (125-128 MHz) |
+| `data_clock` | Clock sink | 1-bit | Emulator byte clock (125 MHz) |
 | `data_reset` | Reset sink | 1-bit | Synchronous reset |
 | `tx8b1k` | AVST source | 9-bit data, 4-bit channel, 3-bit error | 8b/1k output to `frame_rcv_ip` |
 | `ctrl` | AVST sink | 9-bit data | 9-bit one-hot run control input |
@@ -54,8 +54,9 @@ flags_evt[15:8] | flags_evt[7:0] | hit_data... |
 CRC[15:8] | CRC[7:0] | K28.4(trailer)
 ```
 
-- Long mode: 720 byte-clocks per frame (~5.6 us at 128 MHz), 48-bit hits (6 bytes each)
-- Short mode: 420 byte-clocks per frame (~3.3 us at 128 MHz), 28-bit hits (3.5 bytes, alternating 3/4 byte packing)
+- Long mode: 1550 byte-clocks per frame (~12.4 us at 125 MHz, datapath-matched), 48-bit hits (6 bytes each)
+- Short mode: 910 byte-clocks per frame (~7.3 us at 125 MHz, datapath-matched), 28-bit hits (3.5 bytes, alternating 3/4 byte packing)
+- Short-mode payload follows the current Mu3e datapath contract: only `TCC`, `T_Fine`, and `E_Flag` are carried. The older MuTRiG ASIC RTL used legacy `ECC` / `E_Fine` names for those same short-word bit positions.
 
 ## CSR Register Map
 

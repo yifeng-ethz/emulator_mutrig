@@ -1,0 +1,17 @@
+Analysis & Synthesis Status : Successful - Sun Apr 12 16:12:25 2026
+Quartus Prime Version : 18.1.0 Build 625 09/12/2018 SJ Standard Edition
+Revision Name : emulator_mutrig_syn
+Top-level Entity Name : emulator_mutrig_syn_top
+Family : Arria V
+Logic utilization (in ALMs) : N/A
+Total registers : 490
+Total pins : 1
+Total virtual pins : 101
+Total block memory bits : 3,072
+Total DSP Blocks : 2
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 0
+Total DLLs : 0

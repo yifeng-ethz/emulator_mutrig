@@ -12,7 +12,7 @@ package require -exact qsys 16.1
 # ========================================================================
 set_module_property NAME                    emulator_mutrig
 set_module_property DISPLAY_NAME            "MuTRiG Emulator"
-set_module_property VERSION                 26.0.0.0410
+set_module_property VERSION                 26.0.1.0410
 set_module_property DESCRIPTION             "MuTRiG Emulator Mu3e IP Core"
 set_module_property GROUP                   "Mu3e Emulators/Modules"
 set_module_property AUTHOR                  "Yifeng Wang"
@@ -90,8 +90,8 @@ Depth: <b>${fifo_depth}</b> entries &times; 48-bit hit words = <b>${storage_bits
 <b>Frame format</b><br/>\
 IDLE(K28.5) | K28.0(hdr) | frame_cnt[15:8] | frame_cnt[7:0] | flags_evt[15:8] | flags_evt[7:0] | hit_data&hellip; | CRC[15:8] | CRC[7:0] | K28.4(trailer)<br/><br/>\
 <b>Frame interval</b><br/>\
-Long mode: <b>720</b> byte-clocks (~5.6 &micro;s at 128 MHz)<br/>\
-Short mode: <b>420</b> byte-clocks (~3.3 &micro;s at 128 MHz)<br/><br/>\
+Long mode: <b>1550</b> byte-clocks (~12.4 &micro;s at 125 MHz, datapath-matched)<br/>\
+Short mode: <b>910</b> byte-clocks (~7.3 &micro;s at 125 MHz, datapath-matched)<br/><br/>\
 <b>Hit word size</b><br/>\
 Long: <b>48</b> bits (6 bytes per event)<br/>\
 Short: <b>28</b> bits (3.5 bytes, alternating 3/4 byte packing)</html>"
@@ -456,6 +456,13 @@ set_interface_property ctrl ENABLED true
 add_interface_port ctrl asi_ctrl_data  data  Input  $RUN_CONTROL_WIDTH_CONST
 add_interface_port ctrl asi_ctrl_valid valid Input  1
 add_interface_port ctrl asi_ctrl_ready ready Output 1
+
+# Conduit [inject] — datapath charge-injection pulse
+add_interface inject conduit end
+set_interface_property inject associatedClock data_clock
+set_interface_property inject associatedReset data_reset
+set_interface_property inject ENABLED true
+add_interface_port inject coe_inject_pulse pulse Input 1
 
 # Avalon-MM slave [csr] — configuration registers
 add_interface csr avalon end

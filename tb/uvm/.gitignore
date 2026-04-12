@@ -1,0 +1,3 @@
+cov/*.ucdb
+logs/
+work_uvm/

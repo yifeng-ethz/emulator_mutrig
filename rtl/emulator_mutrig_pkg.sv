@@ -1,7 +1,9 @@
 // emulator_mutrig_pkg.sv
 // MuTRiG 3 emulator constants and types
 // Author: Claude / Yifeng Wang
-// Date: 2026-04-10
+// Version : 26.0.1
+// Date    : 20260412
+// Change  : Align frame timing to 125 MHz datapath targets and correct short-hit time-field semantics.
 //
 // Based on the MuTRiG 3 ASIC digital readout (Huangshan Chen, KIP Heidelberg)
 // Reference: kbriggl-mutrig3-c3cce8d41dcb RTL
@@ -17,12 +19,16 @@ package emulator_mutrig_pkg;
     // ========================================
     // Clock and timing
     // ========================================
-    // Serial clock: 320 MHz (dual-edge → 640 Mbps)
-    // Byte clock:   128 MHz (320/2.5, or ser_clk/5 for dual-edge)
-    //   Actually: byte_clk = ser_clk / 5 (dual-edge serializer uses 5:1 ratio for 10-bit symbols)
-    // Frame interval counter values (in byte_clk cycles)
-    localparam int FRAME_INTERVAL_LONG  = 720;  // ~5.6 µs at 128 MHz byte clock
-    localparam int FRAME_INTERVAL_SHORT = 420;  // ~3.3 µs at 128 MHz byte clock
+    // Architect-correct timing target:
+    //   - the native MuTRiG datapath runs at 625 MHz
+    //   - this emulator models that behavior at a 125 MHz byte-clock boundary
+    //   - the datapath-observed short-frame period at the emulator boundary is
+    //     910 byte-clock cycles
+    //
+    // Both frame intervals below are the architect-approved targets at the
+    // 125 MHz emulator boundary.
+    localparam int FRAME_INTERVAL_LONG  = 1550; // architect-correct long period at the 125 MHz emulator boundary
+    localparam int FRAME_INTERVAL_SHORT = 910;  // architect-correct short period at the 125 MHz emulator boundary
 
     // ========================================
     // LFSR / PRBS-15 coarse counter
@@ -64,10 +70,14 @@ package emulator_mutrig_pkg;
     localparam int HIT_LONG_WIDTH  = 48;
     localparam int HIT_SHORT_WIDTH = 28;
     // Short hit word (28 bits):
+    //   Note: the original 2016 MuTRiG ASIC RTL named these short-mode payload
+    //   fields ECC/E_Fine. The current Mu3e online datapath contract treats the
+    //   same bit positions as TCC/T_Fine for short "time-only" events, and this
+    //   emulator follows that current Mu3e contract.
     //   [27:23] channel  (5)
     //   [22]    E_BadHit (1)
-    //   [21:7]  ECC      (15)
-    //   [6:2]   E_Fine   (5)
+    //   [21:7]  TCC      (15) -- short mode carries time coarse, not energy coarse
+    //   [6:2]   T_Fine   (5)
     //   [1]     E_Flag   (1)
     //   [0]     pad      (1)
 
@@ -117,11 +127,11 @@ package emulator_mutrig_pkg;
     function automatic logic [27:0] pack_hit_short(
         input logic [4:0]  channel,
         input logic        e_badhit,
-        input logic [14:0] ecc,
-        input logic [4:0]  e_fine,
+        input logic [14:0] tcc,
+        input logic [4:0]  t_fine,
         input logic        e_flag
     );
-        return {channel, e_badhit, ecc, e_fine, e_flag, 1'b0};
+        return {channel, e_badhit, tcc, t_fine, e_flag, 1'b0};
     endfunction
 
 endpackage

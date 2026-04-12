@@ -6,14 +6,18 @@
 //   - Configurable hit generation (Poisson, burst, noise, mixed)
 //   - Frame assembly with CRC-16 matching real MuTRiG format
 //   - 8b/1k parallel output (bypasses 8b10b + serializer for FPGA-internal use)
+//   - Optional charge-injection pulse hook for datapath-aligned burst stimuli
 //
 // Interfaces:
 //   - Avalon-MM slave for configuration (CSR)
 //   - Avalon-ST source for 8b/1k data (feeds frame_rcv_ip directly)
 //   - Avalon-ST sink for run control timing (from run-control_mgmt)
+//   - Conduit input for charge-injection pulses (from mutrig_injector datapath IP)
 //
 // Author: Claude / Yifeng Wang
-// Date: 2026-04-10
+// Version : 26.0.1
+// Date    : 20260410
+// Change  : Add datapath injection pulse hook and synchronizer.
 
 module emulator_mutrig
     import emulator_mutrig_pkg::*;
@@ -36,6 +40,9 @@ module emulator_mutrig
     input  logic        asi_ctrl_valid,
     output logic        asi_ctrl_ready,
 
+    // Conduit [inject] — datapath charge-injection pulse
+    input  logic        coe_inject_pulse,
+
     // Avalon-MM slave [csr] — configuration registers
     input  logic [CSR_ADDR_WIDTH-1:0] avs_csr_address,
     input  logic        avs_csr_read,
@@ -55,6 +62,8 @@ module emulator_mutrig
 
     logic       run_active;     // emulator is active (producing frames)
     logic       emu_rst;        // emulator reset (released on RUN_SYNC→RUNNING edge)
+    logic [1:0] inject_sync;
+    logic       inject_pulse_clk;
 
     // Decode one-hot run state from ctrl stream — only care about RUNNING (bit 3)
     always_ff @(posedge i_clk) begin
@@ -69,6 +78,17 @@ module emulator_mutrig
     // Emulator reset: active during everything except RUNNING
     // Released on SYNC→RUNNING transition (matching real MuTRiG behavior)
     assign emu_rst    = i_rst | ~run_active;
+
+    // The injector can source pulses from either the datapath clock domain or
+    // the 50 MHz async mode, so resynchronize before consuming the edge.
+    always_ff @(posedge i_clk) begin
+        if (emu_rst)
+            inject_sync <= 2'b00;
+        else
+            inject_sync <= {inject_sync[0], coe_inject_pulse};
+    end
+
+    assign inject_pulse_clk = inject_sync[0] & ~inject_sync[1];
 
     // ========================================
     // CSR registers
@@ -216,6 +236,7 @@ module emulator_mutrig
         .cfg_noise_rate  (csr_noise_rate),
         .cfg_prng_seed   (csr_prng_seed),
         .cfg_short_mode  (csr_short_mode),
+        .inject_pulse    (inject_pulse_clk),
         .tcc_lfsr        (tcc_lfsr),
         .ecc_lfsr        (ecc_lfsr),
         .fifo_rd_en      (fifo_rd_en),
@@ -269,7 +290,7 @@ module emulator_mutrig
             status_frame_count <= '0;
             status_event_count <= '0;
         end else if (frame_start) begin
-            status_frame_count <= status_frame_count + 1;
+            status_frame_count <= status_frame_count + 16'd1;
             status_event_count <= event_count;
         end
     end

@@ -1,6 +1,6 @@
 // tb_emulator_mutrig.sv
 // Testbench for MuTRiG 3 emulator
-// Questa FSE compatible (no rand, no covergroup, no DPI)
+// Mixed-language smoke bench with frame_rcv_ip replay checks.
 
 `timescale 1ns/1ps
 
@@ -55,6 +55,7 @@ module tb_emulator_mutrig;
     logic [8:0]  asi_ctrl_data;
     logic        asi_ctrl_valid;
     logic        asi_ctrl_ready;
+    logic        coe_inject_pulse;
 
     logic [3:0]  avs_csr_address;
     logic        avs_csr_read;
@@ -62,6 +63,41 @@ module tb_emulator_mutrig;
     logic [31:0] avs_csr_writedata;
     logic [31:0] avs_csr_readdata;
     logic        avs_csr_waitrequest;
+
+    // ========================================
+    // Parser replay signals
+    // ========================================
+    logic        parser_rst;
+    logic [8:0]  parser_rx_data;
+    logic        parser_rx_valid;
+    logic [2:0]  parser_rx_error;
+    logic [3:0]  parser_rx_channel;
+    logic [8:0]  parser_ctrl_data;
+    logic        parser_ctrl_valid;
+    logic        parser_ctrl_ready;
+    logic [1:0]  parser_csr_address;
+    logic        parser_csr_read;
+    logic        parser_csr_write;
+    logic [31:0] parser_csr_writedata;
+    logic [31:0] parser_csr_readdata;
+    logic        parser_csr_waitrequest;
+    logic [3:0]  parser_hit_channel;
+    logic        parser_hit_sop;
+    logic        parser_hit_eop;
+    logic [2:0]  parser_hit_error;
+    logic [44:0] parser_hit_data;
+    logic        parser_hit_valid;
+    logic [41:0] parser_headerinfo_data;
+    logic        parser_headerinfo_valid;
+    logic [3:0]  parser_headerinfo_channel;
+
+    int          parser_header_count;
+    int          parser_hit_count;
+    logic [41:0] parser_last_headerinfo_data;
+    logic [44:0] parser_last_hit_data;
+    logic [2:0]  parser_last_hit_error;
+    logic        parser_last_hit_sop;
+    logic        parser_last_hit_eop;
 
     // ========================================
     // DUT instantiation
@@ -79,6 +115,7 @@ module tb_emulator_mutrig;
         .asi_ctrl_data      (asi_ctrl_data),
         .asi_ctrl_valid     (asi_ctrl_valid),
         .asi_ctrl_ready     (asi_ctrl_ready),
+        .coe_inject_pulse   (coe_inject_pulse),
         .avs_csr_address    (avs_csr_address),
         .avs_csr_read       (avs_csr_read),
         .avs_csr_write      (avs_csr_write),
@@ -86,6 +123,62 @@ module tb_emulator_mutrig;
         .avs_csr_readdata   (avs_csr_readdata),
         .avs_csr_waitrequest(avs_csr_waitrequest)
     );
+
+    frame_rcv_ip #(
+        .CHANNEL_WIDTH (4),
+        .CSR_ADDR_WIDTH(2),
+        .MODE_HALT     (0),
+        .DEBUG_LV      (0)
+    ) parser (
+        .asi_rx8b1k_data             (parser_rx_data),
+        .asi_rx8b1k_valid            (parser_rx_valid),
+        .asi_rx8b1k_error            (parser_rx_error),
+        .asi_rx8b1k_channel          (parser_rx_channel),
+        .aso_hit_type0_channel       (parser_hit_channel),
+        .aso_hit_type0_startofpacket (parser_hit_sop),
+        .aso_hit_type0_endofpacket   (parser_hit_eop),
+        .aso_hit_type0_error         (parser_hit_error),
+        .aso_hit_type0_data          (parser_hit_data),
+        .aso_hit_type0_valid         (parser_hit_valid),
+        .aso_headerinfo_data         (parser_headerinfo_data),
+        .aso_headerinfo_valid        (parser_headerinfo_valid),
+        .aso_headerinfo_channel      (parser_headerinfo_channel),
+        .avs_csr_readdata            (parser_csr_readdata),
+        .avs_csr_read                (parser_csr_read),
+        .avs_csr_address             (parser_csr_address),
+        .avs_csr_waitrequest         (parser_csr_waitrequest),
+        .avs_csr_write               (parser_csr_write),
+        .avs_csr_writedata           (parser_csr_writedata),
+        .asi_ctrl_data               (parser_ctrl_data),
+        .asi_ctrl_valid              (parser_ctrl_valid),
+        .asi_ctrl_ready              (parser_ctrl_ready),
+        .i_rst                       (parser_rst),
+        .i_clk                       (clk)
+    );
+
+    always_ff @(posedge clk) begin
+        if (parser_rst) begin
+            parser_header_count         <= 0;
+            parser_hit_count            <= 0;
+            parser_last_headerinfo_data <= '0;
+            parser_last_hit_data        <= '0;
+            parser_last_hit_error       <= '0;
+            parser_last_hit_sop         <= 1'b0;
+            parser_last_hit_eop         <= 1'b0;
+        end else begin
+            if (parser_headerinfo_valid) begin
+                parser_header_count         <= parser_header_count + 1;
+                parser_last_headerinfo_data <= parser_headerinfo_data;
+            end
+            if (parser_hit_valid) begin
+                parser_hit_count      <= parser_hit_count + 1;
+                parser_last_hit_data  <= parser_hit_data;
+                parser_last_hit_error <= parser_hit_error;
+                parser_last_hit_sop   <= parser_hit_sop;
+                parser_last_hit_eop   <= parser_hit_eop;
+            end
+        end
+    end
 
     // ========================================
     // CSR access tasks
@@ -144,6 +237,39 @@ module tb_emulator_mutrig;
         send_run_state(CTRL_IDLE);
     endtask
 
+    task automatic parser_send_run_state(input logic [8:0] state);
+        @(posedge clk);
+        parser_ctrl_data  <= state;
+        parser_ctrl_valid <= 1'b1;
+        @(posedge clk);
+        parser_ctrl_valid <= 1'b0;
+    endtask
+
+    task automatic parser_prepare_for_replay();
+        parser_rst          <= 1'b1;
+        parser_rx_data      <= '0;
+        parser_rx_valid     <= 1'b0;
+        parser_rx_error     <= '0;
+        parser_rx_channel   <= '0;
+        parser_ctrl_data    <= CTRL_IDLE;
+        parser_ctrl_valid   <= 1'b0;
+        parser_csr_address  <= '0;
+        parser_csr_read     <= 1'b0;
+        parser_csr_write    <= 1'b0;
+        parser_csr_writedata <= '0;
+
+        repeat (4) @(posedge clk);
+        parser_rst <= 1'b0;
+        repeat (2) @(posedge clk);
+
+        parser_send_run_state(CTRL_RUN_PREPARE);
+        repeat (5) @(posedge clk);
+        parser_send_run_state(CTRL_SYNC);
+        repeat (5) @(posedge clk);
+        parser_send_run_state(CTRL_RUNNING);
+        repeat (2) @(posedge clk);
+    endtask
+
     // ========================================
     // Frame capture
     // ========================================
@@ -152,6 +278,8 @@ module tb_emulator_mutrig;
 
     logic [7:0] captured_bytes [0:MAX_FRAME_BYTES-1];
     logic       captured_isk   [0:MAX_FRAME_BYTES-1];
+    logic [3:0] captured_channel [0:MAX_FRAME_BYTES-1];
+    logic [2:0] captured_error   [0:MAX_FRAME_BYTES-1];
     int         captured_len;
 
     task automatic capture_frame(output int frame_len);
@@ -162,33 +290,160 @@ module tb_emulator_mutrig;
 
         // Wait for header (K28.0)
         while (!found_header) begin
-            @(posedge clk);
+            @(negedge clk);
             if (aso_tx8b1k_valid && aso_tx8b1k_data == {1'b1, K28_0}) begin
                 found_header = 1;
-                captured_bytes[0] = aso_tx8b1k_data[7:0];
-                captured_isk[0]   = aso_tx8b1k_data[8];
+                captured_bytes[0]   = aso_tx8b1k_data[7:0];
+                captured_isk[0]     = aso_tx8b1k_data[8];
+                captured_channel[0] = aso_tx8b1k_channel;
+                captured_error[0]   = aso_tx8b1k_error;
                 idx = 1;
             end
         end
 
         // Capture until trailer (K28.4)
         while (1) begin
-            @(posedge clk);
+            @(negedge clk);
             if (aso_tx8b1k_valid) begin
-                captured_bytes[idx] = aso_tx8b1k_data[7:0];
-                captured_isk[idx]   = aso_tx8b1k_data[8];
+                captured_bytes[idx]   = aso_tx8b1k_data[7:0];
+                captured_isk[idx]     = aso_tx8b1k_data[8];
+                captured_channel[idx] = aso_tx8b1k_channel;
+                captured_error[idx]   = aso_tx8b1k_error;
                 idx++;
                 if (aso_tx8b1k_data == {1'b1, K28_4}) begin
                     frame_len = idx;
+                    captured_len = idx;
                     return;
                 end
                 if (idx >= MAX_FRAME_BYTES) begin
                     $display("ERROR: Frame too long, aborting capture");
                     frame_len = idx;
+                    captured_len = idx;
                     return;
                 end
             end
         end
+    endtask
+
+    task automatic capture_next_nonempty_frame(output int frame_len, output int evt_count);
+        logic [15:0] evt_cnt_ext;
+        frame_len = 0;
+        evt_count = 0;
+
+        for (int attempt = 0; attempt < 4; attempt++) begin
+            capture_frame(frame_len);
+            evt_cnt_ext = {captured_bytes[3], captured_bytes[4]};
+            evt_count = evt_cnt_ext[9:0];
+            if (evt_count != 0)
+                return;
+        end
+
+        $display("ERROR: Timed out waiting for a non-empty frame");
+    endtask
+
+    function automatic logic [27:0] decode_short_hit_from_capture();
+        return {
+            captured_bytes[5],
+            captured_bytes[6],
+            captured_bytes[7],
+            captured_bytes[8][7:4]
+        };
+    endfunction
+
+    task automatic replay_captured_frame(input int frame_len);
+        parser_prepare_for_replay();
+
+        for (int i = 0; i < frame_len; i++) begin
+            @(posedge clk);
+            parser_rx_data    <= {captured_isk[i], captured_bytes[i]};
+            parser_rx_valid   <= 1'b1;
+            parser_rx_error   <= captured_error[i];
+            parser_rx_channel <= captured_channel[i];
+        end
+
+        @(posedge clk);
+        parser_rx_valid   <= 1'b0;
+        parser_rx_data    <= '0;
+        parser_rx_error   <= '0;
+        parser_rx_channel <= '0;
+        repeat (8) @(posedge clk);
+    endtask
+
+    task automatic measure_header_gap(output int gap_cycles);
+        int cycles;
+        logic found_first;
+        found_first = 1'b0;
+        cycles = 0;
+
+        while (!found_first) begin
+            @(posedge clk);
+            if (aso_tx8b1k_valid && aso_tx8b1k_data == {1'b1, K28_0})
+                found_first = 1'b1;
+        end
+
+        while (1) begin
+            @(posedge clk);
+            cycles++;
+            if (aso_tx8b1k_valid && aso_tx8b1k_data == {1'b1, K28_0}) begin
+                gap_cycles = cycles;
+                return;
+            end
+            if (cycles > 4096) begin
+                $display("ERROR: Timed out measuring header gap");
+                gap_cycles = cycles;
+                return;
+            end
+        end
+    endtask
+
+    task automatic pulse_inject_once();
+        @(posedge clk);
+        coe_inject_pulse <= 1'b1;
+        @(posedge clk);
+        coe_inject_pulse <= 1'b0;
+    endtask
+
+    task automatic wait_for_generated_hit(output logic [47:0] hit_word);
+        int timeout_cycles;
+        hit_word = '0;
+        timeout_cycles = 0;
+
+`ifdef EMUT_GATE_SIM
+        while (timeout_cycles < 4096) begin
+            @(negedge clk);
+            timeout_cycles++;
+        end
+
+        $display("NOTE: Gate-level netlist hides u_hit_gen internals; skipping direct generated-hit capture");
+`else
+        while (timeout_cycles < 4096) begin
+            @(negedge clk);
+            if (dut.u_hit_gen.hit_wr_en && !dut.u_hit_gen.fifo_full) begin
+                hit_word = dut.u_hit_gen.hit_wr_data;
+                return;
+            end
+            timeout_cycles++;
+        end
+
+        $display("ERROR: Timed out waiting for a generated hit");
+`endif
+    endtask
+
+    task automatic clear_hit_generator_state();
+`ifndef EMUT_GATE_SIM
+        @(posedge clk);
+        dut.u_hit_gen.fifo_wr_ptr         = '0;
+        dut.u_hit_gen.fifo_rd_ptr         = '0;
+        dut.u_hit_gen.fifo_count          = '0;
+        dut.u_hit_gen.hit_wr_en           = 1'b0;
+        dut.u_hit_gen.hit_wr_data         = '0;
+        dut.u_hit_gen.burst_remaining     = '0;
+        dut.u_hit_gen.burst_ch            = '0;
+        dut.u_hit_gen.burst_cooldown      = '0;
+        dut.u_hit_gen.inject_burst_pending = 1'b0;
+`else
+        @(posedge clk);
+`endif
     endtask
 
     // ========================================
@@ -407,6 +662,26 @@ module tb_emulator_mutrig;
     endtask
 
     // ========================================
+    // Test B04: Short-frame interval timing
+    // ========================================
+    task automatic test_B04_short_interval();
+        int gap_cycles;
+
+        $display("\n=== Test B04: Short-frame interval timing ===");
+
+        csr_write(4'd0, 32'h0000_0009);  // enable, Poisson, short
+        csr_write(4'd1, 32'h0000_0000);  // hit_rate=0, noise_rate=0
+        csr_write(4'd4, 32'h0000_0008);  // gen_idle=1, tx_mode=000
+        run_sequence_start();
+
+        measure_header_gap(gap_cycles);
+        $display("  Header-to-header gap: %0d cycles", gap_cycles);
+        check("Short-frame header gap = 910 cycles", gap_cycles == FRAME_INTERVAL_SHORT);
+
+        run_sequence_stop();
+    endtask
+
+    // ========================================
     // Test B05: CSR readback
     // ========================================
     task automatic test_B05_csr();
@@ -436,6 +711,85 @@ module tb_emulator_mutrig;
         csr_read(4'd4, rdata);
         check("CSR[4] readback asic_id", rdata[7:4] == 4'd5);
         check("CSR[4] readback gen_idle", rdata[3] == 1'b1);
+    endtask
+
+    // ========================================
+    // Test B06: Long-frame interval timing
+    // ========================================
+    task automatic test_B06_long_interval();
+        int gap_cycles;
+
+        $display("\n=== Test B06: Long-frame interval timing ===");
+
+        csr_write(4'd0, 32'h0000_0001);  // enable, Poisson, long
+        csr_write(4'd1, 32'h0000_0000);  // hit_rate=0, noise_rate=0
+        csr_write(4'd4, 32'h0000_0008);  // gen_idle=1, tx_mode=000
+        run_sequence_start();
+
+        measure_header_gap(gap_cycles);
+        $display("  Header-to-header gap: %0d cycles", gap_cycles);
+        check("Long-frame header gap = 1550 cycles", gap_cycles == FRAME_INTERVAL_LONG);
+
+        run_sequence_stop();
+    endtask
+
+    // ========================================
+    // Test B07: Short-frame parser semantics
+    // ========================================
+    task automatic test_B07_short_parser();
+        int flen;
+        int evt_count;
+        logic [47:0] expected_hit;
+        logic [27:0] expected_short_word;
+        logic [27:0] captured_short_word;
+
+        $display("\n=== Test B07: Short-frame parser semantics ===");
+
+        csr_write(4'd0, 32'h0000_0009);  // enable, Poisson, short
+        csr_write(4'd1, 32'h0000_0000);  // disable Poisson/noise background
+        csr_write(4'd2, 32'h0000_0801);  // burst_center=8, burst_size=1
+        csr_write(4'd3, 32'h1357_2468);  // deterministic fine-time seeds
+        csr_write(4'd4, 32'h0000_004C);  // asic_id=4, gen_idle=1, tx_mode=short
+        clear_hit_generator_state();
+        run_sequence_start();
+        repeat (20) @(posedge clk);
+
+        pulse_inject_once();
+        wait_for_generated_hit(expected_hit);
+        capture_next_nonempty_frame(flen, evt_count);
+        run_sequence_stop();
+
+        captured_short_word = decode_short_hit_from_capture();
+
+        $display("  Frame length: %0d bytes, event count: %0d", flen, evt_count);
+        check("Injected short frame carries one hit", evt_count == 1);
+        check("Short payload bytes are data, not K-codes",
+              !captured_isk[5] && !captured_isk[6] && !captured_isk[7] && !captured_isk[8]);
+        check("Short payload low nibble is zero pad", captured_bytes[8][3:0] == 4'h0);
+`ifndef EMUT_GATE_SIM
+        expected_short_word = {
+            expected_hit[47:43],
+            expected_hit[42],
+            expected_hit[41:27],
+            expected_hit[26:22],
+            expected_hit[20],
+            1'b0
+        };
+        check("Short payload matches generated TCC/T_Fine word",
+              captured_short_word == expected_short_word);
+`else
+        $display("  NOTE: Gate-level netlist omits internal generated-hit visibility; skipping direct payload-to-generator compare");
+`endif
+
+        replay_captured_frame(flen);
+
+        check("Parser saw one headerinfo word", parser_header_count == 1);
+        check("Parser saw one short hit", parser_hit_count == 1);
+        check("Parser short mode flags decoded", parser_last_headerinfo_data[4:2] == TX_MODE_SHORT);
+        check("Parser decoded one-hit frame length", parser_last_headerinfo_data[15:6] == 10'd1);
+        check("Parser short E_CC is zero", parser_last_hit_data[15:1] == 15'd0);
+        check("Parser short SOP/EOP are asserted", parser_last_hit_sop && parser_last_hit_eop);
+        check("Parser short hit is error-free", parser_last_hit_error == 3'b000);
     endtask
 
     // ========================================
@@ -509,7 +863,7 @@ module tb_emulator_mutrig;
         begin
             logic saw_header;
             saw_header = 0;
-            for (int i = 0; i < 1000; i++) begin
+            for (int i = 0; i < 2000; i++) begin
                 @(posedge clk);
                 if (aso_tx8b1k_data == {1'b1, K28_0}) saw_header = 1;
             end
@@ -603,10 +957,22 @@ module tb_emulator_mutrig;
         // Initialize control signals
         asi_ctrl_data   = '0;
         asi_ctrl_valid  = 1'b0;
+        coe_inject_pulse = 1'b0;
         avs_csr_address = '0;
         avs_csr_read    = 1'b0;
         avs_csr_write   = 1'b0;
         avs_csr_writedata = '0;
+        parser_rst      = 1'b1;
+        parser_rx_data  = '0;
+        parser_rx_valid = 1'b0;
+        parser_rx_error = '0;
+        parser_rx_channel = '0;
+        parser_ctrl_data = CTRL_IDLE;
+        parser_ctrl_valid = 1'b0;
+        parser_csr_address = '0;
+        parser_csr_read = 1'b0;
+        parser_csr_write = 1'b0;
+        parser_csr_writedata = '0;
 
         // Wait for reset
         @(negedge rst);
@@ -625,8 +991,17 @@ module tb_emulator_mutrig;
         if (test_name == "ALL" || test_name == "B03_single_long")
             test_B03_single_long();
 
+        if (test_name == "ALL" || test_name == "B04_short_interval")
+            test_B04_short_interval();
+
         if (test_name == "ALL" || test_name == "B05_csr")
             test_B05_csr();
+
+        if (test_name == "ALL" || test_name == "B06_long_interval")
+            test_B06_long_interval();
+
+        if (test_name == "ALL" || test_name == "B07_short_parser")
+            test_B07_short_parser();
 
         if (test_name == "ALL" || test_name == "T01_multi_long")
             test_T01_multi_long();
