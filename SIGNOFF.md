@@ -10,7 +10,7 @@ design phase.
 ## Scope
 
 - DUT: `emulator_mutrig`
-- Version family: `26.0.1`
+- Version family: `26.0.3`
 - Device: Arria V `5AGXBA7D4F31C5`
 - Quartus: `18.1.0 Build 625 Standard Edition`
 - Nominal byte-clock target: `125.0 MHz`
@@ -23,6 +23,18 @@ Supporting documents:
 - [tb/DV_PLAN.md](tb/DV_PLAN.md)
 
 ## Verification Signoff
+
+### 2026-04-16 refresh
+
+- Directed bench rerun: `make -C tb run_all`
+  - result: `40 passed, 0 failed`
+  - includes the new `T09_terminate_no_new_frame` regression for the run-sequence patch
+- UVM regression rerun: `make -C tb/uvm regress SEEDS=1`
+  - result: `15 / 15 passed`
+  - includes the new `emut_test_terminate_no_new_frame` regression plus the existing mode/inject/status coverage smoke
+- Gate-level replay:
+  - not rerun in this refresh pass
+  - the previously recorded gate-replay evidence below remains the last checked-in gate result for this IP
 
 ### RTL regression
 
@@ -64,26 +76,26 @@ Standalone compile:
 - command:
   - `quartus_sh --flow compile emulator_mutrig_syn -c emulator_mutrig_syn`
 - flow runtime from `output_files/emulator_mutrig_syn.flow.rpt`:
-  - wall time `00:01:19`
-  - total CPU time `00:02:25`
+  - wall time `00:01:28`
+  - total CPU time `00:02:43`
 
 Timing summary from
 [syn/quartus/output_files/emulator_mutrig_syn.sta.summary](syn/quartus/output_files/emulator_mutrig_syn.sta.summary):
 
 | Corner | Setup Slack | Hold Slack | Min Pulse Width |
 |--------|------------:|-----------:|----------------:|
-| Slow 1100mV 85C | `+0.274 ns` | `+0.257 ns` | `+2.630 ns` |
-| Slow 1100mV 0C | `+0.176 ns` | `+0.218 ns` | `+2.673 ns` |
-| Fast 1100mV 85C | `+3.692 ns` | `+0.161 ns` | `+2.466 ns` |
-| Fast 1100mV 0C | `+4.004 ns` | `+0.133 ns` | `+2.473 ns` |
+| Slow 1100mV 85C | `+0.140 ns` | `+0.251 ns` | `+2.635 ns` |
+| Slow 1100mV 0C | `+0.012 ns` | `+0.229 ns` | `+2.682 ns` |
+| Fast 1100mV 85C | `+3.758 ns` | `+0.159 ns` | `+2.468 ns` |
+| Fast 1100mV 0C | `+3.937 ns` | `+0.135 ns` | `+2.473 ns` |
 
 Worst signoff path after the final timing fix:
 
 - `hit_generator:u_hit_gen|prng_state[5] -> prng_state[18]`
 - launch/latch clock: `clk125`
 - relationship: `7.273 ns`
-- data delay: `6.863 ns`
-- slack: `+0.274 ns`
+- data delay: `7.261 ns`
+- slack: `+0.012 ns`
 
 Interpretation:
 
@@ -100,8 +112,8 @@ Fitter summary from
 
 | Resource | Corrected RTL_PLAN estimate | Actual | Ratio | Status |
 |----------|----------------------------:|-------:|------:|:------:|
-| ALMs | `450` | `438` | `0.97x` | PASS |
-| Registers | `500` | `492` | `0.98x` | PASS |
+| ALMs | `450` | `443` | `0.98x` | PASS |
+| Registers | `500` | `495` | `0.99x` | PASS |
 | RAM blocks | `2` | `2` | `1.00x` | PASS |
 | DSP blocks | `2` | `2` | `1.00x` | PASS |
 

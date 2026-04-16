@@ -1,7 +1,7 @@
 # DV Basic Cases — emulator_mutrig
 
 **Purpose:** deterministic feature-completion cases for Phase 0 signoff  
-**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; cases cover the current single-lane baseline and the intended future shared 8-lane merged-datapath architecture where relevant.
+**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; cases cover the current single-lane baseline first, while future shared 8-lane merged-datapath references remain clearly marked as follow-on only.
 
 | ID | Scenario | Checks | Why it exists |
 |---|---|---|---|
@@ -133,3 +133,5 @@
 | B126 | 8-lane area-wrapper smoke | Functional smoke on the exact area-signoff top | Couples DV to ALM target |
 | B127 | Standalone vs shared small-pattern equivalence | Small deterministic vectors match exactly | Fast regression for optimization |
 | B128 | Signoff replay seed set | Canonical seed bundle reproduces signoff results | Freeze-point regression anchor |
+| B129 | Terminating drain boundary | Final committed frame drains once and no new frame starts after `TERMINATING` | Anchors the run-sequence upgrade contract for the current emulator |
+| B130 | Cross-ASIC cluster slice | One lane of an 8-lane shared cluster domain emits only its local 32-channel slice | Proves the new multi-lane cluster replay hook without disturbing single-lane behavior |

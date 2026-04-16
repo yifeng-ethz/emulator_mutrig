@@ -27,6 +27,20 @@ package emut_env_pkg;
     `uvm_object_utils(emut_cfg)
 
     int unsigned frame_timeout_cycles = 20000;
+    int unsigned run_prepare_cycles = 5;
+    int unsigned sync_cycles = 5;
+    int unsigned running_settle_cycles = 4;
+    int unsigned quick_terminating_hold_cycles = 5;
+    int unsigned system_terminating_hold_cycles = FRAME_INTERVAL_LONG + 32;
+    int unsigned idle_recovery_cycles = 5;
+    int unsigned datapath_clock_hz = 125_000_000;
+    int unsigned osc50_period_ps = 20_000;
+    int unsigned emulator_splitter_base_output = 16;
+    int unsigned mutrig_injector_splitter_output = 13;
+    int unsigned emulator_csr_base_addr = 'h2000;
+    int unsigned emulator_csr_span = 'h40;
+    string       system_qsys_path =
+      "run-control_mgmt/reference/feb_system_v2_snapshot_20260415/scifi_datapath_system_v2.qsys";
 
     function new(string name = "emut_cfg");
       super.new(name);
@@ -51,10 +65,14 @@ package emut_env_pkg;
     `uvm_object_utils(emut_ctrl_item)
 
     logic [8:0] cmd;
+    int unsigned post_accept_delay_cycles;
+    string      state_name;
     time        drive_time_ps;
 
     function new(string name = "emut_ctrl_item");
       super.new(name);
+      post_accept_delay_cycles = 0;
+      state_name = "";
     endfunction
   endclass
 

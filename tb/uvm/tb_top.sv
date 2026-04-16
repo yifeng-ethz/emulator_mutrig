@@ -12,6 +12,7 @@ module tb_top;
   logic [31:0] parser_csr_readdata;
   logic        parser_csr_waitrequest;
   logic        parser_ctrl_ready;
+  logic        frame_idle;
 
   always #(CLK_PERIOD_PS/2) clk = ~clk;
 
@@ -28,7 +29,7 @@ module tb_top;
   emut_parser_if   parser_if(.clk(clk), .rst(rst));
 
   emulator_mutrig #(
-    .FIFO_DEPTH     (64),
+    .FIFO_DEPTH     (RAW_FIFO_DEPTH),
     .CSR_ADDR_WIDTH (4)
   ) dut (
     .i_clk              (clk),
@@ -81,6 +82,8 @@ module tb_top;
     .i_clk                       (clk)
   );
 
+  assign frame_idle = (dut.u_frame_asm.state == 4'd0);
+
   emut_avmm_sva u_avmm_sva (
     .clk        (clk),
     .rst        (rst),
@@ -112,7 +115,9 @@ module tb_top;
   emut_internal_sva u_internal_sva (
     .clk              (clk),
     .rst              (rst),
-    .run_active       (dut.run_active),
+    .run_generating   (dut.run_generating),
+    .run_draining     (dut.run_draining),
+    .frame_idle       (frame_idle),
     .csr_enable       (dut.csr_enable),
     .inject_pulse_clk (dut.inject_pulse_clk),
     .frame_start      (dut.frame_start),

@@ -32,6 +32,8 @@ class emut_ctrl_driver extends uvm_driver #(emut_ctrl_item);
       item.drive_time_ps = $time;
       vif.valid <= 1'b0;
       vif.data  <= CTRL_IDLE;
+      repeat (item.post_accept_delay_cycles)
+        @(posedge vif.clk);
       ap.write(item);
       seq_item_port.item_done();
     end

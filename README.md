@@ -9,7 +9,7 @@ directly without LVDS serialization.
 
 ```
                        +-----------------+
-  cfg (CSR) ---------> | hit_generator   |---> hit FIFO (48-bit)
+  cfg (CSR) ---------> | hit_generator   |---> 4x L1 + 1x L2 raw queues
                        |  LCG PRNG       |         |
                        +-----------------+         v
   tcc_lfsr (PRBS-15) ----+          +--------------------+
@@ -38,6 +38,7 @@ directly without LVDS serialization.
 | `tx8b1k` | AVST source | 9-bit data, 4-bit channel, 3-bit error | 8b/1k output to `frame_rcv_ip` |
 | `ctrl` | AVST sink | 9-bit data | 9-bit one-hot run control input |
 | `csr` | AVMM slave | 4-bit addr, 32-bit data | Configuration registers |
+| `inject` | Conduit sink | 1-bit pulse | Charge-injection trigger shared with the datapath injector |
 
 ### tx8b1k Data Format
 
@@ -64,7 +65,7 @@ CRC[15:8] | CRC[7:0] | K28.4(trailer)
 |------|------|-----|-------------|
 | 0x00 | CONTROL | RW | `[0]` enable, `[2:1]` hit_mode, `[3]` short_mode |
 | 0x01 | HIT_RATE | RW | `[15:0]` hit_rate (8.8 FP), `[31:16]` noise_rate |
-| 0x02 | BURST_CFG | RW | `[4:0]` burst_size, `[12:8]` burst_center |
+| 0x02 | BURST_CFG | RW | `[4:0]` burst_size, `[12:8]` burst_center_local, `[13]` cluster_cross_asic, `[21:14]` cluster_center_global, `[25:22]` cluster_lane_index, `[29:26]` cluster_lane_count |
 | 0x03 | PRNG_SEED | RW | `[31:0]` PRNG seed |
 | 0x04 | TX_MODE | RW | `[2:0]` tx_mode, `[3]` gen_idle, `[7:4]` asic_id |
 | 0x05 | STATUS | RO | `[15:0]` frame_count, `[25:16]` last_event_count |
@@ -73,10 +74,10 @@ CRC[15:8] | CRC[7:0] | K28.4(trailer)
 
 | Value | Mode | Description |
 |-------|------|-------------|
-| 00 | Poisson | i.i.d. per-channel with configurable rate |
+| 00 | Poisson | stochastic hits with optional cluster length from `burst_size` |
 | 01 | Burst | Periodic cluster hits on neighbouring channels |
 | 10 | Noise | Random dark-count-like hits |
-| 11 | Mixed | Poisson signal + burst clusters |
+| 11 | Mixed | Poisson signal clusters plus periodic burst clusters |
 
 ## Platform Designer Integration
 
@@ -88,7 +89,18 @@ The `emulator_mutrig_hw.tcl` registers this IP in Platform Designer. Connect:
 4. `csr` to the Avalon-MM fabric for runtime configuration
 
 Each instance emulates one MuTRiG ASIC. Set `asic_id` (CSR 0x04, bits [7:4]) to a unique
-value per instance for downstream channel identification.
+value per instance for downstream channel identification. The packaged HDL parameter
+`ASIC_ID_DEFAULT` now exposes the reset value of that field so lane-default tagging
+does not depend on a runtime CSR write.
+
+For multi-lane emulation, `BURST_CFG` can optionally reinterpret the burst path as a shared
+cluster domain across up to 8 adjacent emulated MuTRiGs. In that mode each emulator owns one
+32-channel slice selected by `cluster_lane_index`, and all participating lanes must share the
+same seed and run-control timing so they replay the same global cluster deterministically.
+
+Run-state note:
+- `RUNNING` enables new hit commits and fresh frame starts.
+- `TERMINATING` only lets an already-open frame drain; it does not permit a fresh post-edge frame header to open from idle.
 
 ## Simulation
 

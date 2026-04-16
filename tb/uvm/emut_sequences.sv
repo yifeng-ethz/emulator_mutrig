@@ -45,6 +45,8 @@ class emut_ctrl_seq extends uvm_sequence #(emut_ctrl_item);
   `uvm_object_utils(emut_ctrl_seq)
 
   logic [8:0] cmd;
+  int unsigned post_accept_delay_cycles = 0;
+  string       state_name = "";
 
   function new(string name = "emut_ctrl_seq");
     super.new(name);
@@ -55,6 +57,74 @@ class emut_ctrl_seq extends uvm_sequence #(emut_ctrl_item);
     item = emut_ctrl_item::type_id::create("ctrl_item");
     start_item(item);
     item.cmd = cmd;
+    item.post_accept_delay_cycles = post_accept_delay_cycles;
+    item.state_name = state_name;
+    finish_item(item);
+  endtask
+endclass
+
+class emut_run_start_seq extends uvm_sequence #(emut_ctrl_item);
+  `uvm_object_utils(emut_run_start_seq)
+
+  int unsigned run_prepare_cycles = 5;
+  int unsigned sync_cycles = 5;
+  int unsigned running_settle_cycles = 4;
+
+  function new(string name = "emut_run_start_seq");
+    super.new(name);
+  endfunction
+
+  task body();
+    emut_ctrl_item item;
+
+    item = emut_ctrl_item::type_id::create("ctrl_prepare");
+    start_item(item);
+    item.cmd = CTRL_RUN_PREPARE;
+    item.state_name = "RUN_PREPARE";
+    item.post_accept_delay_cycles = run_prepare_cycles;
+    finish_item(item);
+
+    item = emut_ctrl_item::type_id::create("ctrl_sync");
+    start_item(item);
+    item.cmd = CTRL_SYNC;
+    item.state_name = "SYNC";
+    item.post_accept_delay_cycles = sync_cycles;
+    finish_item(item);
+
+    item = emut_ctrl_item::type_id::create("ctrl_running");
+    start_item(item);
+    item.cmd = CTRL_RUNNING;
+    item.state_name = "RUNNING";
+    item.post_accept_delay_cycles = running_settle_cycles;
+    finish_item(item);
+  endtask
+endclass
+
+class emut_run_stop_seq extends uvm_sequence #(emut_ctrl_item);
+  `uvm_object_utils(emut_run_stop_seq)
+
+  int unsigned terminating_hold_cycles = 5;
+  int unsigned idle_recovery_cycles = 5;
+
+  function new(string name = "emut_run_stop_seq");
+    super.new(name);
+  endfunction
+
+  task body();
+    emut_ctrl_item item;
+
+    item = emut_ctrl_item::type_id::create("ctrl_terminating");
+    start_item(item);
+    item.cmd = CTRL_TERMINATING;
+    item.state_name = "TERMINATING";
+    item.post_accept_delay_cycles = terminating_hold_cycles;
+    finish_item(item);
+
+    item = emut_ctrl_item::type_id::create("ctrl_idle");
+    start_item(item);
+    item.cmd = CTRL_IDLE;
+    item.state_name = "IDLE";
+    item.post_accept_delay_cycles = idle_recovery_cycles;
     finish_item(item);
   endtask
 endclass

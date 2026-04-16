@@ -38,7 +38,12 @@ for {set i 0} {$i < 8} {incr i} {
 
     # Add instance
     add_instance $inst emulator_mutrig 1.0
-    set_instance_parameter_value $inst FIFO_DEPTH 64
+    set_instance_parameter_value $inst FIFO_DEPTH 256
+    set_instance_parameter_value $inst ASIC_ID_DEFAULT $i
+    set_instance_parameter_value $inst CLUSTER_CROSS_ASIC_DEFAULT 1
+    set_instance_parameter_value $inst CLUSTER_CENTER_GLOBAL_DEFAULT 127
+    set_instance_parameter_value $inst CLUSTER_LANE_INDEX_DEFAULT $i
+    set_instance_parameter_value $inst CLUSTER_LANE_COUNT_DEFAULT 8
 
     # Clock: lvds_rx_28nm_0.outclock (~125 MHz, same as datapath)
     add_connection lvds_rx_28nm_0.outclock/${inst}.data_clock
@@ -57,7 +62,7 @@ for {set i 0} {$i < 8} {incr i} {
     add_connection master_datapath.master/${inst}.csr
     set_connection_parameter_value master_datapath.master/${inst}.csr baseAddress $csr_addr
 
-    puts "  $inst: CSR base 0x[format %04X $csr_addr], ctrl=splitter.out${splitter_out}"
+    puts "  $inst: CSR base 0x[format %04X $csr_addr], ctrl=splitter.out${splitter_out}, asic_id=$i, cluster_lane=$i/8"
 }
 
 # ── Step 4: Save ──

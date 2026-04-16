@@ -1,7 +1,7 @@
 # DV Performance / Soak Cases — emulator_mutrig
 
 **Purpose:** stress, throughput, latency-distribution, and soak cases for Phase 0 signoff  
-**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; the 8-lane `<4k ALM` target is treated as a first-class validation concern because shared-resource optimizations must survive long-running regressions.
+**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; the current single-lane emulator is the closure target, while the 8-lane `<4k ALM` work remains a follow-on architecture concern that must survive long-running regressions.
 
 | ID | Scenario | Checks | Why it exists |
 |---|---|---|---|
@@ -133,3 +133,4 @@
 | P126 | ALM/regression paired run full 8-lane config | Functional + area evidence aligned | Signoff evidence |
 | P127 | Final signoff seed bundle | All selected performance seeds pass together | Freeze-point confidence |
 | P128 | Final signoff endurance bundle on exact top | Exact target survives the closure run | Final Phase 0 gate |
+| P129 | Repeated terminate/drain soak | Stop windows drain cleanly over many cycles without accumulating stale frame starts | Proves the termination contract does not degrade under stress |

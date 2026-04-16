@@ -3,7 +3,9 @@
 module emut_internal_sva (
   input logic       clk,
   input logic       rst,
-  input logic       run_active,
+  input logic       run_generating,
+  input logic       run_draining,
+  input logic       frame_idle,
   input logic       csr_enable,
   input logic       inject_pulse_clk,
   input logic       frame_start,
@@ -13,7 +15,7 @@ module emut_internal_sva (
 );
   property p_idle_when_disabled;
     @(posedge clk) disable iff (rst)
-      (!run_active || !csr_enable) |-> (tx_valid && tx_data == {1'b1, 8'hBC});
+      (!run_draining || !csr_enable) |-> (tx_valid && tx_data == {1'b1, 8'hBC});
   endproperty
 
   property p_inject_single_cycle;
@@ -26,7 +28,13 @@ module emut_internal_sva (
       frame_start |=> status_frame_count == ($past(status_frame_count) + 16'd1);
   endproperty
 
+  property p_no_new_frame_start_after_running_closes;
+    @(posedge clk) disable iff (rst)
+      (!run_generating && frame_idle) |-> !frame_start;
+  endproperty
+
   assert property (p_idle_when_disabled) else $error("Output was not idle while disabled/not running");
   assert property (p_inject_single_cycle) else $error("inject_pulse_clk was wider than one cycle");
   assert property (p_frame_count_advances) else $error("status_frame_count did not advance after frame_start");
+  assert property (p_no_new_frame_start_after_running_closes) else $error("frame_start asserted after RUNNING closed while frame assembler was idle");
 endmodule

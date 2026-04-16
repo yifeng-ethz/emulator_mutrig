@@ -1,9 +1,9 @@
 # Emulator MuTRiG — RTL Design Plan
 
-**IP Name:** emulator_mutrig  
-**Author:** Codex  
-**Version:** 26.0.1  
-**Integration Target:** Mu3e online datapath / `frame_rcv_ip` sink  
+**IP Name:** emulator_mutrig
+**Author:** Codex
+**Version:** 26.0.3
+**Integration Target:** Mu3e online datapath / `frame_rcv_ip` sink
 **Companion Documents:** `README.md`, `tb/DV_PLAN.md`, `doc/rtl_note.md`
 
 ---
@@ -12,7 +12,9 @@
 
 `emulator_mutrig` is a single-lane MuTRiG digital-output emulator. It models the MuTRiG packet stream at a `125 MHz` FPGA-facing byte-clock boundary while representing a native MuTRiG datapath that is effectively observed at `625 MHz`.
 
-This plan covers standalone sign-off for the current single-lane RTL, not the future shared 8-lane area-optimized architecture.
+This plan covers standalone sign-off for the current single-lane RTL, while also documenting the delivered multi-lane cluster-domain hook that lets neighbouring emulator instances replay one shared global cluster without changing the single-lane default datapath.
+
+The current delivered revision also closes the run-sequence timing-model gap from `RUN_SEQ_UPGRADE_PLAN.md` by preventing a fresh frame start once `RUNNING` has closed and the emulator is only draining through `TERMINATING`.
 
 ---
 
@@ -67,7 +69,9 @@ This plan signs off only reference (1). Reference (2) remains an explicit future
 
 - modulo-equivalent reduced-width LCG PRNG datapaths
 - channel scan / burst / noise mode control
-- single-lane hit FIFO (`FIFO_DEPTH=64`, payload width `48`)
+- Poisson and mixed-mode cluster emission when `burst_size > 1`
+- optional cross-ASIC cluster slicing via `cluster_cross_asic`, `cluster_lane_index`, and `cluster_lane_count`
+- raw-style queue topology: 4 L1 FIFOs (`78` bit) plus 1 shared L2 FIFO (`48` bit)
 - injection-pulse-to-burst trigger path
 
 `frame_assembler.sv`
@@ -119,7 +123,7 @@ Expected hold risk is low because the design is single-clock and locally registe
 
 ## 5. Standalone Resource Estimates
 
-These are the reference estimates for the **current single-lane implementation** at `FIFO_DEPTH=64`.
+These are the reference estimates for the **current single-lane implementation** at `FIFO_DEPTH=256`.
 
 The first pre-fit model for this turn assumed the FIFO would stay in soft logic and the LCG math would stay out of DSPs. The fitted result disproved that assumption: Quartus infers the `64 x 48` FIFO as a simple dual-port `altsyncram` in `2` M10Ks and maps the two reduced-width multipliers into `2` DSP blocks. The table below is therefore the corrected sign-off reference for this delivered revision.
 
@@ -169,6 +173,7 @@ Specific behavioral points relevant to synthesis sign-off:
 - long frame interval = `1550` cycles at the `125 MHz` byte-clock boundary
 - short payload semantics use `TCC/T_Fine`, not `ECC/E_Fine`
 - injection pulse path must remain functional through the resynchronizer and burst trigger path
+- cross-ASIC burst slicing must reduce a shared global cluster to the correct local 32-channel window when enabled
 
 ---
 

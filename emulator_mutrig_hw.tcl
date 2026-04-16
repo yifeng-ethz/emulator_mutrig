@@ -10,7 +10,10 @@ package require -exact qsys 16.1
 # ========================================================================
 # Packaging constants
 # ========================================================================
-set SCRIPT_DIR [file dirname [file normalize [info script]]]
+set SCRIPT_DIR [file dirname [info script]]
+if {[string length $SCRIPT_DIR] == 0} {
+    set SCRIPT_DIR [pwd]
+}
 
 set CSR_ADDR_W_CONST            4
 set TX8B1K_WIDTH_CONST          9
@@ -20,9 +23,9 @@ set RUN_CONTROL_WIDTH_CONST     9
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 0
-set VERSION_PATCH_DEFAULT_CONST 1
-set BUILD_DEFAULT_CONST         412
-set VERSION_DATE_DEFAULT_CONST  20260412
+set VERSION_PATCH_DEFAULT_CONST 3
+set BUILD_DEFAULT_CONST         416
+set VERSION_DATE_DEFAULT_CONST  20260416
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -78,7 +81,7 @@ set CSR_TABLE_HTML {<html><table border="1" cellpadding="3" width="100%">
 <tr><th>Word</th><th>Byte</th><th>Name</th><th>Access</th><th>Description</th></tr>
 <tr><td>0x00</td><td>0x000</td><td>CONTROL</td><td>RW</td><td>[0] enable, [2:1] hit_mode, [3] short_mode</td></tr>
 <tr><td>0x01</td><td>0x004</td><td>HIT_RATE</td><td>RW</td><td>[15:0] hit_rate (8.8 fixed-point), [31:16] noise_rate</td></tr>
-<tr><td>0x02</td><td>0x008</td><td>BURST_CFG</td><td>RW</td><td>[4:0] burst_size, [12:8] burst_center</td></tr>
+<tr><td>0x02</td><td>0x008</td><td>BURST_CFG</td><td>RW</td><td>[4:0] burst_size, [12:8] burst_center_local, [13] cluster_cross_asic, [21:14] cluster_center_global, [25:22] cluster_lane_index, [29:26] cluster_lane_count</td></tr>
 <tr><td>0x03</td><td>0x00C</td><td>PRNG_SEED</td><td>RW</td><td>[31:0] PRNG seed for hit generator</td></tr>
 <tr><td>0x04</td><td>0x010</td><td>TX_MODE</td><td>RW</td><td>[2:0] tx_mode, [3] gen_idle, [7:4] asic_id</td></tr>
 <tr><td>0x05</td><td>0x014</td><td>STATUS</td><td>RO</td><td>[15:0] frame_count, [25:16] last_event_count</td></tr>
@@ -96,8 +99,8 @@ proc compute_derived_values {} {
         [get_parameter_value BUILD]]
     set version_git_hex [format "0x%08X" [get_parameter_value VERSION_GIT]]
 
-    # Storage estimate: 48-bit hit words × depth
-    set storage_bits [expr {48 * $fifo_depth}]
+# Storage estimate: 4x L1 (78-bit) + 1x L2 (48-bit)
+    set storage_bits [expr {(4 * 78 + 48) * $fifo_depth}]
 
     catch {
         set_display_item_property overview_html TEXT "<html>\
@@ -106,21 +109,28 @@ Single-lane MuTRiG&nbsp;3 digital-output emulator for FPGA-internal verification
 The block synthesizes hit traffic, assembles MuTRiG-compatible frames, and drives\
 the decoded 8b/1k byte stream expected by <b>frame_rcv_ip</b>.<br/><br/>\
 <b>Data path</b><br/>\
-run-control + inject pulse + CSR config &rarr; <b>hit_generator</b> &rarr; internal\
-48-bit FIFO &rarr; <b>frame_assembler</b> &rarr; <b>tx8b1k</b><br/><br/>\
+run-control + inject pulse + CSR config &rarr; <b>hit_generator</b> &rarr; 4x L1\
+queues + shared L2 queue &rarr; <b>frame_assembler</b> &rarr; <b>tx8b1k</b><br/><br/>\
+<b>Run-state contract</b><br/>\
+<b>RUNNING</b> enables new hit commits and fresh frame starts.<br/>\
+<b>TERMINATING</b> keeps an in-flight frame draining but blocks any new frame\
+header from opening out of the idle state.<br/><br/>\
 <b>Clocking</b><br/>\
 Single synchronous <b>data_clock</b> domain. The emulator models the MuTRiG\
 625&nbsp;MHz datapath at the Mu3e 125&nbsp;MHz byte-clock boundary.</html>"
     }
     catch {
         set_display_item_property hitgen_html TEXT "<html>\
-<b>Hit FIFO</b><br/>\
-Depth: <b>${fifo_depth}</b> entries &times; 48-bit hit words = <b>${storage_bits}</b> bits<br/><br/>\
+<b>Raw-style queueing</b><br/>\
+Depth per stage: <b>${fifo_depth}</b> entries; storage estimate <b>${storage_bits}</b> bits\
+ across 4x 78-bit L1 queues and one 48-bit L2 queue<br/><br/>\
 <b>Hit modes</b><br/>\
-<b>00</b> Poisson &mdash; i.i.d. per-channel with configurable rate<br/>\
+<b>00</b> Poisson &mdash; stochastic hits with optional cluster length from <b>burst_size</b><br/>\
 <b>01</b> Burst &mdash; periodic cluster hits on neighbouring channels<br/>\
 <b>10</b> Noise &mdash; random dark-count-like hits<br/>\
-<b>11</b> Mixed &mdash; Poisson signal + burst clusters</html>"
+<b>11</b> Mixed &mdash; Poisson signal clusters plus periodic burst clusters<br/><br/>\
+<b>Cross-ASIC cluster replay</b><br/>\
+Optional lane-domain slicing lets neighbouring emulator instances replay one shared cluster across multiple MuTRiG lanes when they share the same seed and run-control timing.</html>"
     }
     catch {
         set_display_item_property frame_html TEXT "<html>\
@@ -131,17 +141,20 @@ Long mode: <b>1550</b> byte-clocks (~12.4 &micro;s at 125 MHz, datapath-matched)
 Short mode: <b>910</b> byte-clocks (~7.3 &micro;s at 125 MHz, datapath-matched)<br/><br/>\
 <b>Hit word size</b><br/>\
 Long: <b>48</b> bits (6 bytes per event)<br/>\
-Short: <b>28</b> bits (3.5 bytes, alternating 3/4 byte packing)</html>"
+Short: <b>28</b> bits (3.5 bytes, alternating 3/4 byte packing)<br/><br/>\
+<b>Termination alignment</b><br/>\
+Once <b>RUNNING</b> closes, the frame assembler may finish the current frame but\
+may not start a fresh header from <b>FS_IDLE</b> during <b>TERMINATING</b>.</html>"
     }
     catch {
-        set_display_item_property profile_html TEXT [format {<html><b>Catalog revision</b><br/>This release is packaged as <b>%s</b>.<br/><br/><b>Catalog provenance</b><br/>Packaged git stamp default <b>%s</b> (<b>%s</b>).<br/>Git describe: <b>%s</b>.<br/><br/><b>Runtime identity</b><br/>This revision still uses catalog-only identity tracking. The common UID + META header is not yet implemented in the RTL CSR window.</html>} \
+        set_display_item_property profile_html TEXT [format {<html><b>Catalog revision</b><br/>This release is packaged as <b>%s</b>.<br/><br/><b>Catalog provenance</b><br/>Packaged git stamp default <b>%s</b> (<b>%s</b>).<br/>Git describe: <b>%s</b>.<br/><br/><b>Delivered behavior</b><br/>This revision aligns the standalone emulator run-state model with the run-sequence upgrade plan and adds optional cross-ASIC cluster replay: <b>TERMINATING</b> drains only an already-open frame and does not permit a fresh post-edge frame start, while the new burst-domain defaults let neighbouring emulator instances emit one shared cluster deterministically.</html>} \
             $version_string \
             $version_git_hex \
             $::VERSION_GIT_SHORT_DEFAULT_CONST \
             $::VERSION_GIT_DESCRIBE_DEFAULT_CONST]
     }
     catch {
-        set_display_item_property versioning_html TEXT [format {<html><b>VERSION encoding</b><br/>VERSION[31:24] = MAJOR, VERSION[23:16] = MINOR, VERSION[15:12] = PATCH, VERSION[11:0] = BUILD.<br/><br/><b>Catalog identity</b><br/>UID default is <b>EMUT</b> (0x454D5554).<br/>Default <b>VERSION_GIT</b> = <b>%s</b> (%s).<br/>Git describe = <b>%s</b>.<br/>Enable <b>Override Git Stamp</b> to enter a custom value.</html>} \
+        set_display_item_property versioning_html TEXT [format {<html><b>VERSION encoding</b><br/>VERSION[31:24] = MAJOR, VERSION[23:16] = MINOR, VERSION[15:12] = PATCH, VERSION[11:0] = BUILD.<br/><br/><b>Catalog identity</b><br/>UID default is <b>EMUT</b> (0x454D5554).<br/>Default <b>VERSION_GIT</b> = <b>%s</b> (%s).<br/>Git describe = <b>%s</b>.<br/>Enable <b>Override Git Stamp</b> to enter a custom value.<br/><br/><b>Field editability</b><br/><b>IP_UID</b> and <b>INSTANCE_ID</b> stay integration-editable; version/build/date fields remain locked to the packaged image.</html>} \
             $version_git_hex \
             $::VERSION_GIT_SHORT_DEFAULT_CONST \
             $::VERSION_GIT_DESCRIBE_DEFAULT_CONST]
@@ -161,6 +174,10 @@ proc validate {} {
     set ver_git      [get_parameter_value VERSION_GIT]
     set instance_id  [get_parameter_value INSTANCE_ID]
     set debug_level  [get_parameter_value DEBUG]
+    set cluster_cross [get_parameter_value CLUSTER_CROSS_ASIC_DEFAULT]
+    set cluster_center [get_parameter_value CLUSTER_CENTER_GLOBAL_DEFAULT]
+    set cluster_lane_index [get_parameter_value CLUSTER_LANE_INDEX_DEFAULT]
+    set cluster_lane_count [get_parameter_value CLUSTER_LANE_COUNT_DEFAULT]
 
     if {$fifo_depth < 16 || $fifo_depth > 256} {
         send_message error "FIFO_DEPTH must be in the range 16..256."
@@ -191,6 +208,18 @@ proc validate {} {
     }
     if {$debug_level < 0 || $debug_level > 2} {
         send_message error "DEBUG must stay in the range 0..2."
+    }
+    if {$cluster_cross < 0 || $cluster_cross > 1} {
+        send_message error "CLUSTER_CROSS_ASIC_DEFAULT must stay in the range 0..1."
+    }
+    if {$cluster_center < 0 || $cluster_center > 255} {
+        send_message error "CLUSTER_CENTER_GLOBAL_DEFAULT must stay in the range 0..255."
+    }
+    if {$cluster_lane_index < 0 || $cluster_lane_index > 7} {
+        send_message error "CLUSTER_LANE_INDEX_DEFAULT must stay in the range 0..7."
+    }
+    if {$cluster_lane_count < 1 || $cluster_lane_count > 8} {
+        send_message error "CLUSTER_LANE_COUNT_DEFAULT must stay in the range 1..8."
     }
 }
 
@@ -234,16 +263,51 @@ add_fileset_file emulator_mutrig.sv     SYSTEM_VERILOG PATH rtl/emulator_mutrig.
 # ========================================================================
 # Parameters — HDL
 # ========================================================================
-add_parameter FIFO_DEPTH INTEGER 64
+add_parameter FIFO_DEPTH INTEGER 256
 set_parameter_property FIFO_DEPTH DISPLAY_NAME "Hit FIFO Depth"
 set_parameter_property FIFO_DEPTH ALLOWED_RANGES {16 32 64 128 256}
 set_parameter_property FIFO_DEPTH HDL_PARAMETER true
-set_parameter_property FIFO_DEPTH DESCRIPTION "Depth of the internal hit FIFO between the hit generator and frame assembler."
+set_parameter_property FIFO_DEPTH DESCRIPTION "Depth of each raw-style queue stage (4x L1 FIFOs plus the shared L2 FIFO)."
 
 add_parameter CSR_ADDR_WIDTH INTEGER $CSR_ADDR_W_CONST
 set_parameter_property CSR_ADDR_WIDTH DISPLAY_NAME "CSR Address Width"
 set_parameter_property CSR_ADDR_WIDTH HDL_PARAMETER true
 set_parameter_property CSR_ADDR_WIDTH VISIBLE false
+
+add_parameter ASIC_ID_DEFAULT NATURAL 0
+set_parameter_property ASIC_ID_DEFAULT DISPLAY_NAME "Default ASIC ID"
+set_parameter_property ASIC_ID_DEFAULT UNITS None
+set_parameter_property ASIC_ID_DEFAULT ALLOWED_RANGES 0:15
+set_parameter_property ASIC_ID_DEFAULT HDL_PARAMETER true
+set_parameter_property ASIC_ID_DEFAULT DESCRIPTION "Reset value of CSR TX_MODE[7:4]. Use this to stamp a per-lane default ID before software configuration."
+
+add_parameter CLUSTER_CROSS_ASIC_DEFAULT NATURAL 0
+set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT DISPLAY_NAME "Default Cross-ASIC Cluster"
+set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT UNITS None
+set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT ALLOWED_RANGES 0:1
+set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT HDL_PARAMETER true
+set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT DESCRIPTION "Reset value of BURST_CFG[13]. When 1, this instance emits only its local slice of a shared multi-lane cluster domain."
+
+add_parameter CLUSTER_CENTER_GLOBAL_DEFAULT NATURAL 16
+set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT DISPLAY_NAME "Default Global Cluster Center"
+set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT UNITS None
+set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT ALLOWED_RANGES 0:255
+set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT HDL_PARAMETER true
+set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT DESCRIPTION "Reset value of BURST_CFG[21:14]. Used when cross-ASIC cluster replay is enabled."
+
+add_parameter CLUSTER_LANE_INDEX_DEFAULT NATURAL 0
+set_parameter_property CLUSTER_LANE_INDEX_DEFAULT DISPLAY_NAME "Default Cluster Lane Index"
+set_parameter_property CLUSTER_LANE_INDEX_DEFAULT UNITS None
+set_parameter_property CLUSTER_LANE_INDEX_DEFAULT ALLOWED_RANGES 0:7
+set_parameter_property CLUSTER_LANE_INDEX_DEFAULT HDL_PARAMETER true
+set_parameter_property CLUSTER_LANE_INDEX_DEFAULT DESCRIPTION "Reset value of BURST_CFG[25:22]. Selects which 32-channel slice of the shared cluster domain this emulator owns."
+
+add_parameter CLUSTER_LANE_COUNT_DEFAULT NATURAL 1
+set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DISPLAY_NAME "Default Cluster Lane Count"
+set_parameter_property CLUSTER_LANE_COUNT_DEFAULT UNITS None
+set_parameter_property CLUSTER_LANE_COUNT_DEFAULT ALLOWED_RANGES 1:8
+set_parameter_property CLUSTER_LANE_COUNT_DEFAULT HDL_PARAMETER true
+set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DESCRIPTION "Reset value of BURST_CFG[29:26]. Number of emulated MuTRiG lanes participating in the shared cluster domain."
 
 add_parameter DEBUG NATURAL 0
 set_parameter_property DEBUG DISPLAY_NAME "Debug Level"
@@ -340,11 +404,16 @@ add_display_item $TAB_CONFIGURATION "Debug" GROUP
 add_html_text "Overview" overview_html {<html><i>Overview text will appear after elaboration.</i></html>}
 
 add_display_item "Hit Generation" FIFO_DEPTH parameter
+add_display_item "Hit Generation" ASIC_ID_DEFAULT parameter
+add_display_item "Hit Generation" CLUSTER_CROSS_ASIC_DEFAULT parameter
+add_display_item "Hit Generation" CLUSTER_CENTER_GLOBAL_DEFAULT parameter
+add_display_item "Hit Generation" CLUSTER_LANE_INDEX_DEFAULT parameter
+add_display_item "Hit Generation" CLUSTER_LANE_COUNT_DEFAULT parameter
 add_html_text "Hit Generation" hitgen_html "<html><b>Hit FIFO</b><br/>Updated by the validation callback.</html>"
 
 add_html_text "Frame Assembly" frame_html "<html><b>Frame format</b><br/>Updated by the validation callback.</html>"
 add_display_item "Debug" DEBUG parameter
-add_html_text "Debug" debug_html {<html><b>Debug control</b><br/>This packaged revision does not expose optional debug RTL knobs. The fixed <b>DEBUG=0</b> entry is kept so the GUI layout matches the standard Mu3e IP packaging contract used by the upgraded wrappers.</html>}
+add_html_text "Debug" debug_html {<html><b>Debug control</b><br/>This packaged revision does not expose optional debug RTL knobs. The fixed <b>DEBUG=0</b> entry is kept so the GUI layout matches the standard Mu3e IP packaging contract used by the upgraded wrappers while the standalone sign-off build remains comparable across releases.</html>}
 
 # ========================================================================
 # GUI — Tab 2: Identity
@@ -406,7 +475,11 @@ add_html_text "Control Path" control_html {<html>
 <tr><td>7</td><td>RESET</td></tr>
 <tr><td>8</td><td>OUT_OF_DAQ</td></tr>
 </table><br/>
-The emulator only responds to bit&nbsp;3 (<b>RUNNING</b>); ready is always asserted.<br/><br/>
+<b>RUNNING</b> enables new hit commits and fresh frame starts.<br/>
+<b>TERMINATING</b> keeps an already-open frame draining but blocks a fresh header
+from opening once the assembler is idle.<br/>
+<b>asi_ctrl_ready</b> remains constantly asserted in this delivered standalone
+revision.<br/><br/>
 <b>csr</b> &mdash; Avalon-MM slave<br/>
 Word-addressed, 4-bit address, 32-bit data.  Read wait = 1 cycle, write wait = 0 cycles.
 </html>}
@@ -414,7 +487,8 @@ Word-addressed, 4-bit address, 32-bit data.  Read wait = 1 cycle, write wait = 0
 add_html_text "Injection" inject_html {<html>
 <b>inject</b> &mdash; 1-bit conduit sink<br/>
 External pulse input used to trigger an immediate burst around the configured
-<b>burst_center</b> channel. The pulse is sampled in the <b>data_clock</b>
+local <b>burst_center</b> channel, or around <b>cluster_center_global</b> when
+cross-ASIC cluster replay is enabled. The pulse is sampled in the <b>data_clock</b>
 domain and feeds the same burst path used by the normal hit modes.
 </html>}
 
@@ -449,8 +523,12 @@ add_html_text "BURST_CFG Fields (0x02)" burst_fields_html {<html>
 <tr><th>Bit</th><th>Name</th><th>Access</th><th>Reset</th><th>Description</th></tr>
 <tr><td>4:0</td><td>burst_size</td><td>RW</td><td>4</td><td>Number of hits per burst cluster</td></tr>
 <tr><td>7:5</td><td>reserved</td><td>RO</td><td>0</td><td>Reserved</td></tr>
-<tr><td>12:8</td><td>burst_center</td><td>RW</td><td>16</td><td>Center channel for burst cluster</td></tr>
-<tr><td>31:13</td><td>reserved</td><td>RO</td><td>0</td><td>Reserved</td></tr>
+<tr><td>12:8</td><td>burst_center_local</td><td>RW</td><td>16</td><td>Center channel for the legacy single-ASIC burst path</td></tr>
+<tr><td>13</td><td>cluster_cross_asic</td><td>RW</td><td>0</td><td>When 1, interpret burst generation in the shared multi-lane cluster domain</td></tr>
+<tr><td>21:14</td><td>cluster_center_global</td><td>RW</td><td>16</td><td>Global center channel used for injected and periodic shared clusters</td></tr>
+<tr><td>25:22</td><td>cluster_lane_index</td><td>RW</td><td>0</td><td>Which 32-channel slice of the shared cluster domain this emulator emits</td></tr>
+<tr><td>29:26</td><td>cluster_lane_count</td><td>RW</td><td>1</td><td>Number of neighbouring emulator lanes participating in the shared cluster domain</td></tr>
+<tr><td>31:30</td><td>reserved</td><td>RO</td><td>0</td><td>Reserved</td></tr>
 </table></html>}
 
 add_display_item $TAB_REGMAP "TX_MODE Fields (0x04)" GROUP

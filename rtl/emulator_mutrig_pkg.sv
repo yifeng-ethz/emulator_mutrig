@@ -1,9 +1,9 @@
 // emulator_mutrig_pkg.sv
 // MuTRiG 3 emulator constants and types
-// Author: Claude / Yifeng Wang
-// Version : 26.0.1
-// Date    : 20260412
-// Change  : Align frame timing to 125 MHz datapath targets and correct short-hit time-field semantics.
+// Author: Yifeng Wang
+// Version : 26.0.3
+// Date    : 20260416
+// Change  : Add shared cluster-domain constants so neighbouring emulator instances can replay one global hit cluster deterministically.
 //
 // Based on the MuTRiG 3 ASIC digital readout (Huangshan Chen, KIP Heidelberg)
 // Reference: kbriggl-mutrig3-c3cce8d41dcb RTL
@@ -13,8 +13,13 @@ package emulator_mutrig_pkg;
     // ========================================
     // MuTRiG physical parameters
     // ========================================
-    localparam int N_CHANNELS       = 32;       // 32 SiPM channels per ASIC
-    localparam int CHANNEL_WIDTH    = 5;        // ceil(log2(32))
+    localparam int N_CHANNELS         = 32;       // 32 SiPM channels per ASIC
+    localparam int CHANNEL_WIDTH      = 5;        // ceil(log2(32))
+    localparam int N_GROUPS           = 4;        // raw MuTRiG datapath fan-in groups
+    localparam int N_CHAN_PER_GROUP   = N_CHANNELS / N_GROUPS;
+    localparam int MAX_EMU_LANES      = 8;        // FEB-facing emulation domain
+    localparam int CLUSTER_LANE_WIDTH = 4;        // ceil(log2(8)) with margin
+    localparam int GLOBAL_CHANNEL_WIDTH = 8;      // 8 lanes * 32 channels = 256 channels
 
     // ========================================
     // Clock and timing
@@ -69,6 +74,7 @@ package emulator_mutrig_pkg;
     //   [4:0]   E_Fine   (5)
     localparam int HIT_LONG_WIDTH  = 48;
     localparam int HIT_SHORT_WIDTH = 28;
+    localparam int HIT_L1_WIDTH    = 78;
     // Short hit word (28 bits):
     //   Note: the original 2016 MuTRiG ASIC RTL named these short-mode payload
     //   fields ECC/E_Fine. The current Mu3e online datapath contract treats the
@@ -84,6 +90,13 @@ package emulator_mutrig_pkg;
     // N_BYTES_PER_WORD for frame packing
     localparam int N_BYTES_LONG  = 6;  // 48/8
     localparam int N_BYTES_SHORT = 3;  // ceil(28/8)=4, but packed 3.5 bytes → alternates 3/4
+
+    // ========================================
+    // Raw MuTRiG-style FIFO topology
+    // ========================================
+    localparam int RAW_FIFO_DEPTH            = 256;
+    localparam int FIFO_ALMOST_FULL_MARGIN   = 3;
+    localparam logic [4:0] MS_LIMITS_DEFAULT = 5'd16;
 
     // ========================================
     // Frame flags (6 bits in event count word)
@@ -132,6 +145,81 @@ package emulator_mutrig_pkg;
         input logic        e_flag
     );
         return {channel, e_badhit, tcc, t_fine, e_flag, 1'b0};
+    endfunction
+
+    function automatic logic [77:0] pack_hit_l1(
+        input logic [4:0]  channel,
+        input logic [14:0] tcc_master,
+        input logic [14:0] tcc_slave,
+        input logic [4:0]  t_fine,
+        input logic        t_badhit,
+        input logic [14:0] ecc_master,
+        input logic [14:0] ecc_slave,
+        input logic [4:0]  e_fine,
+        input logic        e_badhit,
+        input logic        e_flag
+    );
+        return {
+            channel,
+            tcc_master,
+            tcc_slave,
+            t_fine,
+            t_badhit,
+            ecc_master,
+            ecc_slave,
+            e_fine,
+            e_badhit,
+            e_flag
+        };
+    endfunction
+
+    function automatic logic prbs15_feedback(input logic [14:0] state);
+        return state[14] ^ state[0];
+    endfunction
+
+    function automatic logic [14:0] prbs15_step(input logic [14:0] state);
+        return {state[13:0], prbs15_feedback(state)};
+    endfunction
+
+    function automatic logic [1:0] group_from_channel(input logic [4:0] channel);
+        return channel[4:3];
+    endfunction
+
+    function automatic logic select_master_cc(
+        input logic [4:0] fine,
+        input logic [4:0] limits,
+        input logic       overwrite_sel
+    );
+        logic [4:0] fine_sub;
+        fine_sub = fine - limits;
+        return ~(fine_sub[4] ^ overwrite_sel);
+    endfunction
+
+    function automatic logic [47:0] l1_to_l2_word(
+        input logic [77:0] l1_word,
+        input logic [4:0]  limits,
+        input logic        overwrite_sel
+    );
+        logic        t_sel_master;
+        logic        e_sel_master;
+        logic [14:0] tcc_selected;
+        logic [14:0] ecc_selected;
+
+        t_sel_master = select_master_cc(l1_word[42:38], limits, overwrite_sel);
+        e_sel_master = select_master_cc(l1_word[6:2], limits, overwrite_sel);
+        tcc_selected = t_sel_master ? l1_word[72:58] : l1_word[57:43];
+        ecc_selected = e_sel_master ? l1_word[36:22] : l1_word[21:7];
+
+        return pack_hit_long(
+            .channel  (l1_word[77:73]),
+            .t_badhit (l1_word[37]),
+            .tcc      (tcc_selected),
+            .t_fine   (l1_word[42:38]),
+            .e_badhit (l1_word[1]),
+            .e_flag   (l1_word[0]),
+            .ecc      (ecc_selected),
+            .e_fine   (l1_word[6:2])
+        );
     endfunction
 
 endpackage

@@ -9,21 +9,22 @@
 The harness must make these properties observable:
 - CSR programming correctness
 - run-control window behavior
+- run-sequence termination alignment against the real `feb_system_v2` control cadence
 - `inject` pulse capture and edge-use correctness
 - exact `tx8b1k` frame structure
 - frame-to-frame status counter coherence
 - protocol correctness on Avalon-MM / Avalon-ST boundaries
 - realistic trigger-to-hit timing with tunable delay parameters
-- realistic trigger-to-merged-hit timing for the future shared 8-lane architecture
-- functional equivalence between the future shared datapath and 8 golden single-lane references
+- realistic trigger-to-merged-hit timing for the future shared 8-lane architecture, kept as follow-on work
+- functional equivalence between the future shared datapath and 8 golden single-lane references, also kept as follow-on work
 
-The harness should preserve the current directed smoke test while adding a future-proof UVM layer.
+The harness should preserve the current directed smoke test while adding a future-proof UVM layer that closes the single-lane emulator first.
 
 It is explicitly split across:
 - the current **single-lane baseline**
-- the future **8-lane merged/shared datapath**
+- the future **8-lane merged/shared datapath**, which is not part of the first closure pass
 
-Control SPI remains out of scope. The future 8-lane implementation must be observable enough that its functional regressions can be paired with a Quartus `<4000 ALM` signoff build.
+Control SPI remains out of scope. The future 8-lane implementation must be observable enough that its functional regressions can be paired with a Quartus `<4000 ALM` signoff build, but the current harness work is focused on the single-lane emulator and the termination contract first.
 
 ## 2. Planned Directory Layout
 
@@ -147,6 +148,14 @@ For the future resource-optimized implementation, a passive merge/output monitor
 
 This monitor allows the shared implementation to be compared against 8 parallel single-lane golden references instead of being checked only structurally.
 
+### 3.6 System-Level Stimulus Model
+
+The first UVM sequences must mirror the real system cadence seen in [feb_system_v2.qsys](/home/yifeng/packages/mu3e_ip_dev/mu3e-ip-cores/run-control_mgmt/reference/feb_system_v2_snapshot_20260415/feb_system_v2.qsys:1) and [RUN_SEQ_UPGRADE_PLAN.md](/home/yifeng/packages/mu3e_ip_dev/mu3e-ip-cores/RUN_SEQ_UPGRADE_PLAN.md:1):
+- use the `IDLE -> RUN_PREPARE -> SYNC -> RUNNING -> TERMINATING -> IDLE` sequence as the default run-control backbone
+- keep `TERMINATING` active until the terminal frame boundary has been observed and drained
+- drive `inject` pulses as system-level stimuli in the same clock/reset context as the `mutrig_injector_0` path, not as abstract unit-only toggles
+- verify output compatibility with the downstream `frame_rcv_ip` contract, especially the terminal boundary that the stop sequence must preserve
+
 ## 4. Scoreboard Model
 
 The scoreboard is split into four layers:
@@ -166,6 +175,7 @@ The scoreboard is split into four layers:
    - checks channel tag equals `asic_id`
    - checks idle-comma behavior outside active output windows
    - checks mode-dependent payload length rules
+   - checks terminate-to-drain behavior: no new frame starts after the `TERMINATING` edge and the final boundary is forwarded once
 
 4. **Shared-datapath equivalence layer**
    - instantiates 8 golden single-lane predictors in software
@@ -208,6 +218,7 @@ Checks:
 - `asi_ctrl_data` stable while `valid` is asserted
 - driver does not produce X/Z run-state words
 - legal one-hot expectation in positive tests
+- stop-sequence ordering remains `RUN_PREPARE -> SYNC -> RUNNING -> TERMINATING -> IDLE` in clean system-level stimulus bundles
 
 ### 5.3 `emut_tx8b1k_sva.sv`
 
@@ -224,17 +235,20 @@ Checks:
 - status event count updates only when a frame starts
 - output is comma-idle when not running or disabled
 - synchronizer output pulse is single-cycle wide in the destination clock
+- termination drain emits no second terminal frame after the `TERMINATING` edge
 
 ## 6. Coverage Plan
 
 Detailed crosses live in [DV_CROSS.md](/home/yifeng/packages/mu3e_ip_dev/mu3e-ip-cores/emulator_mutrig/tb/DV_CROSS.md:1). The harness must expose coverage on:
 - CSR programming categories
 - run-state transitions
+- termination-alignment bins
 - output mode families
 - long vs short payload packing
 - inject pulse phase categories
 - frame length / event count bins
 - frame counter and status coherence
+- current single-lane `feb_system_v2`-style stimulus and stop-sequence bins
 - active-lane-count bins
 - timestamp tie-degree bins
 - lane-tie-winner bins
@@ -243,7 +257,7 @@ Detailed crosses live in [DV_CROSS.md](/home/yifeng/packages/mu3e_ip_dev/mu3e-ip
 The planned [emut_coverage.sv](/home/yifeng/packages/mu3e_ip_dev/mu3e-ip-cores/emulator_mutrig/tb/uvm/emut_coverage.sv) file is the collector that will own:
 - the DV_CROSS coverpoints and crosses
 - latency histograms for trigger-to-hit and trigger-to-merged-hit timing
-- summary counters for tie winners, active-lane populations, and interval violations
+- summary counters for tie winners, active-lane populations, interval violations, and terminate-to-drain completeness
 
 ## 7. Directed-to-UVM Migration Strategy
 
@@ -257,9 +271,10 @@ After signoff, the UVM build should come in stages:
 2. CSR active agent
 3. run-control active agent
 4. inject active agent
-5. scoreboard and CRC reference model
-6. coverage and SVA binds
-7. randomized sequences mapped to `DV_BASIC`, `DV_EDGE`, `DV_PROF`, and `DV_ERROR`
+5. termination-alignment sequences
+6. scoreboard and CRC reference model
+7. coverage and SVA binds
+8. randomized sequences mapped to `DV_BASIC`, `DV_EDGE`, `DV_PROF`, and `DV_ERROR`
 
 ## 8. Risks To Watch
 

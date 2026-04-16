@@ -1,7 +1,7 @@
 # DV Edge Cases — emulator_mutrig
 
 **Purpose:** corner and boundary conditions for Phase 0 signoff  
-**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; cases include both single-lane baseline and future shared 8-lane merged datapath.
+**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; cases include the current single-lane baseline first, with future shared 8-lane merged-datapath references kept as follow-on only.
 
 | ID | Scenario | Checks | Why it exists |
 |---|---|---|---|
@@ -133,3 +133,4 @@
 | E126 | Standalone vs shared CRC equivalence | Packet integrity preserved by optimization | Equivalence edge |
 | E127 | Signoff seed set with all boundary knobs | All documented boundary knobs replay cleanly | Regression freeze case |
 | E128 | Boundary-case bundle on area-signoff top | Edge regressions exercised on exact synthesis target | Final pre-implementation gate |
+| E129 | `TERMINATING` edge at pending frame start | No fresh frame starts after the stop edge and the terminal boundary is handled once | Catches the exact post-stop parsing hole described in the run-sequence plan |

@@ -12,7 +12,7 @@ module tb_emulator_mutrig;
     // Parameters
     // ========================================
     localparam real CLK_PERIOD = 8.0;  // 125 MHz
-    localparam int  FIFO_DEPTH = 64;
+    localparam int  FIFO_DEPTH = RAW_FIFO_DEPTH;
 
     // ========================================
     // Test selection
@@ -237,6 +237,12 @@ module tb_emulator_mutrig;
         send_run_state(CTRL_IDLE);
     endtask
 
+    task automatic run_sequence_stop_with_hold(input int hold_cycles);
+        send_run_state(CTRL_TERMINATING);
+        repeat (hold_cycles) @(posedge clk);
+        send_run_state(CTRL_IDLE);
+    endtask
+
     task automatic parser_send_run_state(input logic [8:0] state);
         @(posedge clk);
         parser_ctrl_data  <= state;
@@ -438,7 +444,7 @@ module tb_emulator_mutrig;
         dut.u_hit_gen.hit_wr_en           = 1'b0;
         dut.u_hit_gen.hit_wr_data         = '0;
         dut.u_hit_gen.burst_remaining     = '0;
-        dut.u_hit_gen.burst_ch            = '0;
+        dut.u_hit_gen.burst_global_ch     = '0;
         dut.u_hit_gen.burst_cooldown      = '0;
         dut.u_hit_gen.inject_burst_pending = 1'b0;
 `else
@@ -698,10 +704,13 @@ module tb_emulator_mutrig;
         csr_read(4'd1, rdata);
         check("CSR[1] readback", rdata == 32'hABCD_1234);
 
-        csr_write(4'd2, 32'h0000_0A05);  // burst: center=10, size=5
+        csr_write(4'd2, 32'h2100_0A05);  // burst: lane_count=8, lane_index=4, global_center=0, cross=0, center=10, size=5
         csr_read(4'd2, rdata);
         check("CSR[2] readback burst_size", rdata[4:0] == 5'd5);
         check("CSR[2] readback burst_center", rdata[12:8] == 5'd10);
+        check("CSR[2] readback cluster_cross_asic", rdata[13] == 1'b0);
+        check("CSR[2] readback cluster_lane_index", rdata[25:22] == 4'd4);
+        check("CSR[2] readback cluster_lane_count", rdata[29:26] == 4'd8);
 
         csr_write(4'd3, 32'hDEAD_BEEF);  // PRNG seed
         csr_read(4'd3, rdata);
@@ -919,6 +928,83 @@ module tb_emulator_mutrig;
     endtask
 
     // ========================================
+    // Test T09: TERMINATING must not start a fresh frame
+    // ========================================
+    task automatic test_T09_terminate_no_new_frame();
+        int frame_len;
+        logic [15:0] frames_before_stop;
+
+        $display("\n=== Test T09: No fresh frame start during TERMINATING ===");
+
+        csr_write(4'd0, 32'h0000_0001); // enable + poisson + long
+        csr_write(4'd1, 32'h0000_0000);
+        csr_write(4'd2, {19'b0, 5'd16, 3'b0, 5'd31});
+        csr_write(4'd3, 32'hC001_D00D);
+        csr_write(4'd4, 32'h0000_00A8);
+
+        run_sequence_start();
+        capture_frame(frame_len);
+        frames_before_stop = dut.status_frame_count;
+        pulse_inject_once();
+        repeat (8) @(posedge clk);
+        run_sequence_stop_with_hold(FRAME_INTERVAL_LONG + 32);
+
+        check("TERMINATING hold does not start a new frame",
+              dut.status_frame_count == frames_before_stop);
+    endtask
+
+    // ========================================
+    // Test T10: Cross-ASIC cluster slice on one lane
+    // ========================================
+    task automatic test_T10_cross_asic_cluster_slice();
+        int frame_len;
+        int evt_count;
+        int hit_idx;
+        logic [4:0] expected_ch [0:4];
+        logic [4:0] seen_ch [0:4];
+
+        $display("\n=== Test T10: Cross-ASIC cluster slice ===");
+
+        expected_ch[0] = 5'd27;
+        expected_ch[1] = 5'd28;
+        expected_ch[2] = 5'd29;
+        expected_ch[3] = 5'd30;
+        expected_ch[4] = 5'd31;
+
+        csr_write(4'd0, 32'h0000_0001);
+        csr_write(4'd1, 32'h0000_0000);
+        csr_write(4'd2, {2'b00, 4'd8, 4'd3, 8'd127, 1'b1, 5'd0, 3'b0, 5'd8});
+        csr_write(4'd3, 32'h0BAD_CAFE);
+        csr_write(4'd4, 32'h0000_0038);
+        clear_hit_generator_state();
+
+        run_sequence_start();
+        repeat (20) @(posedge clk);
+        pulse_inject_once();
+
+`ifndef EMUT_GATE_SIM
+        hit_idx = 0;
+        while (hit_idx < 5) begin
+            @(negedge clk);
+            if (dut.u_hit_gen.hit_wr_en && !dut.u_hit_gen.fifo_full) begin
+                seen_ch[hit_idx] = dut.u_hit_gen.hit_wr_data[47:43];
+                hit_idx++;
+            end
+        end
+
+        for (int i = 0; i < 5; i++) begin
+            check($sformatf("Cross-ASIC sliced hit %0d local channel", i), seen_ch[i] == expected_ch[i]);
+        end
+`else
+        repeat (64) @(posedge clk);
+`endif
+
+        capture_next_nonempty_frame(frame_len, evt_count);
+        check("Cross-ASIC sliced frame carries local hit count only", evt_count == 5);
+        run_sequence_stop();
+    endtask
+
+    // ========================================
     // Test E03: Back-to-back frames
     // ========================================
     task automatic test_E03_back2back();
@@ -1014,6 +1100,12 @@ module tb_emulator_mutrig;
 
         if (test_name == "ALL" || test_name == "T08_asic_id")
             test_T08_asic_id();
+
+        if (test_name == "ALL" || test_name == "T09_terminate_no_new_frame")
+            test_T09_terminate_no_new_frame();
+
+        if (test_name == "ALL" || test_name == "T10_cross_asic_cluster_slice")
+            test_T10_cross_asic_cluster_slice();
 
         if (test_name == "ALL" || test_name == "E03_back2back")
             test_E03_back2back();

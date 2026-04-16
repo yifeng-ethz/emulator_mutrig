@@ -1,7 +1,7 @@
 # DV Error / Fault Cases — emulator_mutrig
 
 **Purpose:** reset, protocol-negative, fault-containment, and checker-negative cases for Phase 0 signoff  
-**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; these cases intentionally include illegal source behavior and fault injection in the testbench to prove the DUT, checker set, and future shared datapath fail loudly and deterministically.
+**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; these cases intentionally include illegal source behavior and fault injection in the testbench to prove the DUT, checker set, and future shared datapath fail loudly and deterministically. The current single-lane emulator closes first; the 8-lane references are follow-on only.
 
 | ID | Scenario | Checks | Why it exists |
 |---|---|---|---|
@@ -133,3 +133,4 @@
 | X126 | Area-signoff top with injected timing fault | Exact top fails clearly | Final-top fault sensitivity |
 | X127 | Area-signoff top with injected packet fault | Exact top fails clearly | Final-top fault sensitivity |
 | X128 | Final negative regression bundle | Every intentional fault is detected by at least one checker | Final confidence in the DV harness |
+| X129 | Faulted stop sequence omits terminal boundary | Checker flags the missing terminal drain or the illegal post-stop frame start | Proves the run-sequence termination checker sees the exact failure mode |

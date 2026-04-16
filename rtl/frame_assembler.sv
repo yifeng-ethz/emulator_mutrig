@@ -1,8 +1,8 @@
 // frame_assembler.sv
 // MuTRiG frame assembler — produces 8b/1k parallel output
-// Version : 26.0.1
-// Date    : 20260412
-// Change  : Document architect-correct short-hit semantics for downstream frame_rcv_ip compatibility.
+// Version : 26.0.3
+// Date    : 20260416
+// Change  : Align FIFO prefetch and header-flag timing with the raw MuTRiG frame generator contract.
 //
 // Generates frames matching the MuTRiG 3 ASIC serial output format:
 //   IDLE(K28.5) | K28.0(header) | frame_count[15:8] | frame_count[7:0] |
@@ -18,6 +18,7 @@ module frame_assembler
 )(
     input  logic        clk,           // byte clock (architect target: 125 MHz)
     input  logic        rst,
+    input  logic        allow_frame_start,
 
     // Configuration
     input  logic        cfg_short_mode,    // 1=short, 0=long
@@ -29,6 +30,7 @@ module frame_assembler
     input  logic [47:0] fifo_data,
     input  logic [9:0]  event_count,
     input  logic        fifo_empty,
+    input  logic        fifo_almost_full,
 
     // Frame timing
     output logic        frame_start,       // pulse at start of each frame
@@ -81,7 +83,7 @@ module frame_assembler
 
     logic [15:0] frame_count;
     logic [9:0]  evt_cnt_latch;
-    logic [9:0]  evt_remaining;
+    logic [9:0]  evt_remaining;  // unread hits that are not yet prefetched
     logic [9:0]  pack_evt_cnt;
     logic        last_event;
     logic [2:0]  byte_count;     // bytes remaining in current word/state
@@ -171,13 +173,13 @@ module frame_assembler
                     crc_rst  <= 1'b1;
                     crc_valid <= 1'b0;
 
-                    if (interval_tick) begin
+                    if (allow_frame_start && interval_tick) begin
                         frame_start     <= 1'b1;
                         evt_cnt_latch   <= event_count;
                         evt_remaining   <= event_count;
                         pack_evt_cnt    <= '0;
                         last_event      <= 1'b0;
-                        fifo_full_latch <= 1'b0;
+                        fifo_full_latch <= fifo_almost_full;
                         state           <= FS_HEADER;
                     end
                 end
@@ -201,6 +203,10 @@ module frame_assembler
                         3'd2: begin
                             out_byte   <= frame_count[15:8];
                             byte_count <= 3'd1;
+                            if (evt_cnt_latch != 10'd0) begin
+                                fifo_rd_en    <= 1'b1;
+                                evt_remaining <= evt_cnt_latch - 10'd1;
+                            end
                         end
                         3'd1: begin
                             out_byte   <= frame_count[7:0];
@@ -224,30 +230,23 @@ module frame_assembler
                             out_byte   <= evt_count_ext[7:0];
                             if (evt_cnt_latch != 10'd0) begin
                                 state <= FS_PACK;
-                                // Consume the current FIFO word first, then advance the
-                                // read pointer so fifo_data points at the following word.
                                 if (cfg_short_mode) begin
-                                    shift_reg <= {short_hit, 20'b0};
-                                    byte_count <= 3'd3;  // 3.5 bytes per short hit
-                                    if (evt_cnt_latch > 10'd1 && !fifo_empty) begin
+                                    shift_reg  <= {short_hit, 20'b0};
+                                    byte_count <= 3'd3;
+                                    if (evt_remaining != 10'd0 && !fifo_empty) begin
                                         fifo_rd_en    <= 1'b1;
-                                        evt_remaining <= evt_cnt_latch - 10'd1;
+                                        evt_remaining <= evt_remaining - 10'd1;
                                         last_event    <= 1'b0;
                                     end else begin
-                                        evt_remaining <= '0;
                                         last_event <= 1'b1;
                                     end
                                 end else begin
                                     shift_reg  <= fifo_data;
                                     byte_count <= 3'd6;
-                                    if (evt_cnt_latch > 10'd1 && !fifo_empty) begin
-                                        fifo_rd_en    <= 1'b1;
-                                        evt_remaining <= evt_cnt_latch - 10'd1;
-                                        last_event    <= 1'b0;
-                                    end else begin
-                                        evt_remaining <= '0;
+                                    if (evt_remaining == 10'd0)
                                         last_event <= 1'b1;
-                                    end
+                                    else
+                                        last_event <= 1'b0;
                                 end
                             end else begin
                                 state <= FS_DELAY;
@@ -266,49 +265,44 @@ module frame_assembler
                     byte_count <= byte_count - 3'd1;
 
                     if (!cfg_short_mode) begin
-                        // Long mode: 6 bytes per event
                         if (last_event) begin
                             if (byte_count == 3'd1)
                                 state <= FS_DELAY;
                         end else begin
+                            if (byte_count == 3'd4 && evt_remaining != 10'd0 && !fifo_empty) begin
+                                fifo_rd_en    <= 1'b1;
+                                evt_remaining <= evt_remaining - 10'd1;
+                            end
                             if (byte_count == 3'd1) begin
                                 shift_reg  <= fifo_data;
                                 byte_count <= 3'd6;
-                                if (evt_remaining > 10'd1 && !fifo_empty) begin
-                                    fifo_rd_en    <= 1'b1;
-                                    evt_remaining <= evt_remaining - 10'd1;
-                                    last_event    <= 1'b0;
-                                end else begin
-                                    evt_remaining <= '0;
+                                if (evt_remaining == 10'd0)
                                     last_event    <= 1'b1;
-                                end
+                                else
+                                    last_event    <= 1'b0;
                             end
                         end
                     end else begin
-                        // Short mode: 28 bits = 3.5 bytes, packed alternately
                         if (last_event) begin
-                            if (byte_count == 3'd1) begin
+                            if (byte_count == 3'd1)
                                 state <= FS_PACK_EXTRA;
-                            end
                         end else begin
                             if (byte_count == 3'd1) begin
                                 if (pack_evt_cnt[0] == 1'b0) begin
-                                    // Even event: 4-bit leftover + 28-bit new = 32 bits = 4 bytes
                                     shift_reg[47:44] <= shift_reg[39:36];  // leftover 4 bits
                                     shift_reg[43:16] <= short_hit;
                                     shift_reg[15:0]  <= 16'b0;
                                     byte_count       <= 3'd3;
                                     pack_evt_cnt     <= pack_evt_cnt + 10'd1;
-                                    if (evt_remaining > 10'd1 && !fifo_empty) begin
+                                    if (evt_remaining != 10'd0 && !fifo_empty) begin
                                         fifo_rd_en    <= 1'b1;
                                         evt_remaining <= evt_remaining - 10'd1;
-                                        last_event    <= 1'b0;
-                                    end else begin
-                                        evt_remaining <= '0;
-                                        last_event <= 1'b1;
                                     end
+                                    if (evt_remaining == 10'd0)
+                                        last_event <= 1'b1;
+                                    else
+                                        last_event <= 1'b0;
                                 end else begin
-                                    // Odd event: extra byte from leftover
                                     state <= FS_PACK_EXTRA;
                                 end
                             end
@@ -330,14 +324,14 @@ module frame_assembler
                         byte_count       <= 3'd3;
                         pack_evt_cnt     <= pack_evt_cnt + 10'd1;
                         state            <= FS_PACK;
-                        if (evt_remaining > 10'd1 && !fifo_empty) begin
+                        if (evt_remaining != 10'd0 && !fifo_empty) begin
                             fifo_rd_en    <= 1'b1;
                             evt_remaining <= evt_remaining - 10'd1;
-                            last_event    <= 1'b0;
-                        end else begin
-                            evt_remaining <= '0;
-                            last_event <= 1'b1;
                         end
+                        if (evt_remaining == 10'd0)
+                            last_event <= 1'b1;
+                        else
+                            last_event <= 1'b0;
                     end
                 end
 

@@ -68,12 +68,13 @@ DIRECTED_TESTS = \
 	emut_test_mode_payload_sweep \
 	emut_test_inject_matrix \
 	emut_test_short_pack_extra_tail \
-	emut_test_auto_low_center
+	emut_test_auto_low_center \
+	emut_test_terminate_no_new_frame
 
 RANDOM_TESTS = \
 	emut_test_mixed_random
 
-.PHONY: license_check compile run regress merge_cov report closure clean
+.PHONY: license_check compile run run_isolated run_bucket_frame_basic run_all_buckets_frame regress merge_cov report closure clean
 
 license_check:
 	@echo "═══ Checking Mentor floating license at $(ETH_LIC_SERVER) ═══"
@@ -119,6 +120,8 @@ $(WORK_DIR)/.compiled: $(RTL_DIR)/emulator_mutrig_pkg.sv \
 
 run: compile
 	@echo "=== Running $(TEST) seed=$(SEED) ==="
+	@mkdir -p $(COV_DIR)
+	@rm -f $(COV_DIR)/$(TEST)_s$(SEED).ucdb
 	@cd $(WORK_DIR) && $(VSIM) -modelsimini modelsim.ini -c -coverage \
 	  -dpicpppath $(DPI_CPP) -sv_lib $(UVM_DPI_LIB) \
 	  -sv_seed $(SEED) \
@@ -134,6 +137,15 @@ run: compile
 	else \
 	  echo "PASS: $(TEST) seed=$(SEED)"; \
 	fi
+
+run_isolated:
+	@$(MAKE) -s run TEST=$(TEST) SEED=$(SEED)
+
+run_bucket_frame_basic:
+	@$(MAKE) -s run TEST=emut_test_bucket_frame_basic SEED=$(SEED)
+
+run_all_buckets_frame:
+	@$(MAKE) -s run TEST=emut_test_all_buckets_frame SEED=$(SEED)
 
 regress: compile
 	@echo "=== emulator_mutrig UVM regression ==="
