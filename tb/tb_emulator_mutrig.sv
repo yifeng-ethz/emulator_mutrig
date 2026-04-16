@@ -137,6 +137,7 @@ module tb_emulator_mutrig;
         .aso_hit_type0_channel       (parser_hit_channel),
         .aso_hit_type0_startofpacket (parser_hit_sop),
         .aso_hit_type0_endofpacket   (parser_hit_eop),
+        .aso_hit_type0_endofrun      (/*unused*/),
         .aso_hit_type0_error         (parser_hit_error),
         .aso_hit_type0_data          (parser_hit_data),
         .aso_hit_type0_valid         (parser_hit_valid),
