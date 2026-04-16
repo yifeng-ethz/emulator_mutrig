@@ -279,35 +279,35 @@ set_parameter_property ASIC_ID_DEFAULT DISPLAY_NAME "Default ASIC ID"
 set_parameter_property ASIC_ID_DEFAULT UNITS None
 set_parameter_property ASIC_ID_DEFAULT ALLOWED_RANGES 0:15
 set_parameter_property ASIC_ID_DEFAULT HDL_PARAMETER true
-set_parameter_property ASIC_ID_DEFAULT DESCRIPTION "Reset value of CSR TX_MODE[7:4]. Use this to stamp a per-lane default ID before software configuration."
+set_parameter_property ASIC_ID_DEFAULT DESCRIPTION {Reset value of CSR TX_MODE[7:4]. Use this to stamp a per-lane default ID before software configuration.}
 
 add_parameter CLUSTER_CROSS_ASIC_DEFAULT NATURAL 0
 set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT DISPLAY_NAME "Default Cross-ASIC Cluster"
 set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT UNITS None
 set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT ALLOWED_RANGES 0:1
 set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT HDL_PARAMETER true
-set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT DESCRIPTION "Reset value of BURST_CFG[13]. When 1, this instance emits only its local slice of a shared multi-lane cluster domain."
+set_parameter_property CLUSTER_CROSS_ASIC_DEFAULT DESCRIPTION {Reset value of BURST_CFG[13]. When 1, this instance emits only its local slice of a shared multi-lane cluster domain.}
 
 add_parameter CLUSTER_CENTER_GLOBAL_DEFAULT NATURAL 16
 set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT DISPLAY_NAME "Default Global Cluster Center"
 set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT UNITS None
 set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT ALLOWED_RANGES 0:255
 set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT HDL_PARAMETER true
-set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT DESCRIPTION "Reset value of BURST_CFG[21:14]. Used when cross-ASIC cluster replay is enabled."
+set_parameter_property CLUSTER_CENTER_GLOBAL_DEFAULT DESCRIPTION {Reset value of BURST_CFG[21:14]. Used when cross-ASIC cluster replay is enabled.}
 
 add_parameter CLUSTER_LANE_INDEX_DEFAULT NATURAL 0
 set_parameter_property CLUSTER_LANE_INDEX_DEFAULT DISPLAY_NAME "Default Cluster Lane Index"
 set_parameter_property CLUSTER_LANE_INDEX_DEFAULT UNITS None
 set_parameter_property CLUSTER_LANE_INDEX_DEFAULT ALLOWED_RANGES 0:7
 set_parameter_property CLUSTER_LANE_INDEX_DEFAULT HDL_PARAMETER true
-set_parameter_property CLUSTER_LANE_INDEX_DEFAULT DESCRIPTION "Reset value of BURST_CFG[25:22]. Selects which 32-channel slice of the shared cluster domain this emulator owns."
+set_parameter_property CLUSTER_LANE_INDEX_DEFAULT DESCRIPTION {Reset value of BURST_CFG[25:22]. Selects which 32-channel slice of the shared cluster domain this emulator owns.}
 
 add_parameter CLUSTER_LANE_COUNT_DEFAULT NATURAL 1
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DISPLAY_NAME "Default Cluster Lane Count"
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT UNITS None
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT ALLOWED_RANGES 1:8
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT HDL_PARAMETER true
-set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DESCRIPTION "Reset value of BURST_CFG[29:26]. Number of emulated MuTRiG lanes participating in the shared cluster domain."
+set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DESCRIPTION {Reset value of BURST_CFG[29:26]. Number of emulated MuTRiG lanes participating in the shared cluster domain.}
 
 add_parameter DEBUG NATURAL 0
 set_parameter_property DEBUG DISPLAY_NAME "Debug Level"

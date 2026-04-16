@@ -17,7 +17,7 @@
 // Author: Yifeng Wang
 // Version : 26.0.3
 // Date    : 20260416
-// Change  : Add lane-domain cluster controls so one emulated hit cluster can span neighbouring MuTRiG instances while keeping the old single-ASIC default unchanged.
+// Change  : Keep frame generation draining through TERMINATING so buffered hits are framed before reset.
 
 module emulator_mutrig
     import emulator_mutrig_pkg::*;
@@ -91,10 +91,11 @@ module emulator_mutrig
     end
     assign asi_ctrl_ready = 1'b1;
 
-    // RUNNING allows new hit commits and new frame starts. TERMINATING keeps
-    // buffered hits visible to the frame assembler. The datapath state itself
-    // is only reset on cold reset or on an explicit run-preparation/reset
-    // command so queued hits are not wiped at RUN_END.
+    // RUNNING allows new hit commits. TERMINATING keeps buffered hits visible
+    // and still allows the frame assembler to start new drain frames until the
+    // FIFO empties. The datapath state itself is only reset on cold reset or
+    // on an explicit run-preparation/reset command so queued hits are not
+    // wiped at RUN_END.
     assign run_generating = ctrl_state_q[3];
     assign run_draining   = ctrl_state_q[3] | ctrl_state_q[4];
     assign emu_rst        = i_rst | (asi_ctrl_valid && (asi_ctrl_data[1] | asi_ctrl_data[7]));
@@ -298,7 +299,7 @@ module emulator_mutrig
     frame_assembler u_frame_asm (
         .clk            (i_clk),
         .rst            (frame_rst),
-        .allow_frame_start(run_generating),
+        .allow_frame_start(run_draining),
         .cfg_short_mode (csr_short_mode),
         .cfg_gen_idle   (csr_gen_idle),
         .cfg_tx_mode    (csr_tx_mode),

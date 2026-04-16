@@ -11,3 +11,6 @@ tb/work_*/
 tb/transcript
 tb/vsim.wlf
 tb/*.wlf
+
+# Quartus build outputs
+syn/quartus/output_files/
