@@ -1,32 +1,40 @@
 # RTL Note — emulator_mutrig
 
-Date: `2026-04-17`
-Release: `26.1.1.0417`
+Date: `2026-04-18`
+Release: `26.1.5.0418`
 
 ## Summary
 
 This refresh moves the emulator family to a compact per-lane architecture and
-adds a standalone shared bank for the `8 lane / <4000 ALM` study.
+adds a standalone shared bank for the `8 lane / <4000 ALM` study while closing
+the tightened `137.5 MHz` standalone timing target.
 
 ## Main RTL Changes
 
 1. `hit_generator.sv`
    - removed the live `4 x L1 + shared L2` staging fabric
    - kept one `256 x 48` L2 FIFO per lane in M10Ks
+   - changed Poisson fine timing to lightweight LFSR-driven random samples
+   - kept cluster fine timing on an about `1 ns` spread around the anchor
+   - default long-hit timing now commits on `E` with `T <= E`
 2. `emulator_mutrig_bank8.sv`
    - added a standalone merged bank with shared run-control, inject sync, and
      shared PRBS-15 coarse counters
-3. `frame_assembler.sv`
+3. `emulator_mutrig.sv`
+   - public `asic_id` is clamped to `0..7` to match the banked MuTRiG lane map
+4. `frame_assembler.sv`
    - run start now waits a full frame interval before opening the first frame
-4. `emulator_mutrig.sv` and `emulator_mutrig_lane_shared.sv`
+5. `emulator_mutrig_lane_shared.sv`
    - fresh frame starts are now gated by enable, while drain behavior remains
      valid for an already-open frame
 
 ## Result
 
 - functional reruns are green for the compact lane
-- standalone bank8 area target passes at `3398 ALMs`
-- tightened `137.5 MHz` timing remains open by `0.544 ns`
+- standalone bank8 area target passes at `3958 ALMs`
+- tightened `137.5 MHz` timing now passes with slow `85C` setup slack `+0.139 ns`
+- the final bank8 compile uses `16` RAM blocks and `0` DSP blocks
+- the Poisson timestamp study now reports true `E-ts -> pop` latency directly
 
 ## Active Review Pages
 

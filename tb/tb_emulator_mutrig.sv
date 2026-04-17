@@ -357,6 +357,33 @@ module tb_emulator_mutrig;
         };
     endfunction
 
+    function automatic logic [47:0] decode_long_hit_from_capture();
+        return {
+            captured_bytes[5],
+            captured_bytes[6],
+            captured_bytes[7],
+            captured_bytes[8],
+            captured_bytes[9],
+            captured_bytes[10]
+        };
+    endfunction
+
+    function automatic logic long_hit_t_not_later_than_e(input logic [47:0] hit_word);
+        logic [14:0] tcc_v;
+        logic [14:0] ecc_v;
+        logic [4:0]  t_fine_v;
+        logic [4:0]  e_fine_v;
+
+        tcc_v    = hit_word[41:27];
+        t_fine_v = hit_word[26:22];
+        ecc_v    = hit_word[19:5];
+        e_fine_v = hit_word[4:0];
+
+        if (tcc_v == ecc_v)
+            return (t_fine_v <= e_fine_v);
+        return (prbs15_step(tcc_v) == ecc_v) && (t_fine_v > e_fine_v);
+    endfunction
+
     task automatic replay_captured_frame(input int frame_len);
         parser_prepare_for_replay();
 
@@ -425,7 +452,7 @@ module tb_emulator_mutrig;
 `else
         while (timeout_cycles < 4096) begin
             @(negedge clk);
-            if (dut.u_hit_gen.hit_wr_en && !dut.u_hit_gen.fifo_full) begin
+            if (dut.u_hit_gen.hit_wr_en) begin
                 hit_word = dut.u_hit_gen.hit_wr_data;
                 return;
             end
@@ -442,6 +469,8 @@ module tb_emulator_mutrig;
         dut.u_hit_gen.fifo_wr_ptr         = '0;
         dut.u_hit_gen.fifo_rd_ptr         = '0;
         dut.u_hit_gen.fifo_count          = '0;
+        dut.u_hit_gen.pending_valid       = 1'b0;
+        dut.u_hit_gen.pending_word        = '0;
         dut.u_hit_gen.hit_wr_en           = 1'b0;
         dut.u_hit_gen.hit_wr_data         = '0;
         dut.u_hit_gen.burst_remaining     = '0;
@@ -803,6 +832,45 @@ module tb_emulator_mutrig;
     endtask
 
     // ========================================
+    // Test B08: Long-hit timing semantics
+    // ========================================
+    task automatic test_B08_long_hit_timing();
+        int flen;
+        int evt_count;
+        logic [47:0] expected_hit;
+        logic [47:0] captured_long_word;
+
+        $display("\n=== Test B08: Long-hit timing semantics ===");
+
+        csr_write(4'd0, 32'h0000_0001);  // enable, Poisson, long
+        csr_write(4'd1, 32'h0000_0000);  // disable Poisson/noise background
+        csr_write(4'd2, 32'h0000_0801);  // burst_center=8, burst_size=1
+        csr_write(4'd3, 32'h2468_1357);  // deterministic fine-time seeds
+        csr_write(4'd4, 32'h0000_0028);  // asic_id=2, gen_idle=1, tx_mode=long
+        clear_hit_generator_state();
+        run_sequence_start();
+        repeat (20) @(posedge clk);
+
+        pulse_inject_once();
+        wait_for_generated_hit(expected_hit);
+        capture_next_nonempty_frame(flen, evt_count);
+        run_sequence_stop();
+
+        captured_long_word = decode_long_hit_from_capture();
+
+        $display("  Frame length: %0d bytes, event count: %0d", flen, evt_count);
+        check("Injected long frame carries one hit", evt_count == 1);
+        check("Long payload matches generated hit word",
+              captured_long_word == expected_hit);
+        check("Long payload channel stays within 0..31",
+              captured_long_word[47:43] <= 5'd31);
+        check("Long payload E_Flag stays at raw-contract default",
+              captured_long_word[20] == 1'b1);
+        check("Long payload keeps T timestamp not later than E timestamp",
+              long_hit_t_not_later_than_e(captured_long_word));
+    endtask
+
+    // ========================================
     // Test T01: Multi-hit long frame
     // ========================================
     task automatic test_T01_multi_long();
@@ -919,11 +987,11 @@ module tb_emulator_mutrig;
 
         csr_write(4'd0, 32'h0000_0001);
         csr_write(4'd1, 32'h0000_0000);
-        csr_write(4'd4, 32'h0000_00B8);  // asic_id=11, gen_idle=1
+        csr_write(4'd4, 32'h0000_0078);  // asic_id=7, gen_idle=1
         run_sequence_start();
         #(CLK_PERIOD * 10);
 
-        check("ASIC ID channel output = 11", aso_tx8b1k_channel == 4'd11);
+        check("ASIC ID channel output = 7", aso_tx8b1k_channel == 4'd7);
 
         run_sequence_stop();
     endtask
@@ -1089,6 +1157,9 @@ module tb_emulator_mutrig;
 
         if (test_name == "ALL" || test_name == "B07_short_parser")
             test_B07_short_parser();
+
+        if (test_name == "ALL" || test_name == "B08_long_hit_timing")
+            test_B08_long_hit_timing();
 
         if (test_name == "ALL" || test_name == "T01_multi_long")
             test_T01_multi_long();

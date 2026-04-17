@@ -1,7 +1,7 @@
 # Signoff — emulator_mutrig
 
-**DUT family:** `emulator_mutrig` &nbsp; **Date:** `2026-04-17` &nbsp;
-**Release under check:** `26.1.1.0417`
+**DUT family:** `emulator_mutrig` &nbsp; **Date:** `2026-04-18` &nbsp;
+**Release under check:** `26.1.5.0418`
 
 This is the master signoff dashboard for the compact MuTRiG refresh. Detailed DV
 evidence lives in [../tb/DV_REPORT.md](../tb/DV_REPORT.md); detailed standalone
@@ -11,13 +11,15 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 
 | status | field | value |
 |:---:|---|---|
-| PARTIAL | overall_signoff | compact release is functionally green and area-clean, but timing is not yet closed at `137.5 MHz` |
-| PASS | area_target | `3398 ALMs < 4000 ALMs for 8 lanes` |
-| PASS | directed_smoke | `49 passed, 0 failed` |
+| PASS | overall_requested_scope | compact bank release goals are closed for the active scope: area, tightened timing, directed DV, isolated UVM, and timestamp-contract checks |
+| PARTIAL | full_multi_mode_signoff | continuous-frame and gate-level collateral were not rerun in this refresh |
+| PASS | area_target | `3958 ALMs < 4000 ALMs for 8 lanes` |
+| PASS | tightened_timing | slow `85C` setup slack `+0.139 ns` at `137.5 MHz` |
+| PASS | directed_smoke | `54 passed, 0 failed` |
 | PASS | isolated_uvm | `15 / 15 passed` |
 | PASS | merged_ucdb_refresh | current isolated UCDB and text report are present |
-| PASS | poisson_queue_study | short-mode FIFO knee characterized; saturation starts around `90%` of raw full rate |
-| PARTIAL | tightened_timing | slow `85C` setup slack `-0.544 ns` |
+| PASS | hit_contract_checks | `asic_id 0..7`, hit channel `0..31`, raw `E_Flag`, and default `T <= E` timestamp semantics verified |
+| PASS | poisson_timestamp_study | true `E-ts -> pop` measured from idle to the raw full-link reference |
 | PARTIAL | cross_mode_dv | continuous-frame evidence not refreshed |
 | PARTIAL | gate_level | not rerun in this refresh |
 
@@ -25,10 +27,10 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 
 | status | area | result | source |
 |:---:|---|---|---|
-| PASS | directed bench | `make -C tb run_all` -> `49 passed, 0 failed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
-| PASS | isolated UVM | `make -C tb/uvm regress SEEDS=1` -> `15 / 15 passed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
-| PASS | targeted reruns | compact-release bug fixes verified in focused reruns | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
-| PASS | Poisson queue study | short-mode delay sweep from `0%` to `100%` raw offered load captured | [../tb/poisson_delay/results/POISSON_DELAY_REPORT.md](../tb/poisson_delay/results/POISSON_DELAY_REPORT.md) |
+| PASS | directed bench | `make -C tb run_all` -> `54 passed, 0 failed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
+| PASS | isolated UVM | `make -C tb/uvm clean closure SEEDS=1` -> `15 / 15 passed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
+| PASS | targeted contract checks | directed bench covers `asic_id`, hit channel bounds, `E_Flag`, and `T <= E` semantics | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
+| PASS | Poisson timestamp study | short-mode true `E-ts -> pop` sweep from `0%` to `100%` raw offered load captured | [../tb/poisson_delay/results/POISSON_DELAY_REPORT.md](../tb/poisson_delay/results/POISSON_DELAY_REPORT.md) |
 | PARTIAL | code coverage | isolated merged UCDB refreshed, multi-mode coverage still open | [../tb/DV_COV.md](../tb/DV_COV.md) |
 
 ## Synthesis
@@ -38,23 +40,26 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 | PASS | revision | `emulator_mutrig_bank8_syn` |
 | PASS | device | `5AGXBA7D4F31C5` |
 | PASS | signoff constraint | `137.5 MHz` / `7.273 ns` |
-| PASS | fitted resources | `3398 ALMs`, `2927 regs`, `16 RAM`, `16 DSP` |
+| PASS | fitted resources | `3958 ALMs`, `3579 regs`, `16 RAM`, `0 DSP` |
 | PASS | area objective | `8` lanes are below the `4000 ALM` target |
-| PARTIAL | slow 85C setup | `-0.544 ns`, Fmax `127.93 MHz` |
-| PASS | hold timing | worst hold slack `+0.149 ns` or better |
+| PASS | slow 85C setup | `+0.139 ns` |
+| PASS | hold timing | worst hold slack `+0.150 ns` or better |
 | PARTIAL | harness constraints | standalone wrapper leaves many non-core I/O paths unconstrained |
 
 ## Queueing Characterization
 
 Supplemental short-mode Poisson characterization shows:
 
-- no L2 FIFO saturation through `80%` of the raw `1 hit / 3.5 cycles` offered
-  load
-- FIFO-full activity begins around `90%` raw offered load
-- accepted throughput plateaus near `0.259 hits/cycle`, about
-  `3.86 cycles / accepted hit`
-- the raw `3.5 cycles / hit` figure is therefore slightly optimistic once frame
-  overhead is included in the closed-loop service path
+- the primary latency metric is true `E-ts -> pop`, because the default long-hit
+  contract commits on the encoded `E` timestamp
+- at `10%` raw full rate, true `E-ts -> pop` spans almost one full short-frame
+  window with a `~32` cycle floor from frame-header overhead
+- at `100%` raw full rate, true `E-ts -> pop` stays mostly in the
+  `0.8 .. 1.15` frame range rather than filling a full `0 .. 1820` cycle box
+- occasional FIFO-full cycles begin around `60%` raw full rate, but accepted
+  throughput still tracks the offered rate closely through the mid-load points
+- at `100%` raw full rate, accepted throughput is `0.2698 hits/cycle`, about
+  `3.71 cycles / accepted hit`
 
 ## Fixes In Scope
 
@@ -64,8 +69,10 @@ Supplemental short-mode Poisson characterization shows:
 | PASS | RTL | bank8 merged shell added for standalone shared-resource study |
 | PASS | RTL | first post-start frame now waits a full frame interval |
 | PASS | RTL | new frame starts are gated by enable in both single-lane and bank8 lane wrappers |
+| PASS | RTL | single-lane public `asic_id` is clamped to the bank-valid `0..7` range |
+| PASS | RTL | long-hit default timing now keeps `T <= E`, commits on `E`, and preserves raw-compatible `E_Flag = 1` |
 | PASS | Harness | reset-default UVM expectation aligned to the live cluster defaults |
-| PASS | Metadata | packaged IP defaults updated to `26.1.1.0417` |
+| PASS | Metadata | packaged IP defaults updated to `26.1.5.0418` |
 
 ## Evidence Index
 
@@ -79,11 +86,10 @@ Supplemental short-mode Poisson characterization shows:
 
 ## Verdict
 
-Overall signoff for `26.1.1.0417` is `PARTIAL`:
+Overall signoff for `26.1.5.0418` is `PASS` for the active compact-bank scope:
 
-- functionally, the compact lane refresh is in good shape
-- for area, the merged bank closes the requested `<4000 ALM / 8 lane` target
-- for short-mode queueing, the lane stays comfortable through `80%` raw offered
-  load and starts to saturate near `90%`
-- for tightened standalone timing, more work is still required if `137.5 MHz`
-  remains the hard signoff clock
+- the merged bank closes the requested `<4000 ALM / 8 lane` area target
+- tightened standalone timing closes at `137.5 MHz`
+- directed DV, isolated UVM, and the requested timestamp-contract checks are green
+- continuous-frame and gate-level collateral remain out of scope for this
+  refresh and are still called out separately as not rerun

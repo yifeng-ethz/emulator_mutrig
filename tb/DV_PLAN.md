@@ -1,7 +1,7 @@
 # DV Plan: emulator_mutrig
 
 **DUT family:** `emulator_mutrig`
-**Active release:** `26.1.1.0417`
+**Active release:** `26.1.5.0418`
 **Primary evidence target:** compact single-lane behavior plus standalone bank8 synthesis proof
 **Companion reports:** [DV_REPORT.md](DV_REPORT.md), [DV_COV.md](DV_COV.md), [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md)
 
@@ -18,7 +18,7 @@ In scope:
 - CSR-visible defaults and enable semantics
 - short and long frame cadence
 - burst, noise, mixed, inject, and cross-ASIC slice behavior
-- supplemental short-mode Poisson queue-delay characterization from `0%` to
+- supplemental short-mode Poisson true-timestamp latency characterization from `0%` to
   `100%` of the raw `1 hit / 3.5 cycles` offered-load target
 - standalone `emulator_mutrig_bank8` synthesis/resource evidence
 
@@ -89,21 +89,21 @@ Artifacts:
 
 Expected outputs:
 
-- enqueue-to-pop queue delay distribution
-- enqueue-to-parser delay distribution
+- true `E-ts -> pop` latency distribution
+- commit-cycle-to-pop cross-check distribution
 - average and peak L2 FIFO occupancy
 - `full_cycles` as the saturation indicator
-- accepted throughput plateau near the true framed service limit
+- accepted throughput versus the raw `1 hit / 3.5 cycles` reference
 
-## 4. Current Truth After 2026-04-17 Reruns
+## 4. Current Truth After 2026-04-18 Reruns
 
-- directed smoke passes cleanly
+- directed smoke passes cleanly at `54 passed, 0 failed`
 - isolated UVM regression passes cleanly
-- coverage refresh is present and reviewable
-- Poisson delay sweep is present and shows the FIFO knee between `80%` and
-  `90%` raw offered load
-- bank8 standalone compile meets the area target at `3398 ALMs`
-- tightened `137.5 MHz` timing is still open by `0.544 ns`
+- coverage refresh is present and reviewable (`72.26%` filtered merged total)
+- Poisson delay sweep is present and reports true `E-ts -> pop` latency across
+  the full requested `0% .. 100%` raw-load range
+- bank8 standalone compile meets the area target at `3958 ALMs`
+- tightened `137.5 MHz` timing closes with slow `85C` setup slack `+0.139 ns`
 
 ## 5. Signoff Interpretation
 
@@ -111,6 +111,8 @@ For this release:
 
 - functional status is `PASS` for the promoted directed and isolated UVM runs
 - coverage status is `PARTIAL`, because only isolated UCDB evidence was refreshed
-- standalone synthesis status is `PASS` for area and `PARTIAL` for timing
+- standalone synthesis status is `PASS` for both area and timing
+- continuous-frame and gate-level collateral remain out of the active compact
+  refresh scope and are therefore still reported separately as not refreshed
 
 The master verdict is kept in [../doc/SIGNOFF.md](../doc/SIGNOFF.md).

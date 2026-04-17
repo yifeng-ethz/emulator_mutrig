@@ -142,7 +142,7 @@ class emut_base_test extends uvm_test;
 
     ctrl_reg  = {28'b0, short_mode, hit_mode, 1'b1};
     burst_reg = {19'b0, burst_center, 3'b0, burst_size};
-    tx_reg    = {24'b0, asic_id, gen_idle, tx_mode};
+    tx_reg    = {25'b0, asic_id[2:0], gen_idle, tx_mode};
 
     csr_write(4'd0, ctrl_reg);
     csr_write(4'd1, {noise_rate, hit_rate});
@@ -347,7 +347,7 @@ class emut_test_mixed_random extends emut_base_test;
 
     for (int iter = 0; iter < 12; iter++) begin
       scenario     = $urandom_range(0, 5);
-      asic_id      = iter[3:0];
+      asic_id      = {1'b0, iter[2:0]};
       burst_center = 5'($urandom_range(4, 27));
 
       case (scenario)
@@ -587,7 +587,7 @@ class emut_test_inject_matrix extends emut_base_test;
         bit [3:0] asic_id;
         short_mode = (p + w) & 1;
         tx_mode    = short_mode ? TX_MODE_SHORT : TX_MODE_LONG;
-        asic_id    = (p * 3 + w) & 15;
+        asic_id    = (p * 3 + w) & 7;
 
         program_common_cfg(HIT_MODE_POISSON, short_mode, 16'h0000, 16'h0000, 5'd1, 5'd7,
           $urandom, tx_mode, 1'b1, asic_id);
@@ -975,7 +975,7 @@ class emut_frame_suite_base extends emut_base_test;
         bit [3:0] asic_id;
         short_mode = (p + w) & 1;
         tx_mode    = short_mode ? TX_MODE_SHORT : TX_MODE_LONG;
-        asic_id    = (p * 3 + w) & 15;
+        asic_id    = (p * 3 + w) & 7;
 
         program_common_cfg(HIT_MODE_POISSON, short_mode, 16'h0000, 16'h0000, 5'd1, 5'd7,
           $urandom, tx_mode, 1'b1, asic_id);
@@ -1007,7 +1007,7 @@ class emut_frame_suite_base extends emut_base_test;
     log_case("emut_test_mixed_random");
     for (int iter = 0; iter < 12; iter++) begin
       scenario     = $urandom_range(0, 5);
-      asic_id      = iter[3:0];
+      asic_id      = {1'b0, iter[2:0]};
       burst_center = 5'($urandom_range(4, 27));
 
       case (scenario)

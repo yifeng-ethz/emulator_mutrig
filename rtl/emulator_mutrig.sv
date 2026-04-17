@@ -15,9 +15,9 @@
 //   - Conduit input for charge-injection pulses (from mutrig_injector datapath IP)
 //
 // Author: Yifeng Wang
-// Version : 26.1.1
-// Date    : 20260417
-// Change  : Gate fresh frame starts with csr_enable while keeping TERMINATING drain behavior for already-open frames.
+// Version : 26.1.5
+// Date    : 20260418
+// Change  : Clamp the public asic_id tag to 0..7 so the single-lane wrapper matches the shared 8-lane bank contract.
 
 module emulator_mutrig
     import emulator_mutrig_pkg::*;
@@ -62,6 +62,10 @@ module emulator_mutrig
     output logic [31:0] avs_csr_readdata,
     output logic        avs_csr_waitrequest
 );
+
+    function automatic logic [3:0] clamp_asic_id(input logic [3:0] raw_asic_id);
+        return {1'b0, raw_asic_id[2:0]};
+    endfunction
 
     // ========================================
     // Run control state decode
@@ -175,7 +179,7 @@ module emulator_mutrig
             csr_prng_seed            <= 32'hDEAD_BEEF;
             csr_tx_mode      <= 3'b000;   // long mode
             csr_gen_idle     <= 1'b1;
-            csr_asic_id      <= ASIC_ID_DEFAULT;
+            csr_asic_id      <= clamp_asic_id(ASIC_ID_DEFAULT);
             avs_csr_readdata <= '0;
             avs_csr_waitrequest <= 1'b1;
         end else begin
@@ -207,7 +211,7 @@ module emulator_mutrig
                     'd4: begin
                         csr_tx_mode  <= avs_csr_writedata[2:0];
                         csr_gen_idle <= avs_csr_writedata[3];
-                        csr_asic_id  <= avs_csr_writedata[7:4];
+                        csr_asic_id  <= clamp_asic_id(avs_csr_writedata[7:4]);
                     end
                     default: ;
                 endcase

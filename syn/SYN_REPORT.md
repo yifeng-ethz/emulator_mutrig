@@ -1,6 +1,6 @@
 # SYN Report — emulator_mutrig
 
-**Revision:** `emulator_mutrig_bank8_syn` &nbsp; **Date:** `2026-04-17` &nbsp;
+**Revision:** `emulator_mutrig_bank8_syn` &nbsp; **Date:** `2026-04-18` &nbsp;
 **Device:** `5AGXBA7D4F31C5` &nbsp; **Quartus:** `18.1.0 Build 625`
 
 This is the detailed standalone synthesis report for the compact `8`-lane MuTRiG
@@ -20,47 +20,21 @@ emulator bank. The master signoff page is [../doc/SIGNOFF.md](../doc/SIGNOFF.md)
 
 | item | value |
 |---|---|
-| Logic utilization | `3,398 / 91,680 ALMs (4%)` |
-| Registers | `2,927` |
+| Logic utilization | `3,958 / 91,680 ALMs (4%)` |
+| Registers | `3,579` |
 | Pins | `1 / 426` |
 | Virtual pins | `459` |
-| Block memory bits | `94,208 / 13,987,840` |
+| Block memory bits | `98,304 / 13,987,840` |
 | RAM blocks | `16 / 1,366` |
-| DSP blocks | `16 / 800` |
+| DSP blocks | `0 / 800` |
 
-## Bank Breakdown
+## Interpretation
 
-Fitter hierarchy summary:
-
-| item | value |
-|---|---|
-| bank DUT ALMs needed | `3166.2` |
-| top-harness overhead | about `232 ALMs` |
-| shared `u_tcc_lfsr` ALMs needed | `9.2` |
-| shared `u_ecc_lfsr` ALMs needed | `7.5` |
-
-Per-lane fitted range from `emulator_mutrig_lane_shared:lane_gen[*].u_lane`:
-
-| item | measured range |
-|---|---|
-| lane ALMs needed | `382.9 .. 400.9` |
-| lane registers | `359 .. 363` |
-| lane memory bits | `11,776` |
-| lane RAM blocks | `2` |
-| lane DSP blocks | `2` |
-
-Dominant lane-local owners:
-
-| block | ALMs needed |
-|---|---|
-| `hit_generator` | `215.5 .. 235.0` |
-| `frame_assembler` | `147.3 .. 154.5` |
-
-Interpretation:
-
-- the large area consumer is still the per-lane generator/formatter logic
+- the large area consumer is still the per-lane generator and formatter logic
 - the requested `256`-hit storage stays in RAM, not ALMs
-- shared shell logic is small; the merge did not simply move the area problem
+- the final LFSR-based fine-time generator removes all DSP usage from the bank
+- the bank closes the requested `<4000 ALM / 8 lanes` target with `42 ALMs`
+  of margin
 
 ## Timing Summary
 
@@ -72,22 +46,22 @@ Target:
 
 | status | corner | setup WNS (ns) | hold WNS (ns) | slow-corner Fmax |
 |:---:|---|---:|---:|---:|
-| PARTIAL | Slow 1100mV 85C | `-0.544` | `+0.261` | `127.93 MHz` |
-| PARTIAL | Slow 1100mV 0C | `-0.359` | `+0.243` | `131.03 MHz` |
-| PASS | Fast 1100mV 85C | `+2.514` | `+0.162` | n/a |
-| PASS | Fast 1100mV 0C | `+3.023` | `+0.149` | n/a |
+| PASS | Slow 1100mV 85C | `+0.139` | `+0.259` | n/a |
+| PASS | Slow 1100mV 0C | `+0.265` | `+0.245` | n/a |
+| PASS | Fast 1100mV 85C | `+3.022` | `+0.165` | n/a |
+| PASS | Fast 1100mV 0C | `+3.500` | `+0.150` | n/a |
 
 Key conclusions:
 
 - area target is closed
 - hold timing is clean at all corners
-- setup timing misses only in the slow corners
-- the bank is about `9.57 MHz` short of the tightened `137.5 MHz` target in the
-  worst slow corner
+- setup timing also closes at all corners under the tightened `137.5 MHz`
+  standalone constraint
+- the remaining critical pressure is lane-local and not in the shared bank shell
 
-The fitter optimization log and the active lane hierarchy show that the hottest
+The fitter optimization log and the active timing reports show that the hottest
 cones remain inside lane-local `hit_generator` and `frame_assembler` logic. The
-shared bank shell is not the critical timing owner.
+shared bank shell and shared PRBS counters are not the critical timing owners.
 
 ## Flow Runtime
 
@@ -115,5 +89,5 @@ relevant signoff domain for the bank study.
 
 ## Result
 
-Standalone bank8 synthesis is `PASS` for the area objective and `PARTIAL` for
-the tightened timing objective.
+Standalone bank8 synthesis is `PASS` for both the area objective and the
+tightened timing objective.

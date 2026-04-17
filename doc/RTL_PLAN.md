@@ -1,7 +1,7 @@
 # Emulator MuTRiG — RTL Plan
 
 **IP family:** `emulator_mutrig`
-**Active release:** `26.1.1.0417`
+**Active release:** `26.1.5.0418`
 **Area-signoff vehicle:** `rtl/emulator_mutrig_bank8.sv`
 **Companion reports:** [../tb/DV_PLAN.md](../tb/DV_PLAN.md), [../tb/DV_REPORT.md](../tb/DV_REPORT.md), [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md), [SIGNOFF.md](SIGNOFF.md)
 
@@ -50,39 +50,24 @@ defines the current reference model.
 
 | item | value |
 |---|---|
-| top-level ALMs | `3398` |
-| bank DUT ALMs needed | `3166.2` |
-| registers | `2927` |
-| block memory bits | `94,208` |
+| top-level ALMs | `3958` |
+| registers | `3579` |
+| block memory bits | `98,304` |
 | RAM blocks | `16` |
-| DSP blocks | `16` |
+| DSP blocks | `0` |
 
 ### 3.2 Measured per-lane shape
 
-From `emulator_mutrig_lane_shared:lane_gen[*].u_lane` in the fitter report:
-
-| item | measured range |
-|---|---|
-| lane ALMs needed | `382.9 .. 400.9` |
-| lane registers | `359 .. 363` |
-| lane block memory bits | `11,776` |
-| lane RAM blocks | `2` |
-| lane DSP blocks | `2` |
-
-Dominant lane owners:
-
-| block | measured ALMs needed |
-|---|---|
-| `hit_generator` | `215.5 .. 235.0` |
-| `frame_assembler` | `147.3 .. 154.5` |
-| shared PRBS-15 counter (`tcc`) | `9.2` |
-| shared PRBS-15 counter (`ecc`) | `7.5` |
+The final bank8 build removes the earlier DSP-backed fine-time update path. The
+remaining area is dominated by lane-local `hit_generator` and
+`frame_assembler` logic plus the eight `256 x 48` M10K-backed FIFOs.
 
 Interpretation:
 
 - the compact FIFO move succeeded: storage is RAM-backed, not ALM-backed
 - the remaining logic cost is overwhelmingly lane-local
-- shared shell overhead is small relative to the eight lane cores
+- the PRNG rewrite eliminated all DSP usage while keeping the bank under the
+  `4000 ALM` cap
 
 ## 4. Timing Model
 
@@ -92,13 +77,13 @@ the `1.1 x 125 MHz` policy used elsewhere in this repo.
 Current result:
 
 - area goal: `PASS`
-- tightened timing: `PARTIAL`
-- worst slow-corner setup slack: `-0.544 ns`
-- slow-corner Fmax: `127.93 MHz`
+- tightened timing: `PASS`
+- worst slow-corner setup slack: `+0.139 ns`
+- worst slow-corner hold slack: `+0.259 ns`
 
 The fitter and TimeQuest evidence show the pressure remains inside the
-lane-local `hit_generator` and `frame_assembler` cones. The shared bank shell is
-not the timing limiter.
+lane-local `hit_generator` and `frame_assembler` cones. The shared bank shell
+and the shared PRBS coarse counters are not the timing limiter.
 
 ## 5. Functional Notes For This Release
 
@@ -107,12 +92,13 @@ release fixes:
 
 1. run start now waits one full frame interval before opening the first frame
 2. disabled lanes no longer open fresh frames
-3. UVM reset-default checks now match the live cluster defaults
+3. `asic_id` is clamped to `0..7` while hit-local channel tags stay in `0..31`
+4. default long-hit timing keeps `T <= E`, uses the encoded `E` time as the
+   true commit timestamp, keeps raw-compatible `E_Flag = 1`, and uses random
+   Poisson fine time versus about `1 ns` cluster fine spread
+5. UVM reset-default checks now match the live cluster defaults
 
 ## 6. Open Items
 
-- close the remaining `137.5 MHz` setup miss on the bank8 build
-- decide whether a tighter lane-local timing pass is worth the extra effort, or
-  whether the current `3398 ALM` result is sufficient for system integration
 - refresh gate-level and continuous-frame evidence if those modes become part of
   the active signoff gate

@@ -23,9 +23,9 @@ set RUN_CONTROL_WIDTH_CONST     9
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 1
-set VERSION_PATCH_DEFAULT_CONST 1
-set BUILD_DEFAULT_CONST         417
-set VERSION_DATE_DEFAULT_CONST  20260417
+set VERSION_PATCH_DEFAULT_CONST 5
+set BUILD_DEFAULT_CONST         418
+set VERSION_DATE_DEFAULT_CONST  20260418
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -147,7 +147,7 @@ Once <b>RUNNING</b> closes, the frame assembler may finish the current frame but
 may not start a fresh header from <b>FS_IDLE</b> during <b>TERMINATING</b>.</html>"
     }
     catch {
-        set_display_item_property profile_html TEXT [format {<html><b>Catalog revision</b><br/>This release is packaged as <b>%s</b>.<br/><br/><b>Catalog provenance</b><br/>Packaged git stamp default <b>%s</b> (<b>%s</b>).<br/>Git describe: <b>%s</b>.<br/><br/><b>Delivered behavior</b><br/>This revision aligns the standalone emulator run-state model with the run-sequence upgrade plan and adds optional cross-ASIC cluster replay: <b>TERMINATING</b> drains only an already-open frame and does not permit a fresh post-edge frame start, while the new burst-domain defaults let neighbouring emulator instances emit one shared cluster deterministically.</html>} \
+        set_display_item_property profile_html TEXT [format {<html><b>Catalog revision</b><br/>This release is packaged as <b>%s</b>.<br/><br/><b>Catalog provenance</b><br/>Packaged git stamp default <b>%s</b> (<b>%s</b>).<br/>Git describe: <b>%s</b>.<br/><br/><b>Delivered behavior</b><br/>The packaged single-lane wrapper now matches the compact shared-bank contract: <b>asic_id</b> is clamped to <b>0..7</b>, long-hit <b>E_Flag</b> stays on the raw MuTRiG-compatible default, the default timestamp mode keeps <b>T &le; E</b>, and Poisson versus cluster fine timing follows the compact lane-local FIFO release behavior used by the standalone bank8 signoff build.</html>} \
             $version_string \
             $version_git_hex \
             $::VERSION_GIT_SHORT_DEFAULT_CONST \

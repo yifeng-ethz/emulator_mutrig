@@ -1,9 +1,9 @@
 // emulator_mutrig_pkg.sv
 // MuTRiG 3 emulator constants and types
 // Author: Yifeng Wang
-// Version : 26.1.1
-// Date    : 20260417
-// Change  : Keep the single-lane public constants stable while documenting the compact lane-local FIFO architecture used by the shared 8-lane bank.
+// Version : 26.1.5
+// Date    : 20260418
+// Change  : Add PRBS back-step support for timestamp checks and keep the shared-bank release constants documented in the public package.
 //
 // Based on the MuTRiG 3 ASIC digital readout (Huangshan Chen, KIP Heidelberg)
 // Reference: kbriggl-mutrig3-c3cce8d41dcb RTL
@@ -182,6 +182,10 @@ package emulator_mutrig_pkg;
 
     function automatic logic [14:0] prbs15_step(input logic [14:0] state);
         return {state[13:0], prbs15_feedback(state)};
+    endfunction
+
+    function automatic logic [14:0] prbs15_prev(input logic [14:0] state);
+        return {state[0] ^ state[1], state[14:1]};
     endfunction
 
     function automatic logic [1:0] group_from_channel(input logic [4:0] channel);

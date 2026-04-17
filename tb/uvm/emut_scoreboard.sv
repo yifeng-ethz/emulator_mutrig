@@ -259,7 +259,7 @@ class emut_scoreboard extends uvm_component;
       4'd4: begin
         cfg_tx_mode  = item.writedata[2:0];
         cfg_gen_idle = item.writedata[3];
-        cfg_asic_id  = item.writedata[7:4];
+        cfg_asic_id  = {1'b0, item.writedata[6:4]};
       end
       default: ;
     endcase
