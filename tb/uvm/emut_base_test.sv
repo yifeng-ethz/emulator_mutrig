@@ -174,7 +174,7 @@ class emut_test_reset_defaults extends emut_base_test;
 
     csr_expect_eq(4'd0, 32'h0000_0001, "CSR0 default");
     csr_expect_eq(4'd1, 32'h0100_0800, "CSR1 default");
-    csr_expect_eq(4'd2, 32'h0000_1004, "CSR2 default");
+    csr_expect_eq(4'd2, 32'h0404_1004, "CSR2 default");
     csr_expect_eq(4'd3, 32'hDEAD_BEEF, "CSR3 default");
     csr_expect_eq(4'd4, 32'h0000_0008, "CSR4 default");
 

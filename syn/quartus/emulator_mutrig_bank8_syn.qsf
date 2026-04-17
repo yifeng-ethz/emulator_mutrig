@@ -1,0 +1,33 @@
+set_global_assignment -name FAMILY "Arria V"
+set_global_assignment -name DEVICE 5AGXBA7D4F31C5
+set_global_assignment -name TOP_LEVEL_ENTITY emulator_mutrig_bank8_syn_top
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.0
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files/emulator_mutrig_bank8_syn
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 4
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name ROUTER_TIMING_OPTIMIZATION_LEVEL MAXIMUM
+set_global_assignment -name PHYSICAL_SYNTHESIS_COMBO_LOGIC ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_RETIMING ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_EFFORT NORMAL
+
+set_instance_assignment -name GLOBAL_SIGNAL "GLOBAL CLOCK" -to clk125
+set_instance_assignment -name VIRTUAL_PIN ON -to reset_n
+set_instance_assignment -name VIRTUAL_PIN ON -to asi_*
+set_instance_assignment -name VIRTUAL_PIN ON -to cfg_*
+set_instance_assignment -name VIRTUAL_PIN ON -to aso_*
+set_instance_assignment -name VIRTUAL_PIN ON -to status_*
+set_instance_assignment -name VIRTUAL_PIN ON -to coe_*
+
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/emulator_mutrig_pkg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/prbs15_lfsr.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/crc16_8.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/hit_generator.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/frame_assembler.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/emulator_mutrig_lane_shared.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/emulator_mutrig_bank8.sv
+set_global_assignment -name SYSTEMVERILOG_FILE emulator_mutrig_bank8_syn_top.sv
+
+set_global_assignment -name SDC_FILE emulator_mutrig_bank8_syn.sdc
+
+set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Standard Edition"

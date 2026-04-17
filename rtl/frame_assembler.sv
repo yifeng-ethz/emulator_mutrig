@@ -1,8 +1,8 @@
 // frame_assembler.sv
 // MuTRiG frame assembler — produces 8b/1k parallel output
-// Version : 26.0.3
-// Date    : 20260416
-// Change  : Align FIFO prefetch and header-flag timing with the raw MuTRiG frame generator contract.
+// Version : 26.1.1
+// Date    : 20260417
+// Change  : Start each run on a full frame interval so burst clusters are not split by an immediate post-reset frame header.
 //
 // Generates frames matching the MuTRiG 3 ASIC serial output format:
 //   IDLE(K28.5) | K28.0(header) | frame_count[15:8] | frame_count[7:0] |
@@ -51,7 +51,7 @@ module frame_assembler
 
     always_ff @(posedge clk) begin
         if (rst) begin
-            interval_cnt  <= '0;
+            interval_cnt  <= max_interval - 11'd1;
             interval_tick <= 1'b0;
         end else begin
             if (interval_cnt == '0) begin

@@ -22,10 +22,10 @@ set RUN_CONTROL_WIDTH_CONST     9
 # Identity defaults (no identity header in RTL — catalog tracking only)
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
-set VERSION_MINOR_DEFAULT_CONST 0
-set VERSION_PATCH_DEFAULT_CONST 3
-set BUILD_DEFAULT_CONST         416
-set VERSION_DATE_DEFAULT_CONST  20260416
+set VERSION_MINOR_DEFAULT_CONST 1
+set VERSION_PATCH_DEFAULT_CONST 1
+set BUILD_DEFAULT_CONST         417
+set VERSION_DATE_DEFAULT_CONST  20260417
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -99,8 +99,8 @@ proc compute_derived_values {} {
         [get_parameter_value BUILD]]
     set version_git_hex [format "0x%08X" [get_parameter_value VERSION_GIT]]
 
-# Storage estimate: 4x L1 (78-bit) + 1x L2 (48-bit)
-    set storage_bits [expr {(4 * 78 + 48) * $fifo_depth}]
+# Storage estimate: one compact 48-bit lane-local L2 FIFO
+    set storage_bits [expr {48 * $fifo_depth}]
 
     catch {
         set_display_item_property overview_html TEXT "<html>\
@@ -109,8 +109,8 @@ Single-lane MuTRiG&nbsp;3 digital-output emulator for FPGA-internal verification
 The block synthesizes hit traffic, assembles MuTRiG-compatible frames, and drives\
 the decoded 8b/1k byte stream expected by <b>frame_rcv_ip</b>.<br/><br/>\
 <b>Data path</b><br/>\
-run-control + inject pulse + CSR config &rarr; <b>hit_generator</b> &rarr; 4x L1\
-queues + shared L2 queue &rarr; <b>frame_assembler</b> &rarr; <b>tx8b1k</b><br/><br/>\
+run-control + inject pulse + CSR config &rarr; <b>hit_generator</b> &rarr; compact\
+ lane-local L2 FIFO &rarr; <b>frame_assembler</b> &rarr; <b>tx8b1k</b><br/><br/>\
 <b>Run-state contract</b><br/>\
 <b>RUNNING</b> enables new hit commits and fresh frame starts.<br/>\
 <b>TERMINATING</b> keeps an in-flight frame draining but blocks any new frame\
@@ -121,9 +121,9 @@ Single synchronous <b>data_clock</b> domain. The emulator models the MuTRiG\
     }
     catch {
         set_display_item_property hitgen_html TEXT "<html>\
-<b>Raw-style queueing</b><br/>\
-Depth per stage: <b>${fifo_depth}</b> entries; storage estimate <b>${storage_bits}</b> bits\
- across 4x 78-bit L1 queues and one 48-bit L2 queue<br/><br/>\
+<b>Compact queueing</b><br/>\
+Depth: <b>${fifo_depth}</b> entries; storage estimate <b>${storage_bits}</b> bits\
+ in one 48-bit lane-local L2 FIFO inferred into M10Ks<br/><br/>\
 <b>Hit modes</b><br/>\
 <b>00</b> Poisson &mdash; stochastic hits with optional cluster length from <b>burst_size</b><br/>\
 <b>01</b> Burst &mdash; periodic cluster hits on neighbouring channels<br/>\
@@ -267,7 +267,7 @@ add_parameter FIFO_DEPTH INTEGER 256
 set_parameter_property FIFO_DEPTH DISPLAY_NAME "Hit FIFO Depth"
 set_parameter_property FIFO_DEPTH ALLOWED_RANGES {16 32 64 128 256}
 set_parameter_property FIFO_DEPTH HDL_PARAMETER true
-set_parameter_property FIFO_DEPTH DESCRIPTION "Depth of each raw-style queue stage (4x L1 FIFOs plus the shared L2 FIFO)."
+set_parameter_property FIFO_DEPTH DESCRIPTION "Depth of the compact lane-local L2 hit FIFO."
 
 add_parameter CSR_ADDR_WIDTH INTEGER $CSR_ADDR_W_CONST
 set_parameter_property CSR_ADDR_WIDTH DISPLAY_NAME "CSR Address Width"

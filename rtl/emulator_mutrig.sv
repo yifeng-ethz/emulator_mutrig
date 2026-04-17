@@ -15,9 +15,9 @@
 //   - Conduit input for charge-injection pulses (from mutrig_injector datapath IP)
 //
 // Author: Yifeng Wang
-// Version : 26.0.3
-// Date    : 20260416
-// Change  : Keep frame generation draining through TERMINATING so buffered hits are framed before reset.
+// Version : 26.1.1
+// Date    : 20260417
+// Change  : Gate fresh frame starts with csr_enable while keeping TERMINATING drain behavior for already-open frames.
 
 module emulator_mutrig
     import emulator_mutrig_pkg::*;
@@ -91,11 +91,10 @@ module emulator_mutrig
     end
     assign asi_ctrl_ready = 1'b1;
 
-    // RUNNING allows new hit commits. TERMINATING keeps buffered hits visible
-    // and still allows the frame assembler to start new drain frames until the
-    // FIFO empties. The datapath state itself is only reset on cold reset or
-    // on an explicit run-preparation/reset command so queued hits are not
-    // wiped at RUN_END.
+    // RUNNING allows new hit commits. TERMINATING lets an already-open frame
+    // finish draining, but it must not open a fresh header from the idle state.
+    // The datapath state itself is only reset on cold reset or on an explicit
+    // run-preparation/reset command so queued hits are not wiped at RUN_END.
     assign run_generating = ctrl_state_q[3];
     assign run_draining   = ctrl_state_q[3] | ctrl_state_q[4];
     assign emu_rst        = i_rst | (asi_ctrl_valid && (asi_ctrl_data[1] | asi_ctrl_data[7]));
@@ -299,7 +298,7 @@ module emulator_mutrig
     frame_assembler u_frame_asm (
         .clk            (i_clk),
         .rst            (frame_rst),
-        .allow_frame_start(run_draining),
+        .allow_frame_start(run_generating & csr_enable),
         .cfg_short_mode (csr_short_mode),
         .cfg_gen_idle   (csr_gen_idle),
         .cfg_tx_mode    (csr_tx_mode),

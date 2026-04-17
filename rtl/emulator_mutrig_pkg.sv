@@ -1,9 +1,9 @@
 // emulator_mutrig_pkg.sv
 // MuTRiG 3 emulator constants and types
 // Author: Yifeng Wang
-// Version : 26.0.3
-// Date    : 20260416
-// Change  : Add shared cluster-domain constants so neighbouring emulator instances can replay one global hit cluster deterministically.
+// Version : 26.1.1
+// Date    : 20260417
+// Change  : Keep the single-lane public constants stable while documenting the compact lane-local FIFO architecture used by the shared 8-lane bank.
 //
 // Based on the MuTRiG 3 ASIC digital readout (Huangshan Chen, KIP Heidelberg)
 // Reference: kbriggl-mutrig3-c3cce8d41dcb RTL
@@ -92,8 +92,11 @@ package emulator_mutrig_pkg;
     localparam int N_BYTES_SHORT = 3;  // ceil(28/8)=4, but packed 3.5 bytes → alternates 3/4
 
     // ========================================
-    // Raw MuTRiG-style FIFO topology
+    // Lane FIFO configuration
     // ========================================
+    // The compact generator keeps one lane-local 48-bit L2 FIFO in RAM. The
+    // historical group constants stay defined because the public package still
+    // serves the compatibility single-lane wrapper and older references.
     localparam int RAW_FIFO_DEPTH            = 256;
     localparam int FIFO_ALMOST_FULL_MARGIN   = 3;
     localparam logic [4:0] MS_LIMITS_DEFAULT = 5'd16;

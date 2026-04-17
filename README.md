@@ -1,132 +1,81 @@
 # MuTRiG Emulator (`emulator_mutrig`)
 
-FPGA emulator of the MuTRiG 3 SiPM readout ASIC digital output. Generates
-8b/1k parallel data frames bit-compatible with the real ASIC serial output
-(after 8b10b decoding). Designed for FPGA-internal use, feeding `frame_rcv_ip`
-directly without LVDS serialization.
+Compact FPGA MuTRiG output emulator for the Mu3e datapath. The packaged IP
+`emulator_mutrig` remains the single-lane compatibility block; the standalone
+area study for this refresh is `rtl/emulator_mutrig_bank8.sv`, which merges
+eight lanes behind shared run-control, inject sync, and coarse counters.
 
-## Architecture
+## Active Release
 
-```
-                       +-----------------+
-  cfg (CSR) ---------> | hit_generator   |---> 4x L1 + 1x L2 raw queues
-                       |  LCG PRNG       |         |
-                       +-----------------+         v
-  tcc_lfsr (PRBS-15) ----+          +--------------------+
-  ecc_lfsr (PRBS-15) ----+--------> | frame_assembler    |---> aso_tx8b1k (9-bit)
-                                    |  FSM + CRC-16      |
-  run_control (AVST) ------------> +--------------------+
-```
+- Release: `26.1.1.0417`
+- Primary goal: keep `8` MuTRiG lanes below `4000 ALMs total`
+- Lane storage rule: each lane keeps one `256 x 48` L2 hit FIFO in M10Ks
+- Active signoff set:
+  - [doc/RTL_PLAN.md](doc/RTL_PLAN.md)
+  - [tb/DV_PLAN.md](tb/DV_PLAN.md)
+  - [tb/DV_REPORT.md](tb/DV_REPORT.md)
+  - [tb/DV_COV.md](tb/DV_COV.md)
+  - [syn/SYN_REPORT.md](syn/SYN_REPORT.md)
+  - [doc/SIGNOFF.md](doc/SIGNOFF.md)
 
-### Sub-Components
+## Compact Architecture
 
-| Component | File | Description |
-|-----------|------|-------------|
-| `emulator_mutrig` | `rtl/emulator_mutrig.sv` | Top-level with Avalon interfaces and CSR |
-| `emulator_mutrig_pkg` | `rtl/emulator_mutrig_pkg.sv` | Constants, types, pack functions |
-| `hit_generator` | `rtl/hit_generator.sv` | Configurable hit pattern generation (Poisson, burst, noise, mixed) |
-| `frame_assembler` | `rtl/frame_assembler.sv` | Frame assembly FSM, CRC-16, 8b/1k output |
-| `prbs15_lfsr` | `rtl/prbs15_lfsr.sv` | PRBS-15 LFSR (x^15 + x^1 + 1) coarse counter |
-| `crc16_8` | `rtl/crc16_8.sv` | CRC-16-ANSI byte-wise calculator |
+### Single lane
 
-## Interfaces
+`emulator_mutrig` and `emulator_mutrig_lane_shared` now use the same compact
+lane datapath:
 
-| Interface | Type | Width | Description |
-|-----------|------|-------|-------------|
-| `data_clock` | Clock sink | 1-bit | Emulator byte clock (125 MHz) |
-| `data_reset` | Reset sink | 1-bit | Synchronous reset |
-| `tx8b1k` | AVST source | 9-bit data, 4-bit channel, 3-bit error | 8b/1k output to `frame_rcv_ip` |
-| `ctrl` | AVST sink | 9-bit data | 9-bit one-hot run control input |
-| `csr` | AVMM slave | 4-bit addr, 32-bit data | Configuration registers |
-| `inject` | Conduit sink | 1-bit pulse | Charge-injection trigger shared with the datapath injector |
+- `hit_generator` emits directly into one lane-local `FIFO_DEPTH x 48` L2 FIFO
+- `frame_assembler` drains that FIFO into MuTRiG-compatible 8b/1k frames
+- no per-group L1 staging RAMs remain in the live generator
 
-### tx8b1k Data Format
+### Shared 8-lane bank
 
-| Bit | Field | Description |
-|-----|-------|-------------|
-| 8 | `is_k` | K-character flag |
-| 7:0 | `data` | 8-bit data byte |
+`emulator_mutrig_bank8` shares the parts that do not need to be replicated:
 
-### Frame Format
+- run-control decode and run-state sequencing
+- inject pulse fanout
+- shared `tcc` / `ecc` PRBS-15 coarse counters
+- common configuration broadcast
 
-```
-IDLE(K28.5) | K28.0(hdr) | frame_cnt[15:8] | frame_cnt[7:0] |
-flags_evt[15:8] | flags_evt[7:0] | hit_data... |
-CRC[15:8] | CRC[7:0] | K28.4(trailer)
-```
+Each lane still keeps:
 
-- Long mode: 1550 byte-clocks per frame (~12.4 us at 125 MHz, datapath-matched), 48-bit hits (6 bytes each)
-- Short mode: 910 byte-clocks per frame (~7.3 us at 125 MHz, datapath-matched), 28-bit hits (3.5 bytes, alternating 3/4 byte packing)
-- Short-mode payload follows the current Mu3e datapath contract: only `TCC`, `T_Fine`, and `E_Flag` are carried. The older MuTRiG ASIC RTL used legacy `ECC` / `E_Fine` names for those same short-word bit positions.
+- one `hit_generator`
+- one `frame_assembler`
+- one `256 x 48` L2 FIFO in M10Ks
+- two DSP-backed PRNG multiply paths
 
-## CSR Register Map
+## Current Results
 
-| Addr | Name | R/W | Description |
-|------|------|-----|-------------|
-| 0x00 | CONTROL | RW | `[0]` enable, `[2:1]` hit_mode, `[3]` short_mode |
-| 0x01 | HIT_RATE | RW | `[15:0]` hit_rate (8.8 FP), `[31:16]` noise_rate |
-| 0x02 | BURST_CFG | RW | `[4:0]` burst_size, `[12:8]` burst_center_local, `[13]` cluster_cross_asic, `[21:14]` cluster_center_global, `[25:22]` cluster_lane_index, `[29:26]` cluster_lane_count |
-| 0x03 | PRNG_SEED | RW | `[31:0]` PRNG seed |
-| 0x04 | TX_MODE | RW | `[2:0]` tx_mode, `[3]` gen_idle, `[7:4]` asic_id |
-| 0x05 | STATUS | RO | `[15:0]` frame_count, `[25:16]` last_event_count |
+### Functional
 
-### Hit Modes
+- Directed smoke: `make -C tb run_all` -> `49 passed, 0 failed`
+- UVM isolated regression: `make -C tb/uvm regress SEEDS=1` -> `15 / 15 passed`
+- Coverage refresh: `make -C tb/uvm clean closure SEEDS=1`
+- Key DUT coverage from `tb/uvm/cov/merged.txt`:
+  - top `dut`: branch `100.00%`, statement `100.00%`, toggle `78.34%`
+  - `u_hit_gen`: branch `71.08%`, statement `85.09%`, toggle `85.98%`
+  - `u_frame_asm`: branch `93.05%`, statement `96.03%`, toggle `86.27%`
 
-| Value | Mode | Description |
-|-------|------|-------------|
-| 00 | Poisson | stochastic hits with optional cluster length from `burst_size` |
-| 01 | Burst | Periodic cluster hits on neighbouring channels |
-| 10 | Noise | Random dark-count-like hits |
-| 11 | Mixed | Poisson signal clusters plus periodic burst clusters |
+### Standalone 8-lane synthesis
 
-## Platform Designer Integration
+- Compile:
+  - `quartus_sh --flow compile emulator_mutrig_bank8_syn -c emulator_mutrig_bank8_syn`
+- Result:
+  - `3398 ALMs`
+  - `2927` registers
+  - `94,208` block memory bits
+  - `16` RAM blocks
+  - `16` DSP blocks
+- Area target:
+  - `PASS`, because `3398 < 4000`
+- Tightened timing target:
+  - `PARTIAL`, because slow `85C` setup slack is `-0.544 ns` at `137.5 MHz`
 
-The `emulator_mutrig_hw.tcl` registers this IP in Platform Designer. Connect:
+## Notes
 
-1. `data_clock` / `data_reset` to the datapath clock domain
-2. `ctrl` to the run-control splitter output
-3. `tx8b1k` to a `frame_rcv_ip` rx8b1k sink (or `mutrig_datapath_subsystem` serial input)
-4. `csr` to the Avalon-MM fabric for runtime configuration
-
-Each instance emulates one MuTRiG ASIC. Set `asic_id` (CSR 0x04, bits [7:4]) to a unique
-value per instance for downstream channel identification. The packaged HDL parameter
-`ASIC_ID_DEFAULT` now exposes the reset value of that field so lane-default tagging
-does not depend on a runtime CSR write.
-
-For multi-lane emulation, `BURST_CFG` can optionally reinterpret the burst path as a shared
-cluster domain across up to 8 adjacent emulated MuTRiGs. In that mode each emulator owns one
-32-channel slice selected by `cluster_lane_index`, and all participating lanes must share the
-same seed and run-control timing so they replay the same global cluster deterministically.
-
-Run-state note:
-- `RUNNING` enables new hit commits and fresh frame starts.
-- `TERMINATING` only lets an already-open frame drain; it does not permit a fresh post-edge frame header to open from idle.
-
-## Simulation
-
-### Unit Tests
-
-```bash
-cd tb/
-make compile
-make run TEST=B01    # single test
-make run_all         # all tests
-```
-
-Requires Questa FSE (see top-level `CLAUDE.md` for license setup).
-
-### System Integration
-
-The emulator has been verified end-to-end in a full `scifi_datapath_v2_system` simulation
-with 8 instances driving the complete pipeline through `frame_rcv_ip`, `mts_processor`,
-`ring_buffer_cam`, `feb_frame_assembly`, to `hit_type3` output.
-
-## References
-
-- MuTRiG 3 ASIC digital readout: Huangshan Chen, KIP Heidelberg (kbriggl-mutrig3-c3cce8d41dcb)
-- PRBS-15 polynomial: x^15 + x^1 + 1 (Galois form, init 0x7FFF, period 32767)
-- CRC-16-ANSI: x^16 + x^15 + x^2 + 1
-
-## License
-
-Part of the Mu3e IP Cores collection. Internal use.
+- The bank8 compile is the current standalone proof vehicle for the
+  architect-requested `<4000 ALM / 8 lane` target.
+- The single-lane packaged IP stays in place for Platform Designer integration.
+- `doc/SIGNOFF.md` is the master review page; the root
+  [SIGNOFF.md](SIGNOFF.md) is only a pointer.
