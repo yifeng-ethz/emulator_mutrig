@@ -18,6 +18,8 @@ In scope:
 - CSR-visible defaults and enable semantics
 - short and long frame cadence
 - burst, noise, mixed, inject, and cross-ASIC slice behavior
+- supplemental short-mode Poisson queue-delay characterization from `0%` to
+  `100%` of the raw `1 hit / 3.5 cycles` offered-load target
 - standalone `emulator_mutrig_bank8` synthesis/resource evidence
 
 Not refreshed in this turn:
@@ -73,11 +75,33 @@ The merged architecture is accepted only if the standalone build keeps:
 - one `256 x 48` L2 FIFO per lane in RAM
 - total ALMs below `4000`
 
+### 3.5 Supplemental Poisson delay sweep
+
+This is characterization evidence, not a hard release gate. The goal is to
+measure where the compact short-mode lane starts to saturate when driven with a
+Poisson source from idle up to the raw `1 hit / 3.5 cycles` reference.
+
+Artifacts:
+
+- bench: [poisson_delay/tb_poisson_delay.sv](poisson_delay/tb_poisson_delay.sv)
+- driver: [poisson_delay/sweep_poisson_delay.py](poisson_delay/sweep_poisson_delay.py)
+- report: [poisson_delay/results/POISSON_DELAY_REPORT.md](poisson_delay/results/POISSON_DELAY_REPORT.md)
+
+Expected outputs:
+
+- enqueue-to-pop queue delay distribution
+- enqueue-to-parser delay distribution
+- average and peak L2 FIFO occupancy
+- `full_cycles` as the saturation indicator
+- accepted throughput plateau near the true framed service limit
+
 ## 4. Current Truth After 2026-04-17 Reruns
 
 - directed smoke passes cleanly
 - isolated UVM regression passes cleanly
 - coverage refresh is present and reviewable
+- Poisson delay sweep is present and shows the FIFO knee between `80%` and
+  `90%` raw offered load
 - bank8 standalone compile meets the area target at `3398 ALMs`
 - tightened `137.5 MHz` timing is still open by `0.544 ns`
 

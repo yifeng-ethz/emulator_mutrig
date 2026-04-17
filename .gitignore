@@ -11,6 +11,11 @@ tb/work_*/
 tb/transcript
 tb/vsim.wlf
 tb/*.wlf
+tb/poisson_delay/work_poisson_delay/
+tb/poisson_delay/transcript
+tb/poisson_delay/__pycache__/
+tb/poisson_delay/results/f*.csv
+tb/poisson_delay/results/f*.summary
 
 # Quartus build outputs
 syn/quartus/output_files/

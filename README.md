@@ -57,6 +57,22 @@ Each lane still keeps:
   - `u_hit_gen`: branch `71.08%`, statement `85.09%`, toggle `85.98%`
   - `u_frame_asm`: branch `93.05%`, statement `96.03%`, toggle `86.27%`
 
+### Poisson delay characterization
+
+- Sweep report: [tb/poisson_delay/results/POISSON_DELAY_REPORT.md](tb/poisson_delay/results/POISSON_DELAY_REPORT.md)
+- Study mode: single-lane short-mode Poisson, `burst_size=1`, `noise=0`
+- Raw offered-load reference: `1 hit / 3.5 cycles` per MuTRiG lane
+- Measured knee:
+  - no FIFO saturation through `80%` raw offered load
+  - saturation starts around `90%` raw offered load
+- Sustained accepted rate near saturation:
+  - about `0.259 hits/cycle`
+  - about `3.86 cycles / accepted hit`
+- Interpretation:
+  - the apparent latency drop above `90%` is not a real service-speed gain
+  - once the FIFO stays near full, the measured distribution is biased toward
+    the hits that still get accepted
+
 ### Standalone 8-lane synthesis
 
 - Compile:
