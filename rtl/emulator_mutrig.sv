@@ -99,11 +99,12 @@ module emulator_mutrig
 
     // RUNNING allows new hit commits. TERMINATING lets an already-open frame
     // finish draining, but it must not open a fresh header from the idle state.
-    // The datapath state itself is only reset on cold reset or on an explicit
-    // run-preparation/reset command so queued hits are not wiped at RUN_END.
+    // The datapath timestamp epoch must reset on the same SYNC boundary as the
+    // downstream MTS processor. RUN_PREPARE can still flush local state via
+    // frame_rst, but the dark coarse counter must not start early.
     assign run_generating = ctrl_state_q[3];
     assign run_draining   = ctrl_state_q[3] | ctrl_state_q[4];
-    assign emu_rst        = i_rst | (asi_ctrl_valid && (asi_ctrl_data[1] | asi_ctrl_data[7]));
+    assign emu_rst        = i_rst | (asi_ctrl_valid && (asi_ctrl_data[2] | asi_ctrl_data[7]));
     assign frame_rst      = emu_rst | ~run_draining;
 
     // The injector can source pulses from either the datapath clock domain or
@@ -160,10 +161,26 @@ module emulator_mutrig
     logic [2:0]  csr_tx_mode;
     logic        csr_gen_idle;
     logic [3:0]  csr_asic_id;
+    logic [31:0] csr_readdata_comb;
 
     // Status
     logic [15:0] status_frame_count;
     logic [9:0]  status_event_count;
+
+    always_comb begin
+        unique case (avs_csr_address)
+            'd0: csr_readdata_comb = {28'b0, csr_short_mode, csr_hit_mode, csr_enable};
+            'd1: csr_readdata_comb = {csr_noise_rate, csr_hit_rate};
+            'd2: csr_readdata_comb = {2'b0, csr_cluster_lane_count, csr_cluster_lane_index, csr_cluster_center_global, csr_cluster_cross_asic, csr_burst_center, 3'b0, csr_burst_size};
+            'd3: csr_readdata_comb = csr_prng_seed;
+            'd4: csr_readdata_comb = {24'b0, csr_asic_id, csr_gen_idle, csr_tx_mode};
+            'd5: csr_readdata_comb = {6'b0, status_event_count, status_frame_count};
+            default: csr_readdata_comb = '0;
+        endcase
+    end
+
+    assign avs_csr_readdata    = csr_readdata_comb;
+    assign avs_csr_waitrequest = 1'b0;
 
     always_ff @(posedge i_clk) begin
         if (i_rst) begin
@@ -182,13 +199,8 @@ module emulator_mutrig
             csr_tx_mode      <= 3'b000;   // long mode
             csr_gen_idle     <= 1'b1;
             csr_asic_id      <= clamp_asic_id(ASIC_ID_DEFAULT);
-            avs_csr_readdata <= '0;
-            avs_csr_waitrequest <= 1'b1;
         end else begin
-            avs_csr_waitrequest <= 1'b1;
-
             if (avs_csr_write) begin
-                avs_csr_waitrequest <= 1'b0;
                 case (avs_csr_address)
                     'd0: begin
                         csr_enable     <= avs_csr_writedata[0];
@@ -217,17 +229,6 @@ module emulator_mutrig
                     end
                     default: ;
                 endcase
-            end else if (avs_csr_read) begin
-                avs_csr_waitrequest <= 1'b0;
-                case (avs_csr_address)
-                    'd0: avs_csr_readdata <= {28'b0, csr_short_mode, csr_hit_mode, csr_enable};
-                    'd1: avs_csr_readdata <= {csr_noise_rate, csr_hit_rate};
-                    'd2: avs_csr_readdata <= {2'b0, csr_cluster_lane_count, csr_cluster_lane_index, csr_cluster_center_global, csr_cluster_cross_asic, csr_burst_center, 3'b0, csr_burst_size};
-                    'd3: avs_csr_readdata <= csr_prng_seed;
-                    'd4: avs_csr_readdata <= {24'b0, csr_asic_id, csr_gen_idle, csr_tx_mode};
-                    'd5: avs_csr_readdata <= {6'b0, status_event_count, status_frame_count};
-                    default: avs_csr_readdata <= '0;
-                endcase
             end
         end
     end
@@ -236,13 +237,18 @@ module emulator_mutrig
     // PRBS-15 coarse counters
     // ========================================
     // Two independent LFSRs: one for T (time), one for E (energy)
-    // They advance every clock cycle when the emulator is running
+    // They free-run between run-control resets so the dark timestamp epoch
+    // stays aligned with the downstream MTS processor.
     logic [14:0] tcc_lfsr, ecc_lfsr;
+    logic [14:0] tcc_lfsr_commit, ecc_lfsr_commit;
     logic        lfsr_en;
     logic [10:0] frame_interval_cnt;
     logic [10:0] frame_interval_max;
     logic        frame_start_req;
-    assign lfsr_en = run_generating & csr_enable;
+`ifndef SYNTHESIS
+    logic [47:0] true_gts_8n;
+`endif
+    assign lfsr_en = ~emu_rst;
     assign frame_interval_max = csr_short_mode ? 11'(FRAME_INTERVAL_SHORT) : 11'(FRAME_INTERVAL_LONG);
 
     always_ff @(posedge i_clk) begin
@@ -260,7 +266,9 @@ module emulator_mutrig
         end
     end
 
-    prbs15_lfsr u_tcc_lfsr (
+    prbs15_lfsr #(
+        .STEP_COUNT (MUTRIG_COARSE_STEPS_PER_CYCLE)
+    ) u_tcc_lfsr (
         .clk      (i_clk),
         .rst      (emu_rst),
         .en       (lfsr_en),
@@ -270,12 +278,28 @@ module emulator_mutrig
     // E coarse counter: offset by half period from T
     // (In real MuTRiG, ECC is from a separate TDC measurement triggered by energy discriminator)
     // For emulation: use same LFSR with different phase
-    prbs15_lfsr u_ecc_lfsr (
+    prbs15_lfsr #(
+        .STEP_COUNT (MUTRIG_COARSE_STEPS_PER_CYCLE)
+    ) u_ecc_lfsr (
         .clk      (i_clk),
         .rst      (emu_rst),
         .en       (lfsr_en),
         .lfsr_out (ecc_lfsr)
     );
+
+    // The MuTRiG timestamps must reflect the coarse counter value of the
+    // cycle that commits the hit, not the pre-edge register image.
+    assign tcc_lfsr_commit = lfsr_en ? prbs15_step_n(tcc_lfsr, MUTRIG_COARSE_STEPS_PER_CYCLE) : tcc_lfsr;
+    assign ecc_lfsr_commit = lfsr_en ? prbs15_step_n(ecc_lfsr, MUTRIG_COARSE_STEPS_PER_CYCLE) : ecc_lfsr;
+
+`ifndef SYNTHESIS
+    always_ff @(posedge i_clk) begin
+        if (emu_rst)
+            true_gts_8n <= '0;
+        else if (lfsr_en)
+            true_gts_8n <= true_gts_8n + 48'd1;
+    end
+`endif
 
     // ========================================
     // Hit generator
@@ -307,8 +331,8 @@ module emulator_mutrig
         .sim_offer_valid (1'b0),
         .sim_offer_word  ('0),
         .sim_offer_ready (),
-        .tcc_lfsr        (tcc_lfsr),
-        .ecc_lfsr        (ecc_lfsr),
+        .tcc_lfsr        (tcc_lfsr_commit),
+        .ecc_lfsr        (ecc_lfsr_commit),
         .fifo_rd_en      (fifo_rd_en),
         .fifo_data       (fifo_data),
         .event_count     (event_count),

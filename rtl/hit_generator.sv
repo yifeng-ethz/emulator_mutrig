@@ -93,6 +93,11 @@ module hit_generator
     logic [47:0]              pending_word;
     logic                     hit_wr_en;
     logic [47:0]              hit_wr_data;
+`ifndef SYNTHESIS
+    logic [47:0]              debug_true_gts_8n;
+    logic [47:0]              debug_hit_gen_gts_8n;
+    logic [47:0]              cluster_true_gts_anchor;
+`endif
 
     // The frame assembler always consumes the long-word layout. Short-mode
     // normalization happens later during packet assembly.
@@ -351,6 +356,10 @@ module hit_generator
         logic [4:0] poisson_t_fine_v;
         logic [4:0] poisson_e_fine_v;
         logic inject_pulse_seen_v;
+`ifndef SYNTHESIS
+        logic [47:0] debug_true_gts_next_v;
+        logic [47:0] cluster_true_gts_anchor_next_v;
+`endif
 
         if (rst) begin
             prng_state           <= prng1_seed_init(cfg_prng_seed);
@@ -372,6 +381,11 @@ module hit_generator
             fifo_data            <= '0;
             hit_wr_en            <= 1'b0;
             hit_wr_data          <= '0;
+`ifndef SYNTHESIS
+            debug_true_gts_8n    <= '0;
+            debug_hit_gen_gts_8n <= '0;
+            cluster_true_gts_anchor <= '0;
+`endif
         end else begin
             hit_wr_en           <= 1'b0;
             consume_cluster_word_v = 1'b0;
@@ -401,6 +415,10 @@ module hit_generator
                                     !(pending_valid && (fifo_count == FIFO_COUNT_WIDTH'(FIFO_DEPTH - 1)));
             pending_valid_next_v = pending_valid;
             pending_word_next_v  = pending_word;
+`ifndef SYNTHESIS
+            debug_true_gts_next_v = debug_true_gts_8n + 48'd1;
+            cluster_true_gts_anchor_next_v = cluster_true_gts_anchor;
+`endif
 
             if (l2_push_valid_v || l2_pop_from_pending_v)
                 pending_valid_next_v = 1'b0;
@@ -436,6 +454,9 @@ module hit_generator
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
                             cluster_fine_anchor_next_v = prng2_state[4:0];
+`ifndef SYNTHESIS
+                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+`endif
                             consume_cluster_word_v = 1'b1;
                             candidate_global_ch_v = burst_start_v;
                             burst_remaining_next_v = cluster_size_v - 5'd1;
@@ -456,6 +477,9 @@ module hit_generator
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
                             cluster_fine_anchor_next_v = prng2_state[4:0];
+`ifndef SYNTHESIS
+                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+`endif
                             consume_cluster_word_v = 1'b1;
                             candidate_global_ch_v = burst_start_v;
                             burst_remaining_next_v = cluster_size_v - 5'd1;
@@ -473,6 +497,9 @@ module hit_generator
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
                             cluster_fine_anchor_next_v = prng2_state[4:0];
+`ifndef SYNTHESIS
+                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+`endif
                             consume_cluster_word_v = 1'b1;
                             candidate_global_ch_v = burst_start_v;
                             burst_remaining_next_v = cluster_size_v - 5'd1;
@@ -493,6 +520,9 @@ module hit_generator
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
                             cluster_fine_anchor_next_v = prng2_state[4:0];
+`ifndef SYNTHESIS
+                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+`endif
                             consume_cluster_word_v = 1'b1;
                             candidate_global_ch_v = burst_start_v;
                             burst_remaining_next_v = cluster_size_v - 5'd1;
@@ -512,6 +542,9 @@ module hit_generator
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
                             cluster_fine_anchor_next_v = prng2_state[4:0];
+`ifndef SYNTHESIS
+                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+`endif
                             consume_cluster_word_v = 1'b1;
                             candidate_global_ch_v = burst_start_v;
                             burst_remaining_next_v = cluster_size_v - 5'd1;
@@ -540,6 +573,9 @@ module hit_generator
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
                             cluster_fine_anchor_next_v = prng2_state[4:0];
+`ifndef SYNTHESIS
+                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+`endif
                             consume_cluster_word_v = 1'b1;
                             candidate_global_ch_v = burst_start_v;
                             burst_remaining_next_v = cluster_size_v - 5'd1;
@@ -560,6 +596,9 @@ module hit_generator
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
                             cluster_fine_anchor_next_v = prng2_state[4:0];
+`ifndef SYNTHESIS
+                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+`endif
                             consume_cluster_word_v = 1'b1;
                             candidate_global_ch_v = burst_start_v;
                             burst_remaining_next_v = cluster_size_v - 5'd1;
@@ -572,6 +611,9 @@ module hit_generator
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
                             cluster_fine_anchor_next_v = prng2_state[4:0];
+`ifndef SYNTHESIS
+                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+`endif
                             consume_cluster_word_v = 1'b1;
                             candidate_global_ch_v = burst_start_v;
                             burst_remaining_next_v = cluster_size_v - 5'd1;
@@ -601,6 +643,9 @@ module hit_generator
                 cluster_tcc_anchor   <= cluster_tcc_anchor_next_v;
                 cluster_ecc_anchor   <= cluster_ecc_anchor_next_v;
                 cluster_fine_anchor  <= cluster_fine_anchor_next_v;
+`ifndef SYNTHESIS
+                cluster_true_gts_anchor <= cluster_true_gts_anchor_next_v;
+`endif
                 inject_burst_pending <= inject_burst_pending_next_v;
                 burst_remaining      <= burst_remaining_next_v;
                 burst_global_ch      <= burst_global_next_v;
@@ -631,10 +676,19 @@ module hit_generator
                 pending_word_next_v  = candidate_word_v;
                 hit_wr_en            <= 1'b1;
                 hit_wr_data          <= candidate_word_v;
+`ifndef SYNTHESIS
+                if (consume_cluster_word_v)
+                    debug_hit_gen_gts_8n <= cluster_true_gts_anchor_next_v;
+                else
+                    debug_hit_gen_gts_8n <= debug_true_gts_next_v;
+`endif
             end
 
             pending_valid <= pending_valid_next_v;
             pending_word  <= pending_word_next_v;
+`ifndef SYNTHESIS
+            debug_true_gts_8n <= debug_true_gts_next_v;
+`endif
 
             if (l2_push_valid_v) begin
                 l2_fifo_mem[fifo_wr_ptr] <= pending_word;

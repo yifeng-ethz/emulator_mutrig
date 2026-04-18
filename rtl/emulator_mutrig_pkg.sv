@@ -39,12 +39,19 @@ package emulator_mutrig_pkg;
     // ========================================
     // LFSR / PRBS-15 coarse counter
     // ========================================
-    // Polynomial: x^15 + x^1 + 1  (Galois form: taps at bit 14 and bit 0)
-    // Feedback:   new_bit = sreg[14] XOR sreg[0]
-    // Init state: all 1s (0x7FFF)
+    // The integrated MuTRiG timestamp processor decodes the dark coarse code
+    // with the `dual_port_rom_init.txt` LUT used in the FEB datapath. That
+    // LUT corresponds to the following 15-bit sequence:
+    //   - seed      = 0x0001
+    //   - next[0]   = ~(state[14] ^ state[13])
+    //   - next[14:1]= state[13:0]
+    //
+    // Keep the emulator on that exact sequence so the downstream MTS decoder
+    // reconstructs the true 1.6 ns timestamp without a phase remap.
     // Period:     2^15 - 1 = 32767
     localparam int TCC_WIDTH = 15;
-    localparam logic [14:0] LFSR15_INIT = 15'h7FFF;
+    localparam logic [14:0] LFSR15_INIT = 15'h0001;
+    localparam int MUTRIG_COARSE_STEPS_PER_CYCLE = 5;
 
     // ========================================
     // 8b/10b K-characters
@@ -178,11 +185,23 @@ package emulator_mutrig_pkg;
     endfunction
 
     function automatic logic prbs15_feedback(input logic [14:0] state);
-        return state[14] ^ state[0];
+        return ~(state[14] ^ state[13]);
     endfunction
 
     function automatic logic [14:0] prbs15_step(input logic [14:0] state);
         return {state[13:0], prbs15_feedback(state)};
+    endfunction
+
+    function automatic logic [14:0] prbs15_step_n(
+        input logic [14:0] state,
+        input int unsigned step_count
+    );
+        logic [14:0] state_v;
+
+        state_v = state;
+        for (int idx = 0; idx < step_count; idx++)
+            state_v = prbs15_step(state_v);
+        return state_v;
     endfunction
 
     function automatic logic [14:0] prbs15_prev(input logic [14:0] state);

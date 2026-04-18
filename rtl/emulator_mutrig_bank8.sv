@@ -51,9 +51,14 @@ module emulator_mutrig_bank8
     logic       lfsr_en;
     logic [14:0] tcc_lfsr;
     logic [14:0] ecc_lfsr;
+    logic [14:0] tcc_lfsr_commit;
+    logic [14:0] ecc_lfsr_commit;
     logic [10:0] frame_interval_cnt;
     logic [10:0] frame_interval_max;
     logic        frame_start_req;
+`ifndef SYNTHESIS
+    logic [47:0] true_gts_8n;
+`endif
 
     always_ff @(posedge i_clk) begin
         if (i_rst) begin
@@ -66,7 +71,7 @@ module emulator_mutrig_bank8
     assign asi_ctrl_ready = 1'b1;
     assign run_generating = ctrl_state_q[3];
     assign run_draining   = ctrl_state_q[3] | ctrl_state_q[4];
-    assign emu_rst        = i_rst | (asi_ctrl_valid && (asi_ctrl_data[1] | asi_ctrl_data[7]));
+    assign emu_rst        = i_rst | (asi_ctrl_valid && (asi_ctrl_data[2] | asi_ctrl_data[7]));
     assign frame_rst      = emu_rst | ~run_draining;
 
     always_ff @(posedge i_clk) begin
@@ -77,7 +82,7 @@ module emulator_mutrig_bank8
     end
 
     assign inject_pulse_clk = inject_sync[0] & ~inject_sync[1];
-    assign lfsr_en = run_generating & (cfg_enable_mask != '0);
+    assign lfsr_en = ~emu_rst;
     assign frame_interval_max = cfg_short_mode ? 11'(FRAME_INTERVAL_SHORT) : 11'(FRAME_INTERVAL_LONG);
 
     always_ff @(posedge i_clk) begin
@@ -95,19 +100,35 @@ module emulator_mutrig_bank8
         end
     end
 
-    prbs15_lfsr u_tcc_lfsr (
+    prbs15_lfsr #(
+        .STEP_COUNT (MUTRIG_COARSE_STEPS_PER_CYCLE)
+    ) u_tcc_lfsr (
         .clk      (i_clk),
         .rst      (emu_rst),
         .en       (lfsr_en),
         .lfsr_out (tcc_lfsr)
     );
 
-    prbs15_lfsr u_ecc_lfsr (
+    prbs15_lfsr #(
+        .STEP_COUNT (MUTRIG_COARSE_STEPS_PER_CYCLE)
+    ) u_ecc_lfsr (
         .clk      (i_clk),
         .rst      (emu_rst),
         .en       (lfsr_en),
         .lfsr_out (ecc_lfsr)
     );
+
+    assign tcc_lfsr_commit = lfsr_en ? prbs15_step_n(tcc_lfsr, MUTRIG_COARSE_STEPS_PER_CYCLE) : tcc_lfsr;
+    assign ecc_lfsr_commit = lfsr_en ? prbs15_step_n(ecc_lfsr, MUTRIG_COARSE_STEPS_PER_CYCLE) : ecc_lfsr;
+
+`ifndef SYNTHESIS
+    always_ff @(posedge i_clk) begin
+        if (emu_rst)
+            true_gts_8n <= '0;
+        else if (lfsr_en)
+            true_gts_8n <= true_gts_8n + 48'd1;
+    end
+`endif
 
     genvar lane_idx;
     generate
@@ -124,8 +145,8 @@ module emulator_mutrig_bank8
                 .run_generating         (run_generating),
                 .run_draining           (run_draining),
                 .inject_pulse           (inject_pulse_clk),
-                .tcc_lfsr               (tcc_lfsr),
-                .ecc_lfsr               (ecc_lfsr),
+                .tcc_lfsr               (tcc_lfsr_commit),
+                .ecc_lfsr               (ecc_lfsr_commit),
                 .cfg_enable             (cfg_enable_mask[lane_idx]),
                 .cfg_hit_mode           (cfg_hit_mode),
                 .cfg_short_mode         (cfg_short_mode),
