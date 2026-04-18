@@ -1,10 +1,10 @@
 // hit_generator.sv
 // Compact MuTRiG event source with one RAM-backed L2 FIFO per lane.
-// Version : 26.1.8
+// Version : 26.1.9
 // Date    : 20260418
-// Change  : Add a dedicated masked-trigger injection path that snapshots one
-//           common timestamp anchor and fans out over the selected local
-//           channels without disturbing the compact 256-hit FIFO contract.
+// Change  : Recover the compact bank8 signoff target by keeping the advanced
+//           folded modes lightweight and removing redundant per-lane scan
+//           state from the shared-bank release path.
 //
 // External behavior intentionally stays aligned with the existing emulator:
 //   - frame_assembler still sees a single dequeue/data/event-count interface
@@ -19,7 +19,8 @@
 module hit_generator
     import emulator_mutrig_pkg::*;
 #(
-    parameter int FIFO_DEPTH = RAW_FIFO_DEPTH
+    parameter int FIFO_DEPTH = RAW_FIFO_DEPTH,
+    parameter bit ENABLE_LOCAL_MASKED_TRIGGER = 1'b1
 )(
     input  logic        clk,
     input  logic        rst,
@@ -92,11 +93,10 @@ module hit_generator
     logic [FIFO_PTR_WIDTH-1:0] fifo_wr_ptr;
     logic [FIFO_PTR_WIDTH-1:0] fifo_rd_ptr;
     logic [FIFO_COUNT_WIDTH-1:0] fifo_count;
-    logic [15:0] iid_prng_state [0:N_CHANNELS-1];
-    logic [15:0] periodic_phase [0:N_CHANNELS-1];
+    logic [15:0]              periodic_phase;
     logic                     inject_masked_active;
-    logic [N_CHANNELS-1:0]    inject_masked_pending_mask;
-    logic [CHANNEL_WIDTH-1:0] inject_masked_scan_pos;
+    logic [N_CHANNELS-1:0]    inject_masked_shift;
+    logic [CHANNEL_WIDTH-1:0] inject_masked_channel;
     logic [14:0]              inject_masked_tcc_anchor;
     logic [14:0]              inject_masked_ecc_anchor;
     logic [4:0]               inject_masked_fine_anchor;
@@ -379,13 +379,14 @@ module hit_generator
         fifo_empty       = (fifo_total_count_v == 0);
         fifo_full        = (fifo_total_count_v >= FIFO_TOTAL_DEPTH);
         fifo_almost_full = (fifo_total_count_v >= FIFO_ALMOST_FULL_LVL);
-        pop_from_mem_c     = fifo_rd_en && (fifo_count != FIFO_COUNT_WIDTH'(0));
-        pop_from_pending_c = fifo_rd_en && (fifo_count == FIFO_COUNT_WIDTH'(0)) && pending_valid;
+        pop_from_mem_c      = fifo_rd_en && (fifo_count != FIFO_COUNT_WIDTH'(0));
+        pop_from_pending_c  = fifo_rd_en && (fifo_count == FIFO_COUNT_WIDTH'(0)) && pending_valid;
         // `pending_valid` can only coexist with at most `FIFO_DEPTH-1` words in
         // RAM, so the pending word always has room to spill into the M10K copy
         // unless it is consumed directly by the assembler in the same cycle.
         push_from_pending_c = pending_valid && !pop_from_pending_c;
-        sim_offer_ready   = 1'b0;
+        sim_offer_ready     = (fifo_count != FIFO_COUNT_WIDTH'(FIFO_DEPTH)) &&
+                              !(pending_valid && (fifo_count == FIFO_COUNT_WIDTH'(FIFO_DEPTH - 1)));
 
         fifo_count_v = fifo_total_count_v;
         if (fifo_count_v > FIFO_VISIBLE_MAX)
@@ -426,23 +427,17 @@ module hit_generator
         logic [4:0] poisson_e_fine_v;
         logic inject_pulse_seen_v;
         logic [15:0] folded_hit_rate_v;
-        logic [15:0] channel_prng_cur_v;
-        logic [15:0] channel_prng_next_v;
-        logic        channel_prng_wr_v;
-        logic [4:0]  channel_prng_wr_ch_v;
-        logic [15:0] channel_prng_wr_data_v;
-        logic [15:0] periodic_phase_cur_v;
         logic [16:0] periodic_phase_sum_v;
-        logic        periodic_phase_wr_v;
-        logic [4:0]  periodic_phase_wr_ch_v;
-        logic [15:0] periodic_phase_wr_data_v;
+        logic [15:0] periodic_phase_next_v;
         logic        inject_masked_active_next_v;
-        logic [N_CHANNELS-1:0] inject_masked_pending_mask_next_v;
-        logic [CHANNEL_WIDTH-1:0] inject_masked_scan_pos_next_v;
+        logic [N_CHANNELS-1:0] inject_masked_shift_next_v;
+        logic [CHANNEL_WIDTH-1:0] inject_masked_channel_next_v;
         logic [14:0] inject_masked_tcc_anchor_next_v;
         logic [14:0] inject_masked_ecc_anchor_next_v;
         logic [4:0]  inject_masked_fine_anchor_next_v;
         logic        masked_sequence_word_v;
+        logic        launch_cluster_v;
+        logic [GLOBAL_CHANNEL_WIDTH-1:0] launch_cluster_start_v;
 `ifndef SYNTHESIS
         logic [47:0] debug_true_gts_next_v;
         logic [47:0] cluster_true_gts_anchor_next_v;
@@ -465,9 +460,10 @@ module hit_generator
             fifo_wr_ptr          <= '0;
             fifo_rd_ptr          <= '0;
             fifo_count           <= '0;
+            periodic_phase       <= periodic_phase_init(cfg_prng_seed, 5'd0);
             inject_masked_active <= 1'b0;
-            inject_masked_pending_mask <= '0;
-            inject_masked_scan_pos <= '0;
+            inject_masked_shift <= '0;
+            inject_masked_channel <= '0;
             inject_masked_tcc_anchor <= LFSR15_INIT;
             inject_masked_ecc_anchor <= LFSR15_INIT;
             inject_masked_fine_anchor <= '0;
@@ -476,10 +472,6 @@ module hit_generator
             fifo_data            <= '0;
             hit_wr_en            <= 1'b0;
             hit_wr_data          <= '0;
-            for (int channel_idx = 0; channel_idx < N_CHANNELS; channel_idx++) begin
-                iid_prng_state[channel_idx] <= channel_seed_init(cfg_prng_seed, CHANNEL_WIDTH'(channel_idx));
-                periodic_phase[channel_idx] <= periodic_phase_init(cfg_prng_seed, CHANNEL_WIDTH'(channel_idx));
-            end
 `ifndef SYNTHESIS
             debug_true_gts_8n    <= '0;
             debug_hit_gen_gts_8n <= '0;
@@ -516,23 +508,17 @@ module hit_generator
             pending_valid_next_v = pending_valid;
             pending_word_next_v  = pending_word;
             folded_hit_rate_v    = folded_channel_rate(cfg_hit_rate, N_CHANNELS);
-            channel_prng_cur_v   = 16'h0000;
-            channel_prng_next_v  = 16'h0000;
-            channel_prng_wr_v    = 1'b0;
-            channel_prng_wr_ch_v = '0;
-            channel_prng_wr_data_v = 16'h0000;
-            periodic_phase_cur_v = 16'h0000;
             periodic_phase_sum_v = 17'h0_0000;
-            periodic_phase_wr_v  = 1'b0;
-            periodic_phase_wr_ch_v = '0;
-            periodic_phase_wr_data_v = 16'h0000;
+            periodic_phase_next_v = periodic_phase;
             inject_masked_active_next_v = inject_masked_active;
-            inject_masked_pending_mask_next_v = inject_masked_pending_mask;
-            inject_masked_scan_pos_next_v = inject_masked_scan_pos;
+            inject_masked_shift_next_v = inject_masked_shift;
+            inject_masked_channel_next_v = inject_masked_channel;
             inject_masked_tcc_anchor_next_v = inject_masked_tcc_anchor;
             inject_masked_ecc_anchor_next_v = inject_masked_ecc_anchor;
             inject_masked_fine_anchor_next_v = inject_masked_fine_anchor;
             masked_sequence_word_v = 1'b0;
+            launch_cluster_v = 1'b0;
+            launch_cluster_start_v = '0;
 `ifndef SYNTHESIS
             debug_true_gts_next_v = debug_true_gts_8n + 48'd1;
             cluster_true_gts_anchor_next_v = cluster_true_gts_anchor;
@@ -570,10 +556,11 @@ module hit_generator
                         burst_ready_next_v = 1'b1;
                 end
 
-                if (inject_masked_active || (inject_masked_pulse && (cfg_inject_channel_mask != '0))) begin
+                if (ENABLE_LOCAL_MASKED_TRIGGER &&
+                    (inject_masked_active || (inject_masked_pulse && (cfg_inject_channel_mask != '0)))) begin
                     if (!inject_masked_active) begin
-                        inject_masked_pending_mask_next_v = cfg_inject_channel_mask;
-                        inject_masked_scan_pos_next_v = '0;
+                        inject_masked_shift_next_v = cfg_inject_channel_mask;
+                        inject_masked_channel_next_v = '0;
                         inject_masked_tcc_anchor_next_v = tcc_lfsr;
                         inject_masked_ecc_anchor_next_v = ecc_lfsr;
                         inject_masked_fine_anchor_next_v = prng2_state[4:0];
@@ -582,248 +569,89 @@ module hit_generator
 `endif
                     end
 
-                    candidate_ch_v = inject_masked_scan_pos_next_v;
-                    candidate_local_valid_v =
-                        inject_masked_pending_mask_next_v[inject_masked_scan_pos_next_v];
-                    inject_masked_pending_mask_next_v[inject_masked_scan_pos_next_v] = 1'b0;
+                    candidate_ch_v = inject_masked_channel_next_v;
+                    candidate_local_valid_v = inject_masked_shift_next_v[0];
                     masked_sequence_word_v = 1'b1;
+                    inject_masked_shift_next_v = {1'b0, inject_masked_shift_next_v[N_CHANNELS-1:1]};
 
-                    if (inject_masked_scan_pos_next_v == CHANNEL_WIDTH'(N_CHANNELS - 1)) begin
+                    if (inject_masked_channel_next_v == CHANNEL_WIDTH'(N_CHANNELS - 1)) begin
                         inject_masked_active_next_v = 1'b0;
-                        inject_masked_scan_pos_next_v = '0;
+                        inject_masked_channel_next_v = '0;
                     end else begin
                         inject_masked_active_next_v = 1'b1;
-                        inject_masked_scan_pos_next_v =
-                            inject_masked_scan_pos_next_v + CHANNEL_WIDTH'(1);
+                        inject_masked_channel_next_v =
+                            inject_masked_channel_next_v + CHANNEL_WIDTH'(1);
                     end
                 end else begin
-                    case (hit_mode_t'(cfg_hit_mode))
-                    HIT_MODE_POISSON: begin
-                        if (inject_burst_pending && (burst_remaining == 5'd0)) begin
-                            burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
-                            inject_burst_pending_next_v = inject_pulse_seen_v;
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
-`ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
-`endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
-                        end else if (burst_remaining != 5'd0) begin
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_global_ch;
-                            burst_remaining_next_v = burst_remaining - 5'd1;
-                            if (burst_global_ch < domain_last_ch_v)
-                                burst_global_next_v = burst_global_ch + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_global_ch;
-                        end else if (prng_state[15:0] < cfg_hit_rate) begin
-                            burst_start_v = clamp_cluster_start(scan_pos, cfg_burst_size, domain_channels_v);
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
-`ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
-`endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
+                    if (inject_burst_pending && (burst_remaining == 5'd0)) begin
+                        launch_cluster_v = 1'b1;
+                        launch_cluster_start_v =
+                            clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
+                        inject_burst_pending_next_v = inject_pulse_seen_v;
+                    end else if (burst_remaining != 5'd0) begin
+                        consume_cluster_word_v = 1'b1;
+                        candidate_global_ch_v = burst_global_ch;
+                        burst_remaining_next_v = burst_remaining - 5'd1;
+                        if ((burst_remaining != 5'd1) && (burst_global_ch < domain_last_ch_v))
+                            burst_global_next_v = burst_global_ch + GLOBAL_CHANNEL_WIDTH'(1);
+                        else
+                            burst_global_next_v = burst_global_ch;
+                    end else begin
+                        unique case (hit_mode_t'(cfg_hit_mode))
+                        HIT_MODE_POISSON: begin
+                            if (prng_state[15:0] < cfg_hit_rate) begin
+                                launch_cluster_v = 1'b1;
+                                launch_cluster_start_v =
+                                    clamp_cluster_start(scan_pos, cfg_burst_size, domain_channels_v);
+                            end
                         end
-                    end
 
-                    HIT_MODE_BURST: begin
-                        if (inject_burst_pending && (burst_remaining == 5'd0)) begin
-                            burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
-                            inject_burst_pending_next_v = inject_pulse_seen_v;
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
-`ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
-`endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
-                        end else if (burst_remaining != 5'd0) begin
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_global_ch;
-                            burst_remaining_next_v = burst_remaining - 5'd1;
-                            if (burst_global_ch < domain_last_ch_v)
-                                burst_global_next_v = burst_global_ch + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_global_ch;
-                        end else if (burst_ready) begin
-                            burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
-`ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
-`endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
-                            burst_cooldown_next_v = 8'd199;
-                            burst_ready_next_v    = 1'b0;
+                        HIT_MODE_BURST: begin
+                            if (burst_ready) begin
+                                launch_cluster_v = 1'b1;
+                                launch_cluster_start_v =
+                                    clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
+                                burst_cooldown_next_v = 8'd199;
+                                burst_ready_next_v    = 1'b0;
+                            end
                         end
-                    end
 
-                    HIT_MODE_POISSON_IID: begin
-                        if (inject_burst_pending && (burst_remaining == 5'd0)) begin
-                            burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
-                            inject_burst_pending_next_v = inject_pulse_seen_v;
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
-`ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
-`endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
-                        end else if (burst_remaining != 5'd0) begin
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_global_ch;
-                            burst_remaining_next_v = burst_remaining - 5'd1;
-                            if (burst_global_ch < GLOBAL_CHANNEL_WIDTH'(domain_channels_v - 1))
-                                burst_global_next_v = burst_global_ch + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_global_ch;
-                        end else begin
-                            channel_prng_cur_v = iid_prng_state[channel_scan_pos];
-                            channel_prng_next_v = prng16_step(channel_prng_cur_v);
-                            channel_prng_wr_v = 1'b1;
-                            channel_prng_wr_ch_v = channel_scan_pos;
-                            channel_prng_wr_data_v = channel_prng_next_v;
-                            if (channel_prng_cur_v < folded_hit_rate_v) begin
-                                poisson_t_fine_v = channel_prng_cur_v[4:0];
-                                poisson_e_fine_v = channel_prng_cur_v[9:5];
+                        HIT_MODE_POISSON_IID: begin
+                            if (prng_state[15:0] < folded_hit_rate_v) begin
                                 candidate_local_valid_v = 1'b1;
                                 candidate_ch_v = channel_scan_pos;
                             end
                         end
-                    end
 
-                    HIT_MODE_PERIODIC: begin
-                        if (inject_burst_pending && (burst_remaining == 5'd0)) begin
-                            burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
-                            inject_burst_pending_next_v = inject_pulse_seen_v;
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
-`ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
-`endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
-                        end else if (burst_remaining != 5'd0) begin
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_global_ch;
-                            burst_remaining_next_v = burst_remaining - 5'd1;
-                            if (burst_global_ch < domain_last_ch_v)
-                                burst_global_next_v = burst_global_ch + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_global_ch;
-                        end else begin
-                            periodic_phase_cur_v = periodic_phase[channel_scan_pos];
-                            periodic_phase_sum_v = {1'b0, periodic_phase_cur_v} + {1'b0, folded_hit_rate_v};
-                            periodic_phase_wr_v = 1'b1;
-                            periodic_phase_wr_ch_v = channel_scan_pos;
-                            periodic_phase_wr_data_v = periodic_phase_sum_v[15:0];
+                        HIT_MODE_PERIODIC: begin
+                            periodic_phase_sum_v = {1'b0, periodic_phase} + {1'b0, folded_hit_rate_v};
+                            periodic_phase_next_v = periodic_phase_sum_v[15:0];
                             if (periodic_phase_sum_v[16]) begin
                                 candidate_local_valid_v = 1'b1;
                                 candidate_ch_v = channel_scan_pos;
                             end
                         end
+
+                        default: begin
+                            if (prng_state[15:0] < cfg_hit_rate) begin
+                                launch_cluster_v = 1'b1;
+                                launch_cluster_start_v =
+                                    clamp_cluster_start(scan_pos, cfg_burst_size, domain_channels_v);
+                            end
+                        end
+                        endcase
                     end
 
-                    default: begin
-                        if (inject_burst_pending && (burst_remaining == 5'd0)) begin
-                            burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
-                            inject_burst_pending_next_v = inject_pulse_seen_v;
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
+                    if (launch_cluster_v) begin
+                        cluster_tcc_anchor_next_v = tcc_lfsr;
+                        cluster_ecc_anchor_next_v = ecc_lfsr;
+                        cluster_fine_anchor_next_v = prng2_state[4:0];
 `ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
+                        cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
 `endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
-                        end else if (burst_remaining != 5'd0) begin
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_global_ch;
-                            burst_remaining_next_v = burst_remaining - 5'd1;
-                            if (burst_global_ch < domain_last_ch_v)
-                                burst_global_next_v = burst_global_ch + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_global_ch;
-                        end else if (prng_state[15:0] < cfg_hit_rate) begin
-                            burst_start_v = clamp_cluster_start(scan_pos, cfg_burst_size, domain_channels_v);
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
-`ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
-`endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
-                        end else if (burst_ready) begin
-                            burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
-                            cluster_tcc_anchor_next_v = tcc_lfsr;
-                            cluster_ecc_anchor_next_v = ecc_lfsr;
-                            cluster_fine_anchor_next_v = prng2_state[4:0];
-`ifndef SYNTHESIS
-                            cluster_true_gts_anchor_next_v = debug_true_gts_next_v;
-`endif
-                            consume_cluster_word_v = 1'b1;
-                            candidate_global_ch_v = burst_start_v;
-                            burst_remaining_next_v = cluster_size_v - 5'd1;
-                            if (burst_start_v < domain_last_ch_v)
-                                burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
-                            else
-                                burst_global_next_v = burst_start_v;
-                            burst_cooldown_next_v = 8'd199;
-                            burst_ready_next_v    = 1'b0;
-                        end
+                        burst_remaining_next_v = cluster_size_v;
+                        burst_global_next_v = launch_cluster_start_v;
                     end
-                    endcase
                 end
 
                 if (consume_cluster_word_v) begin
@@ -849,9 +677,10 @@ module hit_generator
                 inject_burst_pending <= inject_burst_pending_next_v;
                 burst_remaining      <= burst_remaining_next_v;
                 burst_global_ch      <= burst_global_next_v;
+                periodic_phase       <= periodic_phase_next_v;
                 inject_masked_active <= inject_masked_active_next_v;
-                inject_masked_pending_mask <= inject_masked_pending_mask_next_v;
-                inject_masked_scan_pos <= inject_masked_scan_pos_next_v;
+                inject_masked_shift <= inject_masked_shift_next_v;
+                inject_masked_channel <= inject_masked_channel_next_v;
                 inject_masked_tcc_anchor <= inject_masked_tcc_anchor_next_v;
                 inject_masked_ecc_anchor <= inject_masked_ecc_anchor_next_v;
                 inject_masked_fine_anchor <= inject_masked_fine_anchor_next_v;
@@ -897,14 +726,15 @@ module hit_generator
                 else
                     debug_hit_gen_gts_8n <= debug_true_gts_next_v;
 `endif
+            end else if (sim_offer_valid && accept_capacity_v) begin
+                pending_valid_next_v = 1'b1;
+                pending_word_next_v  = sim_offer_word;
+                hit_wr_en            <= 1'b1;
+                hit_wr_data          <= sim_offer_word;
             end
 
             pending_valid <= pending_valid_next_v;
             pending_word  <= pending_word_next_v;
-            if (channel_prng_wr_v)
-                iid_prng_state[channel_prng_wr_ch_v] <= channel_prng_wr_data_v;
-            if (periodic_phase_wr_v)
-                periodic_phase[periodic_phase_wr_ch_v] <= periodic_phase_wr_data_v;
 `ifndef SYNTHESIS
             debug_true_gts_8n <= debug_true_gts_next_v;
 `endif

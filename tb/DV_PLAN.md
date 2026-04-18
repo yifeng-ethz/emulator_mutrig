@@ -1,7 +1,7 @@
 # DV Plan: emulator_mutrig
 
 **DUT family:** `emulator_mutrig`
-**Active release:** `26.1.7.0418`
+**Active release:** `26.1.9.0418`
 **Primary evidence target:** compact single-lane behavior plus standalone bank8 synthesis proof
 **Companion reports:** [DV_REPORT.md](DV_REPORT.md), [DV_COV.md](DV_COV.md), [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md)
 
@@ -120,7 +120,7 @@ Expected outputs:
 
 ## 4. Current Truth After 2026-04-18 Reruns
 
-- directed smoke passes cleanly at `54 passed, 0 failed`
+- directed smoke passes cleanly at `61 passed, 0 failed`
 - isolated UVM regression passes cleanly
 - coverage refresh is present and reviewable (`70.74%` filtered merged total)
 - raw MuTRiG A/B sweep proves exact short/long collective latency-distribution
@@ -128,8 +128,8 @@ Expected outputs:
 - Poisson delay sweep is present and reports the corrected raw-style
   `true E-ts -> frame_start` and `true E-ts -> output` distributions across the
   full requested `0% .. 100%` raw-load range
-- bank8 standalone compile meets the area target at `3883 ALMs`
-- tightened `137.5 MHz` timing closes with slow `85C` setup slack `+0.026 ns`
+- bank8 standalone compile meets the area target at `3856 ALMs`
+- tightened `137.5 MHz` timing closes with slow `85C` setup slack `+1.224 ns`
 
 ## 5. Signoff Interpretation
 

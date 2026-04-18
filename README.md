@@ -7,7 +7,7 @@ eight lanes behind shared run-control, inject sync, and coarse counters.
 
 ## Active Release
 
-- Release: `26.1.7.0418`
+- Release: `26.1.9.0418`
 - Primary goal: keep `8` MuTRiG lanes below `4000 ALMs total`
 - Lane storage rule: each lane keeps one `256 x 48` L2 hit FIFO in M10Ks
 - Active signoff set:
@@ -50,7 +50,7 @@ Each lane still keeps:
 
 ### Functional
 
-- Directed smoke: `make -C tb run_all` -> `54 passed, 0 failed`
+- Directed smoke: `make -C tb run_all` -> `61 passed, 0 failed`
 - UVM isolated regression: `make -C tb/uvm clean closure SEEDS=1` -> `15 / 15 passed`
 - Raw-vs-emulator A/B sweep: `python3 tb/mutrig_true_ab/sweep_true_ab.py`
 - Coverage refresh: `make -C tb/uvm clean closure SEEDS=1`
@@ -117,15 +117,15 @@ Each lane still keeps:
 - Compile:
   - `quartus_sh --flow compile emulator_mutrig_bank8_syn -c emulator_mutrig_bank8_syn`
 - Result:
-  - `3883 ALMs`
-  - `3545` registers
+  - `3856 ALMs`
+  - `3777` registers
   - `98,304` block memory bits
   - `16` RAM blocks
   - `0` DSP blocks
 - Area target:
-  - `PASS`, because `3883 < 4000`
+  - `PASS`, because `3856 < 4000`
 - Tightened timing target:
-  - `PASS`, because slow `85C` setup slack is `+0.026 ns` at `137.5 MHz`
+  - `PASS`, because slow `85C` setup slack is `+1.224 ns` at `137.5 MHz`
 
 ## Notes
 

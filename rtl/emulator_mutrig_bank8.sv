@@ -1,10 +1,10 @@
 // emulator_mutrig_bank8.sv
 // Standalone 8-lane MuTRiG emulator bank with shared control/timebase.
-// Version : 26.1.8
+// Version : 26.1.9
 // Date    : 20260418
-// Change  : Maintain the compact 8-lane standalone bank as the timing-closed
-//           signoff vehicle while adding a broadcast masked-trigger input and
-//           per-lane local channel mask for controlled latency injection.
+// Change  : Keep the 8-lane standalone bank compact by sharing one masked
+//           offer word plus lane index, recovering the <4k ALM signoff point
+//           without changing lane-visible behavior.
 
 module emulator_mutrig_bank8
     import emulator_mutrig_pkg::*;
@@ -61,9 +61,49 @@ module emulator_mutrig_bank8
     logic [10:0] frame_interval_cnt;
     logic [10:0] frame_interval_max;
     logic        frame_start_req;
+    localparam int LANE_INDEX_WIDTH = (LANE_COUNT > 1) ? $clog2(LANE_COUNT) : 1;
+
+    logic                     masked_offer_valid;
+    logic [LANE_INDEX_WIDTH-1:0] masked_offer_lane;
+    logic [47:0]              masked_offer_word;
+    logic [LANE_COUNT-1:0]    masked_offer_ready;
+    logic                     masked_bank_active;
+    logic [LANE_INDEX_WIDTH-1:0] masked_lane;
+    logic [4:0]               masked_channel;
+    logic                     masked_bank_active_next;
+    logic [LANE_INDEX_WIDTH-1:0] masked_lane_next;
+    logic [4:0]               masked_channel_next;
+    logic [14:0]              masked_tcc_anchor;
+    logic [14:0]              masked_ecc_anchor;
+    logic [4:0]               masked_fine_anchor;
 `ifndef SYNTHESIS
     logic [47:0] true_gts_8n;
 `endif
+
+    function automatic logic [47:0] build_masked_offer_word(
+        input logic [4:0]  channel,
+        input logic [14:0] tcc_base,
+        input logic [14:0] ecc_base,
+        input logic [4:0]  fine_anchor
+    );
+        logic [4:0] t_fine_v;
+
+        if (fine_anchor == 5'd0)
+            t_fine_v = 5'd0;
+        else
+            t_fine_v = fine_anchor - 5'd1;
+
+        return pack_hit_long(
+            .channel  (channel),
+            .t_badhit (1'b0),
+            .tcc      (tcc_base),
+            .t_fine   (t_fine_v),
+            .e_badhit (1'b0),
+            .e_flag   (1'b1),
+            .ecc      (ecc_base),
+            .e_fine   (fine_anchor)
+        );
+    endfunction
 
     always_ff @(posedge i_clk) begin
         if (i_rst) begin
@@ -144,13 +184,94 @@ module emulator_mutrig_bank8
     end
 `endif
 
+    always_comb begin : masked_offer_comb
+        logic next_active_v;
+        logic [LANE_INDEX_WIDTH-1:0] next_lane_v;
+        logic [4:0] next_channel_v;
+        logic advance_cursor_v;
+
+        masked_offer_valid = 1'b0;
+        masked_offer_lane  = masked_lane;
+        masked_offer_word  = '0;
+
+        next_active_v  = masked_bank_active;
+        next_lane_v    = masked_lane;
+        next_channel_v = masked_channel;
+        advance_cursor_v = 1'b0;
+
+        if (!masked_bank_active) begin
+            if (inject_masked_pulse_clk && (cfg_inject_channel_mask != '0) && (cfg_enable_mask != '0)) begin
+                next_active_v  = 1'b1;
+                next_lane_v    = '0;
+                next_channel_v = '0;
+            end
+        end else begin
+            if (cfg_enable_mask[masked_lane] && cfg_inject_channel_mask[masked_channel]) begin
+                masked_offer_valid = 1'b1;
+                masked_offer_lane  = masked_lane;
+                masked_offer_word  =
+                    build_masked_offer_word(masked_channel, masked_tcc_anchor, masked_ecc_anchor, masked_fine_anchor);
+                if (masked_offer_ready[masked_lane])
+                    advance_cursor_v = 1'b1;
+            end else begin
+                advance_cursor_v = 1'b1;
+            end
+
+            if (advance_cursor_v) begin
+                if (masked_channel == CHANNEL_WIDTH'(N_CHANNELS - 1)) begin
+                    if (masked_lane == 3'(LANE_COUNT - 1)) begin
+                        next_active_v  = 1'b0;
+                        next_lane_v    = '0;
+                        next_channel_v = '0;
+                    end else begin
+                        next_lane_v    = masked_lane + LANE_INDEX_WIDTH'(1);
+                        next_channel_v = '0;
+                    end
+                end else begin
+                    next_channel_v = masked_channel + 5'd1;
+                end
+            end
+        end
+
+        masked_bank_active_next = emu_rst ? 1'b0 : next_active_v;
+        masked_lane_next        = next_lane_v;
+        masked_channel_next     = next_channel_v;
+    end
+
+    always_ff @(posedge i_clk) begin
+        if (emu_rst) begin
+            masked_bank_active <= 1'b0;
+            masked_lane        <= '0;
+            masked_channel     <= '0;
+        end else begin
+            masked_bank_active <= masked_bank_active_next;
+            masked_lane        <= masked_lane_next;
+            masked_channel     <= masked_channel_next;
+        end
+    end
+
+    always_ff @(posedge i_clk) begin
+        if (emu_rst) begin
+            masked_tcc_anchor  <= LFSR15_INIT;
+            masked_ecc_anchor  <= LFSR15_INIT;
+            masked_fine_anchor <= '0;
+        end else if (!masked_bank_active && inject_masked_pulse_clk &&
+                     (cfg_inject_channel_mask != '0) && (cfg_enable_mask != '0)) begin
+            masked_tcc_anchor  <= tcc_lfsr_commit;
+            masked_ecc_anchor  <= ecc_lfsr_commit;
+            masked_fine_anchor <= tcc_lfsr_commit[4:0] ^ ecc_lfsr_commit[4:0];
+        end
+    end
+
     genvar lane_idx;
     generate
         for (lane_idx = 0; lane_idx < LANE_COUNT; lane_idx++) begin : lane_gen
             localparam logic [3:0] LANE_INDEX_CONST = lane_idx[3:0];
+            localparam logic [LANE_INDEX_WIDTH-1:0] MASKED_LANE_CONST = lane_idx[LANE_INDEX_WIDTH-1:0];
 
             emulator_mutrig_lane_shared #(
-                .FIFO_DEPTH (FIFO_DEPTH)
+                .FIFO_DEPTH                 (FIFO_DEPTH),
+                .ENABLE_LOCAL_MASKED_TRIGGER(1'b0)
             ) u_lane (
                 .clk                    (i_clk),
                 .emu_rst                (emu_rst),
@@ -159,7 +280,7 @@ module emulator_mutrig_bank8
                 .run_generating         (run_generating),
                 .run_draining           (run_draining),
                 .inject_pulse           (inject_pulse_clk),
-                .inject_masked_pulse    (inject_masked_pulse_clk),
+                .inject_masked_pulse    (1'b0),
                 .tcc_lfsr               (tcc_lfsr_commit),
                 .ecc_lfsr               (ecc_lfsr_commit),
                 .cfg_enable             (cfg_enable_mask[lane_idx]),
@@ -182,6 +303,9 @@ module emulator_mutrig_bank8
                 .aso_tx8b1k_valid       (aso_tx8b1k_valid[lane_idx]),
                 .aso_tx8b1k_channel     (aso_tx8b1k_channel[(lane_idx*4) +: 4]),
                 .aso_tx8b1k_error       (aso_tx8b1k_error[(lane_idx*3) +: 3]),
+                .sim_offer_valid        (masked_offer_valid && (masked_offer_lane == MASKED_LANE_CONST)),
+                .sim_offer_word         (masked_offer_word),
+                .sim_offer_ready        (masked_offer_ready[lane_idx]),
                 .status_frame_count     (status_frame_count[(lane_idx*16) +: 16]),
                 .status_event_count     (status_event_count[(lane_idx*10) +: 10])
             );

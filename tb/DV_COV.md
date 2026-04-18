@@ -35,6 +35,6 @@ The following evidence was not refreshed in this turn:
 
 ## 4. Use In Signoff
 
-This file is the active summary for the compact `26.1.7.0418` refresh. It is
+This file is the active summary for the compact `26.1.9.0418` refresh. It is
 good enough to support the current isolated-DV release decision, but it does not
 claim full multi-mode DV closure.

@@ -1,7 +1,7 @@
 # DV Report — emulator_mutrig
 
 **DUT:** `emulator_mutrig` &nbsp; **Date:** `2026-04-18` &nbsp;
-**Release under check:** `26.1.7.0418`
+**Release under check:** `26.1.9.0418`
 
 This is the active DV dashboard for the compact MuTRiG refresh.
 
@@ -9,7 +9,7 @@ This is the active DV dashboard for the compact MuTRiG refresh.
 
 | status | field | value |
 |:---:|---|---|
-| PASS | directed_smoke | `54 passed, 0 failed` |
+| PASS | directed_smoke | `61 passed, 0 failed` |
 | PASS | isolated_uvm | `15 / 15 passed` |
 | PASS | true_raw_ab | short and long mode both keep exact collective latency histograms, exact channels, and exact parser output timing from `0%` to `100%` offered load |
 | PASS | compact_contract_checks | `asic_id 0..7`, hit channel `0..31`, raw `E_Flag`, and `T <= E` checks are green in the directed bench |
@@ -22,7 +22,7 @@ This is the active DV dashboard for the compact MuTRiG refresh.
 
 | status | command | result |
 |:---:|---|---|
-| PASS | `make -C tb run_all` | `54 passed, 0 failed` |
+| PASS | `make -C tb run_all` | `61 passed, 0 failed` |
 | PASS | `make -C tb/uvm clean closure SEEDS=1` | refreshed merged UCDB and text report |
 | PASS | `python3 tb/mutrig_true_ab/sweep_true_ab.py` | short/long raw RTL A/B sweep passed with zero payload, channel, cycle, or histogram deltas |
 | PASS | `python3 tb/poisson_delay/sweep_poisson_delay.py` | wrote compact sweep summary and markdown report |

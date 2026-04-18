@@ -1,7 +1,7 @@
 # Signoff — emulator_mutrig
 
 **DUT family:** `emulator_mutrig` &nbsp; **Date:** `2026-04-18` &nbsp;
-**Release under check:** `26.1.7.0418`
+**Release under check:** `26.1.9.0418`
 
 This is the master signoff dashboard for the compact MuTRiG refresh. Detailed DV
 evidence lives in [../tb/DV_REPORT.md](../tb/DV_REPORT.md); detailed standalone
@@ -13,9 +13,9 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 |:---:|---|---|
 | PASS | overall_requested_scope | compact bank release goals are closed for the active scope: area, tightened timing, directed DV, isolated UVM, raw true-A/B parity, and timestamp-contract checks |
 | PARTIAL | full_multi_mode_signoff | continuous-frame and gate-level collateral were not rerun in this refresh |
-| PASS | area_target | `3883 ALMs < 4000 ALMs for 8 lanes` |
-| PASS | tightened_timing | slow `85C` setup slack `+0.026 ns` at `137.5 MHz` |
-| PASS | directed_smoke | `54 passed, 0 failed` |
+| PASS | area_target | `3856 ALMs < 4000 ALMs for 8 lanes` |
+| PASS | tightened_timing | slow `85C` setup slack `+1.224 ns` at `137.5 MHz` |
+| PASS | directed_smoke | `61 passed, 0 failed` |
 | PASS | isolated_uvm | `15 / 15 passed` |
 | PASS | true_raw_ab_distribution | short and long mode both keep exact collective latency histograms, exact recovered channels, and exact parser output timing from `0%` to `100%` offered load |
 | PASS | merged_ucdb_refresh | current isolated UCDB and text report are present |
@@ -28,7 +28,7 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 
 | status | area | result | source |
 |:---:|---|---|---|
-| PASS | directed bench | `make -C tb run_all` -> `54 passed, 0 failed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
+| PASS | directed bench | `make -C tb run_all` -> `61 passed, 0 failed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
 | PASS | isolated UVM | `make -C tb/uvm clean closure SEEDS=1` -> `15 / 15 passed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
 | PASS | true raw A/B | `python3 tb/mutrig_true_ab/sweep_true_ab.py` -> exact short/long latency histograms, channel parity, payload parity, and cycle parity | [../tb/mutrig_true_ab/results/TRUE_AB_REPORT.md](../tb/mutrig_true_ab/results/TRUE_AB_REPORT.md) |
 | PASS | targeted contract checks | directed bench covers `asic_id`, hit channel bounds, `E_Flag`, and `T <= E` semantics | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
@@ -42,10 +42,10 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 | PASS | revision | `emulator_mutrig_bank8_syn` |
 | PASS | device | `5AGXBA7D4F31C5` |
 | PASS | signoff constraint | `137.5 MHz` / `7.273 ns` |
-| PASS | fitted resources | `3883 ALMs`, `3545 regs`, `16 RAM`, `0 DSP` |
+| PASS | fitted resources | `3856 ALMs`, `3777 regs`, `16 RAM`, `0 DSP` |
 | PASS | area objective | `8` lanes are below the `4000 ALM` target |
-| PASS | slow 85C setup | `+0.026 ns` |
-| PASS | hold timing | worst hold slack `+0.132 ns` or better |
+| PASS | slow 85C setup | `+1.224 ns` |
+| PASS | hold timing | worst hold slack `+0.142 ns` or better |
 | PARTIAL | harness constraints | standalone wrapper leaves many non-core I/O paths unconstrained |
 
 ## Queueing Characterization
@@ -79,7 +79,7 @@ Supplemental short-mode Poisson characterization shows:
 | PASS | RTL | single-lane public `asic_id` is clamped to the bank-valid `0..7` range |
 | PASS | RTL | long-hit default timing now keeps `T <= E`, commits on `E`, and preserves raw-compatible `E_Flag = 1` |
 | PASS | Harness | reset-default UVM expectation aligned to the live cluster defaults |
-| PASS | Metadata | packaged IP defaults updated to `26.1.7.0418` |
+| PASS | Metadata | packaged IP defaults updated to `26.1.9.0418` |
 
 ## Evidence Index
 
@@ -94,7 +94,7 @@ Supplemental short-mode Poisson characterization shows:
 
 ## Verdict
 
-Overall signoff for `26.1.7.0418` is `PASS` for the active compact-bank scope:
+Overall signoff for `26.1.9.0418` is `PASS` for the active compact-bank scope:
 
 - the merged bank closes the requested `<4000 ALM / 8 lane` area target
 - tightened standalone timing closes at `137.5 MHz`

@@ -1,15 +1,16 @@
 // emulator_mutrig_lane_shared.sv
 // Shared-control MuTRiG lane core used by the standalone 8-lane area bank.
-// Version : 26.1.8
+// Version : 26.1.9
 // Date    : 20260418
 // Change  : Keep the shared-lane wrapper aligned with the compact raw-style
-//           frame semantics while threading the dedicated masked-trigger path
-//           into each lane-local generator.
+//           frame semantics while accepting one shared masked-offer stream so
+//           the bank8 signoff shell stays below the 4k ALM target.
 
 module emulator_mutrig_lane_shared
     import emulator_mutrig_pkg::*;
 #(
-    parameter int FIFO_DEPTH = RAW_FIFO_DEPTH
+    parameter int FIFO_DEPTH = RAW_FIFO_DEPTH,
+    parameter bit ENABLE_LOCAL_MASKED_TRIGGER = 1'b1
 )(
     input  logic        clk,
     input  logic        emu_rst,
@@ -38,6 +39,9 @@ module emulator_mutrig_lane_shared
     input  logic        cfg_gen_idle,
     input  logic [3:0]  cfg_asic_id,
     input  logic [N_CHANNELS-1:0] cfg_inject_channel_mask,
+    input  logic        sim_offer_valid,
+    input  logic [47:0] sim_offer_word,
+    output logic        sim_offer_ready,
 
     output logic [8:0]  aso_tx8b1k_data,
     output logic        aso_tx8b1k_valid,
@@ -58,7 +62,8 @@ module emulator_mutrig_lane_shared
     logic        tx_valid_int;
 
     hit_generator #(
-        .FIFO_DEPTH (FIFO_DEPTH)
+        .FIFO_DEPTH                 (FIFO_DEPTH),
+        .ENABLE_LOCAL_MASKED_TRIGGER(ENABLE_LOCAL_MASKED_TRIGGER)
     ) u_hit_gen (
         .clk                  (clk),
         .rst                  (emu_rst),
@@ -77,9 +82,9 @@ module emulator_mutrig_lane_shared
         .inject_pulse         (inject_pulse),
         .inject_masked_pulse  (inject_masked_pulse),
         .cfg_inject_channel_mask(cfg_inject_channel_mask),
-        .sim_offer_valid      (1'b0),
-        .sim_offer_word       ('0),
-        .sim_offer_ready      (),
+        .sim_offer_valid      (sim_offer_valid),
+        .sim_offer_word       (sim_offer_word),
+        .sim_offer_ready      (sim_offer_ready),
         .tcc_lfsr             (tcc_lfsr),
         .ecc_lfsr             (ecc_lfsr),
         .fifo_rd_en           (fifo_rd_en),

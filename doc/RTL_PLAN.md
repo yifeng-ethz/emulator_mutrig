@@ -1,7 +1,7 @@
 # Emulator MuTRiG — RTL Plan
 
 **IP family:** `emulator_mutrig`
-**Active release:** `26.1.7.0418`
+**Active release:** `26.1.9.0418`
 **Area-signoff vehicle:** `rtl/emulator_mutrig_bank8.sv`
 **Companion reports:** [../tb/DV_PLAN.md](../tb/DV_PLAN.md), [../tb/DV_REPORT.md](../tb/DV_REPORT.md), [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md), [SIGNOFF.md](SIGNOFF.md)
 
@@ -50,8 +50,8 @@ defines the current reference model.
 
 | item | value |
 |---|---|
-| top-level ALMs | `3883` |
-| registers | `3545` |
+| top-level ALMs | `3856` |
+| registers | `3777` |
 | block memory bits | `98,304` |
 | RAM blocks | `16` |
 | DSP blocks | `0` |
@@ -78,8 +78,8 @@ Current result:
 
 - area goal: `PASS`
 - tightened timing: `PASS`
-- worst slow-corner setup slack: `+0.026 ns`
-- worst slow-corner hold slack: `+0.260 ns`
+- worst slow-corner setup slack: `+1.224 ns`
+- worst slow-corner hold slack: `+0.254 ns`
 
 The fitter and TimeQuest evidence show the pressure remains inside the
 lane-local `hit_generator` and `frame_assembler` cones. The shared bank shell

@@ -20,10 +20,10 @@ emulator bank. The master signoff page is [../doc/SIGNOFF.md](../doc/SIGNOFF.md)
 
 | item | value |
 |---|---|
-| Logic utilization | `3,883 / 91,680 ALMs (4%)` |
-| Registers | `3,545` |
+| Logic utilization | `3,856 / 91,680 ALMs (4%)` |
+| Registers | `3,777` |
 | Pins | `1 / 426` |
-| Virtual pins | `459` |
+| Virtual pins | `492` |
 | Block memory bits | `98,304 / 13,987,840` |
 | RAM blocks | `16 / 1,366` |
 | DSP blocks | `0 / 800` |
@@ -33,7 +33,7 @@ emulator bank. The master signoff page is [../doc/SIGNOFF.md](../doc/SIGNOFF.md)
 - the large area consumer is still the per-lane generator and formatter logic
 - the requested `256`-hit storage stays in RAM, not ALMs
 - the final LFSR-based fine-time generator removes all DSP usage from the bank
-- the bank closes the requested `<4000 ALM / 8 lanes` target with `117 ALMs`
+- the bank closes the requested `<4000 ALM / 8 lanes` target with `144 ALMs`
   of margin
 
 ## Timing Summary
@@ -46,10 +46,10 @@ Target:
 
 | status | corner | setup WNS (ns) | hold WNS (ns) | slow-corner Fmax |
 |:---:|---|---:|---:|---:|
-| PASS | Slow 1100mV 85C | `+0.026` | `+0.260` | n/a |
-| PASS | Slow 1100mV 0C | `+0.317` | `+0.236` | n/a |
-| PASS | Fast 1100mV 85C | `+3.261` | `+0.164` | n/a |
-| PASS | Fast 1100mV 0C | `+3.580` | `+0.132` | n/a |
+| PASS | Slow 1100mV 85C | `+1.224` | `+0.254` | n/a |
+| PASS | Slow 1100mV 0C | `+1.469` | `+0.237` | n/a |
+| PASS | Fast 1100mV 85C | `+3.522` | `+0.156` | n/a |
+| PASS | Fast 1100mV 0C | `+3.890` | `+0.142` | n/a |
 
 Key conclusions:
 
@@ -67,11 +67,11 @@ shared bank shell and shared PRBS counters are not the critical timing owners.
 
 | module | elapsed | CPU time |
 |---|---:|---:|
-| Analysis & Synthesis | `00:00:23` | `00:00:43` |
-| Fitter | `00:01:27` | `00:02:53` |
-| Assembler | `00:00:12` | `00:00:11` |
-| Timing Analyzer | `00:00:07` | `00:00:12` |
-| Total | `00:02:09` | `00:03:59` |
+| Analysis & Synthesis | `00:00:21` | `00:00:42` |
+| Fitter | `00:01:34` | `00:03:04` |
+| Assembler | `00:00:11` | `00:00:12` |
+| Timing Analyzer | `00:00:08` | `00:00:13` |
+| Total | `00:02:14` | `00:04:11` |
 
 ## Constraint Caveat
 
