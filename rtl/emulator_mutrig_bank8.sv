@@ -1,8 +1,9 @@
 // emulator_mutrig_bank8.sv
 // Standalone 8-lane MuTRiG emulator bank with shared control/timebase.
-// Version : 26.1.1
-// Date    : 20260417
-// Change  : Add the compact 8-lane standalone bank for <4000 ALM signoff with shared control, inject sync, and coarse counters.
+// Version : 26.1.7
+// Date    : 20260418
+// Change  : Maintain the compact 8-lane standalone bank as the timing-closed
+//           signoff vehicle for raw-compatible latency and throughput parity.
 
 module emulator_mutrig_bank8
     import emulator_mutrig_pkg::*;
@@ -50,6 +51,9 @@ module emulator_mutrig_bank8
     logic       lfsr_en;
     logic [14:0] tcc_lfsr;
     logic [14:0] ecc_lfsr;
+    logic [10:0] frame_interval_cnt;
+    logic [10:0] frame_interval_max;
+    logic        frame_start_req;
 
     always_ff @(posedge i_clk) begin
         if (i_rst) begin
@@ -74,6 +78,22 @@ module emulator_mutrig_bank8
 
     assign inject_pulse_clk = inject_sync[0] & ~inject_sync[1];
     assign lfsr_en = run_generating & (cfg_enable_mask != '0);
+    assign frame_interval_max = cfg_short_mode ? 11'(FRAME_INTERVAL_SHORT) : 11'(FRAME_INTERVAL_LONG);
+
+    always_ff @(posedge i_clk) begin
+        if (frame_rst) begin
+            frame_interval_cnt <= frame_interval_max - 11'd1;
+            frame_start_req    <= 1'b0;
+        end else begin
+            if (frame_interval_cnt == '0) begin
+                frame_interval_cnt <= frame_interval_max - 11'd1;
+                frame_start_req    <= 1'b1;
+            end else begin
+                frame_interval_cnt <= frame_interval_cnt - 11'd1;
+                frame_start_req    <= 1'b0;
+            end
+        end
+    end
 
     prbs15_lfsr u_tcc_lfsr (
         .clk      (i_clk),
@@ -100,6 +120,7 @@ module emulator_mutrig_bank8
                 .clk                    (i_clk),
                 .emu_rst                (emu_rst),
                 .frame_rst              (frame_rst),
+                .frame_start_req        (frame_start_req),
                 .run_generating         (run_generating),
                 .run_draining           (run_draining),
                 .inject_pulse           (inject_pulse_clk),

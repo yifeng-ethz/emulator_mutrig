@@ -83,7 +83,7 @@ module tb_top;
     .i_clk                       (clk)
   );
 
-  assign frame_idle = (dut.u_frame_asm.state == 4'd0);
+  assign frame_idle = (dut.u_frame_asm.p_state == 4'd0);
 
   emut_avmm_sva u_avmm_sva (
     .clk        (clk),

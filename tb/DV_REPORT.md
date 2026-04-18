@@ -1,7 +1,7 @@
 # DV Report — emulator_mutrig
 
 **DUT:** `emulator_mutrig` &nbsp; **Date:** `2026-04-18` &nbsp;
-**Release under check:** `26.1.5.0418`
+**Release under check:** `26.1.7.0418`
 
 This is the active DV dashboard for the compact MuTRiG refresh.
 
@@ -11,6 +11,7 @@ This is the active DV dashboard for the compact MuTRiG refresh.
 |:---:|---|---|
 | PASS | directed_smoke | `54 passed, 0 failed` |
 | PASS | isolated_uvm | `15 / 15 passed` |
+| PASS | true_raw_ab | short and long mode both keep exact collective latency histograms, exact channels, and exact parser output timing from `0%` to `100%` offered load |
 | PASS | compact_contract_checks | `asic_id 0..7`, hit channel `0..31`, raw `E_Flag`, and `T <= E` checks are green in the directed bench |
 | PASS | merged_ucdb_refresh | `tb/uvm/cov/merged.ucdb` present |
 | PASS | poisson_delay_sweep | corrected frame-marker latency study measured true `E-ts -> frame_start` and `E-ts -> output` from `0%` to `100%` of the raw full-link reference |
@@ -23,6 +24,7 @@ This is the active DV dashboard for the compact MuTRiG refresh.
 |:---:|---|---|
 | PASS | `make -C tb run_all` | `54 passed, 0 failed` |
 | PASS | `make -C tb/uvm clean closure SEEDS=1` | refreshed merged UCDB and text report |
+| PASS | `python3 tb/mutrig_true_ab/sweep_true_ab.py` | short/long raw RTL A/B sweep passed with zero payload, channel, cycle, or histogram deltas |
 | PASS | `python3 tb/poisson_delay/sweep_poisson_delay.py` | wrote compact sweep summary and markdown report |
 
 ## Release Fixes Verified
@@ -42,9 +44,43 @@ Active summary from [DV_COV.md](DV_COV.md):
 
 | instance | branch | statement | toggle |
 |---|---:|---:|---:|
-| `/tb_top/dut` | `100.00%` | `100.00%` | `77.92%` |
-| `/tb_top/dut/u_hit_gen` | `77.35%` | `89.45%` | `88.64%` |
-| `/tb_top/dut/u_frame_asm` | `93.05%` | `96.03%` | `86.27%` |
+| `/tb_top/dut` | `100.00%` | `100.00%` | `76.87%` |
+| `/tb_top/dut/u_hit_gen` | `77.98%` | `89.95%` | `78.72%` |
+| `/tb_top/dut/u_frame_asm` | `91.54%` | `96.66%` | `89.19%` |
+
+Filtered merged total from `vcover`:
+
+- `70.74%`
+
+## True Raw A/B Sweep
+
+Artifacts:
+
+- report: [mutrig_true_ab/results/TRUE_AB_REPORT.md](mutrig_true_ab/results/TRUE_AB_REPORT.md)
+- driver: [mutrig_true_ab/sweep_true_ab.py](mutrig_true_ab/sweep_true_ab.py)
+
+Configuration:
+
+- raw side is `frame_gen + generic_dp_fifo(256)`
+- emulator side consumes the exact same offered-hit stream
+- checks run in both short and long mode from `0%` to `100%` offered load
+
+Key findings:
+
+- all runs completed with `accept_mismatch_count=0`
+- all runs completed with `parser_data_mismatch_count=0`
+- all runs completed with `hit_channel_mismatch_count=0`
+- all runs completed with `parser_cycle_mismatch_count=0`
+- all runs completed with `hist_total_abs_delta=0`
+- all runs completed with `hist_mismatch_bins=0`
+- all runs completed with `hist_max_cdf_delta=0.0000`
+
+Representative full-load points:
+
+| mode | load | offered | accepted | output | p50/p90/p99 | max |
+|---|---:|---:|---:|---:|---|---:|
+| short | `100%` | `3147` | `2997` | `2996` | `913 / 931 / 942` | `952` |
+| long | `100%` | `3099` | `2986` | `2985` | `1537 / 1578 / 1612` | `1632` |
 
 ## Supplemental Poisson Timestamp Sweep
 
@@ -76,8 +112,8 @@ Key findings:
 - at `100%` raw full rate, `true E-ts -> output` stays bounded near one frame
   plus tail rather than flattening across `0 .. 1820`:
   `702.0 / 903.0 / 943.0 / 990.0 / 1052.0` cycles for min / p50 / p90 / p99 / max
-- the simple frame-marker TLM matches the RTL frame assignment at about `99.8%`
-  exact agreement; output timing stays within a few cycles of that model
+- this standalone Poisson sweep is supplemental; the exact equivalence proof is
+  the raw true-A/B histogram match above
 
 Representative points:
 
@@ -90,7 +126,8 @@ Representative points:
 ## Verdict
 
 DV status for the compact refresh is `PASS` for the promoted directed and
-isolated UVM runs, and the supplemental Poisson sweep now measures the corrected
-frame-marker timestamp semantics directly. The extended continuous-frame and gate-level
-collateral were not refreshed in this turn and remain separate from the active
-compact-bank release scope.
+isolated UVM runs. The raw MuTRiG A/B harness now proves exact collective
+latency-distribution parity, exact hit-channel parity, and exact saturation
+behavior in both short and long mode. The extended continuous-frame and
+gate-level collateral were not refreshed in this turn and remain separate from
+the active compact-bank release scope.

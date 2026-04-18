@@ -1,8 +1,9 @@
 // emulator_mutrig_lane_shared.sv
 // Shared-control MuTRiG lane core used by the standalone 8-lane area bank.
-// Version : 26.1.1
-// Date    : 20260417
-// Change  : Gate fresh frame starts with cfg_enable so the shared 8-lane bank keeps disabled lanes fully idle.
+// Version : 26.1.7
+// Date    : 20260418
+// Change  : Keep the shared-lane wrapper aligned with the compact raw-style
+//           frame semantics used by the bank8 signoff and true-A/B checks.
 
 module emulator_mutrig_lane_shared
     import emulator_mutrig_pkg::*;
@@ -12,6 +13,7 @@ module emulator_mutrig_lane_shared
     input  logic        clk,
     input  logic        emu_rst,
     input  logic        frame_rst,
+    input  logic        frame_start_req,
     input  logic        run_generating,
     input  logic        run_draining,
     input  logic        inject_pulse,
@@ -70,6 +72,9 @@ module emulator_mutrig_lane_shared
         .cfg_prng_seed        (cfg_prng_seed),
         .cfg_short_mode       (cfg_short_mode),
         .inject_pulse         (inject_pulse),
+        .sim_offer_valid      (1'b0),
+        .sim_offer_word       ('0),
+        .sim_offer_ready      (),
         .tcc_lfsr             (tcc_lfsr),
         .ecc_lfsr             (ecc_lfsr),
         .fifo_rd_en           (fifo_rd_en),
@@ -83,7 +88,7 @@ module emulator_mutrig_lane_shared
     frame_assembler u_frame_asm (
         .clk              (clk),
         .rst              (frame_rst),
-        .allow_frame_start(run_generating & cfg_enable),
+        .frame_start_req  (frame_start_req & run_generating & cfg_enable),
         .cfg_short_mode   (cfg_short_mode),
         .cfg_gen_idle     (cfg_gen_idle),
         .cfg_tx_mode      (cfg_tx_mode),

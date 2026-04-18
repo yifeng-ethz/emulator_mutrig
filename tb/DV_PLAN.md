@@ -1,7 +1,7 @@
 # DV Plan: emulator_mutrig
 
 **DUT family:** `emulator_mutrig`
-**Active release:** `26.1.5.0418`
+**Active release:** `26.1.7.0418`
 **Primary evidence target:** compact single-lane behavior plus standalone bank8 synthesis proof
 **Companion reports:** [DV_REPORT.md](DV_REPORT.md), [DV_COV.md](DV_COV.md), [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md)
 
@@ -18,6 +18,8 @@ In scope:
 - CSR-visible defaults and enable semantics
 - short and long frame cadence
 - burst, noise, mixed, inject, and cross-ASIC slice behavior
+- raw-MuTRiG versus emulator collective latency-distribution parity in short and long mode
+- raw-MuTRiG versus emulator saturation-curve parity in short and long mode
 - supplemental short-mode Poisson true-timestamp latency characterization from `0%` to
   `100%` of the raw `1 hit / 3.5 cycles` offered-load target
 - standalone `emulator_mutrig_bank8` synthesis/resource evidence
@@ -33,8 +35,8 @@ Not refreshed in this turn:
 The active release is accepted only if these commands stay green:
 
 1. `make -C tb run_all`
-2. `make -C tb/uvm regress SEEDS=1`
-3. `make -C tb/uvm clean closure SEEDS=1`
+2. `make -C tb/uvm clean closure SEEDS=1`
+3. `python3 tb/mutrig_true_ab/sweep_true_ab.py`
 4. `quartus_sh --flow compile emulator_mutrig_bank8_syn -c emulator_mutrig_bank8_syn`
 
 ## 3. Required Evidence
@@ -75,7 +77,27 @@ The merged architecture is accepted only if the standalone build keeps:
 - one `256 x 48` L2 FIFO per lane in RAM
 - total ALMs below `4000`
 
-### 3.5 Supplemental Poisson delay sweep
+### 3.5 True raw A/B parity sweep
+
+This is an active signoff gate. The goal is to drive raw MuTRiG RTL and the
+emulator with the same hit stream and prove that the collective latency plots,
+the accepted/output rate curve, and the decoded channels all match exactly.
+
+Artifacts:
+
+- bench: [mutrig_true_ab/tb_mutrig_true_ab.sv](mutrig_true_ab/tb_mutrig_true_ab.sv)
+- driver: [mutrig_true_ab/sweep_true_ab.py](mutrig_true_ab/sweep_true_ab.py)
+- report: [mutrig_true_ab/results/TRUE_AB_REPORT.md](mutrig_true_ab/results/TRUE_AB_REPORT.md)
+
+Required outputs:
+
+- exact collective latency histogram parity for short and long mode
+- exact parsed payload parity
+- exact recovered hit-channel parity
+- exact parser output-cycle parity
+- matched accepted/output saturation curve from `0%` to `100%` load
+
+### 3.6 Supplemental Poisson delay sweep
 
 This is characterization evidence, not a hard release gate. The goal is to
 measure where the compact short-mode lane starts to saturate when driven with a
@@ -100,12 +122,14 @@ Expected outputs:
 
 - directed smoke passes cleanly at `54 passed, 0 failed`
 - isolated UVM regression passes cleanly
-- coverage refresh is present and reviewable (`72.26%` filtered merged total)
+- coverage refresh is present and reviewable (`70.74%` filtered merged total)
+- raw MuTRiG A/B sweep proves exact short/long collective latency-distribution
+  parity with zero payload, channel, cycle, or histogram deltas
 - Poisson delay sweep is present and reports the corrected raw-style
   `true E-ts -> frame_start` and `true E-ts -> output` distributions across the
   full requested `0% .. 100%` raw-load range
-- bank8 standalone compile meets the area target at `3958 ALMs`
-- tightened `137.5 MHz` timing closes with slow `85C` setup slack `+0.139 ns`
+- bank8 standalone compile meets the area target at `3883 ALMs`
+- tightened `137.5 MHz` timing closes with slow `85C` setup slack `+0.026 ns`
 
 ## 5. Signoff Interpretation
 

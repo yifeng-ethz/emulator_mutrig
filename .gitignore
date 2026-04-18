@@ -16,6 +16,13 @@ tb/poisson_delay/transcript
 tb/poisson_delay/__pycache__/
 tb/poisson_delay/results/f*.csv
 tb/poisson_delay/results/f*.summary
+tb/mutrig_true_ab/build/
+tb/mutrig_true_ab/work_mutrig_true_ab/
+tb/mutrig_true_ab/emuwork_mutrig_true_ab/
+tb/mutrig_true_ab/transcript
+tb/mutrig_true_ab/vish_stacktrace.vstf
+tb/mutrig_true_ab/results/*.csv
+tb/mutrig_true_ab/results/*.summary
 
 # Quartus build outputs
 syn/quartus/output_files/

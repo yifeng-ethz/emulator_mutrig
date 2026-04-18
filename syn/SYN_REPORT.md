@@ -20,8 +20,8 @@ emulator bank. The master signoff page is [../doc/SIGNOFF.md](../doc/SIGNOFF.md)
 
 | item | value |
 |---|---|
-| Logic utilization | `3,958 / 91,680 ALMs (4%)` |
-| Registers | `3,579` |
+| Logic utilization | `3,883 / 91,680 ALMs (4%)` |
+| Registers | `3,545` |
 | Pins | `1 / 426` |
 | Virtual pins | `459` |
 | Block memory bits | `98,304 / 13,987,840` |
@@ -33,7 +33,7 @@ emulator bank. The master signoff page is [../doc/SIGNOFF.md](../doc/SIGNOFF.md)
 - the large area consumer is still the per-lane generator and formatter logic
 - the requested `256`-hit storage stays in RAM, not ALMs
 - the final LFSR-based fine-time generator removes all DSP usage from the bank
-- the bank closes the requested `<4000 ALM / 8 lanes` target with `42 ALMs`
+- the bank closes the requested `<4000 ALM / 8 lanes` target with `117 ALMs`
   of margin
 
 ## Timing Summary
@@ -46,10 +46,10 @@ Target:
 
 | status | corner | setup WNS (ns) | hold WNS (ns) | slow-corner Fmax |
 |:---:|---|---:|---:|---:|
-| PASS | Slow 1100mV 85C | `+0.139` | `+0.259` | n/a |
-| PASS | Slow 1100mV 0C | `+0.265` | `+0.245` | n/a |
-| PASS | Fast 1100mV 85C | `+3.022` | `+0.165` | n/a |
-| PASS | Fast 1100mV 0C | `+3.500` | `+0.150` | n/a |
+| PASS | Slow 1100mV 85C | `+0.026` | `+0.260` | n/a |
+| PASS | Slow 1100mV 0C | `+0.317` | `+0.236` | n/a |
+| PASS | Fast 1100mV 85C | `+3.261` | `+0.164` | n/a |
+| PASS | Fast 1100mV 0C | `+3.580` | `+0.132` | n/a |
 
 Key conclusions:
 

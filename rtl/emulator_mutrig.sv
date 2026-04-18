@@ -15,9 +15,11 @@
 //   - Conduit input for charge-injection pulses (from mutrig_injector datapath IP)
 //
 // Author: Yifeng Wang
-// Version : 26.1.5
+// Version : 26.1.7
 // Date    : 20260418
-// Change  : Clamp the public asic_id tag to 0..7 so the single-lane wrapper matches the shared 8-lane bank contract.
+// Change  : Keep the single-lane wrapper aligned with the compact 8-lane bank
+//           contract for asic_id clamping, run-control frame gating, and the
+//           raw-compatible latency/parity signoff flow.
 
 module emulator_mutrig
     import emulator_mutrig_pkg::*;
@@ -237,7 +239,26 @@ module emulator_mutrig
     // They advance every clock cycle when the emulator is running
     logic [14:0] tcc_lfsr, ecc_lfsr;
     logic        lfsr_en;
+    logic [10:0] frame_interval_cnt;
+    logic [10:0] frame_interval_max;
+    logic        frame_start_req;
     assign lfsr_en = run_generating & csr_enable;
+    assign frame_interval_max = csr_short_mode ? 11'(FRAME_INTERVAL_SHORT) : 11'(FRAME_INTERVAL_LONG);
+
+    always_ff @(posedge i_clk) begin
+        if (frame_rst) begin
+            frame_interval_cnt <= frame_interval_max - 11'd1;
+            frame_start_req    <= 1'b0;
+        end else begin
+            if (frame_interval_cnt == '0) begin
+                frame_interval_cnt <= frame_interval_max - 11'd1;
+                frame_start_req    <= 1'b1;
+            end else begin
+                frame_interval_cnt <= frame_interval_cnt - 11'd1;
+                frame_start_req    <= 1'b0;
+            end
+        end
+    end
 
     prbs15_lfsr u_tcc_lfsr (
         .clk      (i_clk),
@@ -283,6 +304,9 @@ module emulator_mutrig
         .cfg_prng_seed   (csr_prng_seed),
         .cfg_short_mode  (csr_short_mode),
         .inject_pulse    (inject_pulse_clk),
+        .sim_offer_valid (1'b0),
+        .sim_offer_word  ('0),
+        .sim_offer_ready (),
         .tcc_lfsr        (tcc_lfsr),
         .ecc_lfsr        (ecc_lfsr),
         .fifo_rd_en      (fifo_rd_en),
@@ -302,7 +326,7 @@ module emulator_mutrig
     frame_assembler u_frame_asm (
         .clk            (i_clk),
         .rst            (frame_rst),
-        .allow_frame_start(run_generating & csr_enable),
+        .frame_start_req(frame_start_req & run_generating & csr_enable),
         .cfg_short_mode (csr_short_mode),
         .cfg_gen_idle   (csr_gen_idle),
         .cfg_tx_mode    (csr_tx_mode),

@@ -1,7 +1,7 @@
 # RTL Note — emulator_mutrig
 
 Date: `2026-04-18`
-Release: `26.1.5.0418`
+Release: `26.1.7.0418`
 
 ## Summary
 
@@ -31,9 +31,11 @@ the tightened `137.5 MHz` standalone timing target.
 ## Result
 
 - functional reruns are green for the compact lane
-- standalone bank8 area target passes at `3958 ALMs`
-- tightened `137.5 MHz` timing now passes with slow `85C` setup slack `+0.139 ns`
+- standalone bank8 area target passes at `3883 ALMs`
+- tightened `137.5 MHz` timing now passes with slow `85C` setup slack `+0.026 ns`
 - the final bank8 compile uses `16` RAM blocks and `0` DSP blocks
+- the raw MuTRiG A/B sweep now shows exact short/long collective latency
+  histogram parity with zero payload, channel, or cycle mismatches
 - the Poisson timestamp study now reports corrected raw-style
   `true E-ts -> frame_start` and `true E-ts -> output` latency directly
 

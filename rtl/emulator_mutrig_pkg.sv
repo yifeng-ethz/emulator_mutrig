@@ -1,9 +1,10 @@
 // emulator_mutrig_pkg.sv
 // MuTRiG 3 emulator constants and types
 // Author: Yifeng Wang
-// Version : 26.1.5
+// Version : 26.1.7
 // Date    : 20260418
-// Change  : Add PRBS back-step support for timestamp checks and keep the shared-bank release constants documented in the public package.
+// Change  : Keep the raw-compatible field layout and compact shared-bank
+//           release constants aligned with the true-A/B signoff harness.
 //
 // Based on the MuTRiG 3 ASIC digital readout (Huangshan Chen, KIP Heidelberg)
 // Reference: kbriggl-mutrig3-c3cce8d41dcb RTL
@@ -69,9 +70,9 @@ package emulator_mutrig_pkg;
     //   [41:27] TCC      (15) -- LFSR-15 encoded
     //   [26:22] T_Fine   (5)
     //   [21]    E_BadHit (1)
-    //   [20]    E_Flag   (1)
-    //   [19:5]  ECC      (15) -- LFSR-15 encoded
-    //   [4:0]   E_Fine   (5)
+    //   [20:6]  ECC      (15) -- LFSR-15 encoded
+    //   [5:1]   E_Fine   (5)
+    //   [0]     E_Flag   (1)
     localparam int HIT_LONG_WIDTH  = 48;
     localparam int HIT_SHORT_WIDTH = 28;
     localparam int HIT_L1_WIDTH    = 78;
@@ -136,7 +137,7 @@ package emulator_mutrig_pkg;
         input logic [14:0] ecc,
         input logic [4:0]  e_fine
     );
-        return {channel, t_badhit, tcc, t_fine, e_badhit, e_flag, ecc, e_fine};
+        return {channel, t_badhit, tcc, t_fine, e_badhit, ecc, e_fine, e_flag};
     endfunction
 
     // Pack a short hit word

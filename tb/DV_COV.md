@@ -9,13 +9,13 @@
 
 | instance | branch | statement | toggle |
 |---|---:|---:|---:|
-| `/tb_top/dut` | `100.00%` | `100.00%` | `77.92%` |
-| `/tb_top/dut/u_hit_gen` | `77.35%` | `89.45%` | `88.64%` |
-| `/tb_top/dut/u_frame_asm` | `93.05%` | `96.03%` | `86.27%` |
+| `/tb_top/dut` | `100.00%` | `100.00%` | `76.87%` |
+| `/tb_top/dut/u_hit_gen` | `77.98%` | `89.95%` | `78.72%` |
+| `/tb_top/dut/u_frame_asm` | `91.54%` | `96.66%` | `89.19%` |
 
 Filtered total reported by `vcover` on the refreshed merged UCDB:
 
-- by-instance total: `72.26%`
+- by-instance total: `70.74%`
 
 ## 2. Interpretation
 
@@ -35,6 +35,6 @@ The following evidence was not refreshed in this turn:
 
 ## 4. Use In Signoff
 
-This file is the active summary for the compact `26.1.5.0418` refresh. It is
+This file is the active summary for the compact `26.1.7.0418` refresh. It is
 good enough to support the current isolated-DV release decision, but it does not
 claim full multi-mode DV closure.

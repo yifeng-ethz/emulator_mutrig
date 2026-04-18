@@ -1,7 +1,7 @@
 # Emulator MuTRiG — RTL Plan
 
 **IP family:** `emulator_mutrig`
-**Active release:** `26.1.5.0418`
+**Active release:** `26.1.7.0418`
 **Area-signoff vehicle:** `rtl/emulator_mutrig_bank8.sv`
 **Companion reports:** [../tb/DV_PLAN.md](../tb/DV_PLAN.md), [../tb/DV_REPORT.md](../tb/DV_REPORT.md), [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md), [SIGNOFF.md](SIGNOFF.md)
 
@@ -50,8 +50,8 @@ defines the current reference model.
 
 | item | value |
 |---|---|
-| top-level ALMs | `3958` |
-| registers | `3579` |
+| top-level ALMs | `3883` |
+| registers | `3545` |
 | block memory bits | `98,304` |
 | RAM blocks | `16` |
 | DSP blocks | `0` |
@@ -78,8 +78,8 @@ Current result:
 
 - area goal: `PASS`
 - tightened timing: `PASS`
-- worst slow-corner setup slack: `+0.139 ns`
-- worst slow-corner hold slack: `+0.259 ns`
+- worst slow-corner setup slack: `+0.026 ns`
+- worst slow-corner hold slack: `+0.260 ns`
 
 The fitter and TimeQuest evidence show the pressure remains inside the
 lane-local `hit_generator` and `frame_assembler` cones. The shared bank shell
@@ -96,9 +96,11 @@ release fixes:
 4. default long-hit timing keeps `T <= E`, uses the encoded `E` time as the
    true commit timestamp, keeps raw-compatible `E_Flag = 1`, and uses random
    Poisson fine time versus about `1 ns` cluster fine spread
-5. the corrected Poisson study now checks raw-style `frame_start` snapshot
-   latency plus parser-visible output tail against a matching frame-marker TLM
-6. UVM reset-default checks now match the live cluster defaults
+5. the raw MuTRiG A/B harness now proves exact short/long collective latency
+   distribution parity, channel parity, and saturation-curve parity
+6. the supplemental Poisson study now checks the corrected raw-style
+   `frame_start` snapshot latency plus parser-visible output tail
+7. UVM reset-default checks now match the live cluster defaults
 
 ## 6. Open Items
 

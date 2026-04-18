@@ -376,8 +376,8 @@ module tb_emulator_mutrig;
 
         tcc_v    = hit_word[41:27];
         t_fine_v = hit_word[26:22];
-        ecc_v    = hit_word[19:5];
-        e_fine_v = hit_word[4:0];
+        ecc_v    = hit_word[20:6];
+        e_fine_v = hit_word[5:1];
 
         if (tcc_v == ecc_v)
             return (t_fine_v <= e_fine_v);
@@ -476,6 +476,7 @@ module tb_emulator_mutrig;
         dut.u_hit_gen.burst_remaining     = '0;
         dut.u_hit_gen.burst_global_ch     = '0;
         dut.u_hit_gen.burst_cooldown      = '0;
+        dut.u_hit_gen.burst_ready         = 1'b1;
         dut.u_hit_gen.inject_burst_pending = 1'b0;
 `else
         @(posedge clk);
@@ -672,7 +673,7 @@ module tb_emulator_mutrig;
             $display("  Event count: %0d", evt_cnt_ext[9:0]);
 
             if (evt_cnt_ext[9:0] == 10'd1) begin
-                check("Single-hit frame length = 14 bytes", flen == 14);
+                check("Single-hit frame length = 15 bytes", flen == 15);
                 // Verify hit data bytes are present (6 bytes at offset 5)
                 check("Hit data byte 0 (channel+T_BadHit)", captured_bytes[5] != 8'h00 || captured_bytes[6] != 8'h00);
             end else begin
@@ -808,10 +809,10 @@ module tb_emulator_mutrig;
 `ifndef EMUT_GATE_SIM
         expected_short_word = {
             expected_hit[47:43],
-            expected_hit[42],
-            expected_hit[41:27],
-            expected_hit[26:22],
-            expected_hit[20],
+            expected_hit[21],
+            expected_hit[20:6],
+            expected_hit[5:1],
+            expected_hit[0],
             1'b0
         };
         check("Short payload matches generated TCC/T_Fine word",
@@ -865,7 +866,7 @@ module tb_emulator_mutrig;
         check("Long payload channel stays within 0..31",
               captured_long_word[47:43] <= 5'd31);
         check("Long payload E_Flag stays at raw-contract default",
-              captured_long_word[20] == 1'b1);
+              captured_long_word[0] == 1'b1);
         check("Long payload keeps T timestamp not later than E timestamp",
               long_hit_t_not_later_than_e(captured_long_word));
     endtask

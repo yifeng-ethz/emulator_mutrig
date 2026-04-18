@@ -1,8 +1,10 @@
 // hit_generator.sv
 // Compact MuTRiG event source with one RAM-backed L2 FIFO per lane.
-// Version : 26.1.5
+// Version : 26.1.7
 // Date    : 20260418
-// Change  : Replace the per-lane random update multiplies with lightweight LFSRs while keeping the staged inject path and true-timestamp hit semantics.
+// Change  : Keep the raw 256-hit storage depth and visible count semantics
+//           while registering the burst launch readiness so the standalone
+//           bank8 signoff build closes timing without changing traffic parity.
 //
 // External behavior intentionally stays aligned with the existing emulator:
 //   - frame_assembler still sees a single dequeue/data/event-count interface
@@ -37,6 +39,12 @@ module hit_generator
     input  logic        cfg_short_mode,
     input  logic        inject_pulse,
 
+    // Reserved simulation hook. The standalone IP keeps this disabled so the
+    // lane datapath does not pay the timing/area cost of an extra offer mux.
+    input  logic        sim_offer_valid,
+    input  logic [47:0] sim_offer_word,
+    output logic        sim_offer_ready,
+
     // Coarse time reference
     input  logic [14:0] tcc_lfsr,
     input  logic [14:0] ecc_lfsr,
@@ -51,9 +59,10 @@ module hit_generator
 );
 
     localparam int FIFO_STORAGE_DEPTH   = FIFO_DEPTH;
-    localparam int FIFO_TOTAL_DEPTH     = FIFO_DEPTH + 1;
+    localparam int FIFO_TOTAL_DEPTH     = FIFO_DEPTH;
     localparam int FIFO_PTR_WIDTH       = (FIFO_STORAGE_DEPTH > 1) ? $clog2(FIFO_STORAGE_DEPTH) : 1;
     localparam int FIFO_COUNT_WIDTH     = FIFO_PTR_WIDTH + 1;
+    localparam int FIFO_VISIBLE_MAX     = (1 << FIFO_PTR_WIDTH) - 1;
     localparam int LANE_INDEX_WIDTH     = GLOBAL_CHANNEL_WIDTH - CHANNEL_WIDTH;
     localparam int DOMAIN_COUNT_WIDTH   = GLOBAL_CHANNEL_WIDTH + 1;
     localparam int FIFO_ALMOST_FULL_LVL =
@@ -71,6 +80,7 @@ module hit_generator
     logic [4:0] burst_remaining;
     logic [GLOBAL_CHANNEL_WIDTH-1:0] burst_global_ch;
     logic [7:0] burst_cooldown;
+    logic burst_ready;
     logic inject_burst_pending;
     logic [14:0] cluster_tcc_anchor;
     logic [14:0] cluster_ecc_anchor;
@@ -287,17 +297,27 @@ module hit_generator
     always_comb begin : fifo_status_comb
         integer fifo_count_v;
         integer fifo_total_count_v;
+        bit     pop_from_mem_c;
+        bit     pop_from_pending_c;
+        bit     push_from_pending_c;
 
-        fifo_empty       = (fifo_count == FIFO_COUNT_WIDTH'(0));
         fifo_total_count_v = fifo_count + (pending_valid ? 1 : 0);
+        fifo_empty       = (fifo_total_count_v == 0);
         fifo_full        = (fifo_total_count_v >= FIFO_TOTAL_DEPTH);
         fifo_almost_full = (fifo_total_count_v >= FIFO_ALMOST_FULL_LVL);
+        pop_from_mem_c     = fifo_rd_en && (fifo_count != FIFO_COUNT_WIDTH'(0));
+        pop_from_pending_c = fifo_rd_en && (fifo_count == FIFO_COUNT_WIDTH'(0)) && pending_valid;
+        // `pending_valid` can only coexist with at most `FIFO_DEPTH-1` words in
+        // RAM, so the pending word always has room to spill into the M10K copy
+        // unless it is consumed directly by the assembler in the same cycle.
+        push_from_pending_c = pending_valid && !pop_from_pending_c;
+        sim_offer_ready   = 1'b0;
 
-        fifo_count_v = fifo_count;
-        if (fifo_count_v > 1023)
-            event_count = 10'd1023;
+        fifo_count_v = fifo_total_count_v;
+        if (fifo_count_v > FIFO_VISIBLE_MAX)
+            event_count = 10'(FIFO_VISIBLE_MAX);
         else
-            event_count = fifo_count_v[9:0];
+            event_count = 10'(fifo_count_v);
     end
 
     always_ff @(posedge clk) begin : datapath_state
@@ -315,6 +335,7 @@ module hit_generator
         logic [4:0] burst_remaining_next_v;
         logic [GLOBAL_CHANNEL_WIDTH-1:0] burst_global_next_v;
         logic [7:0] burst_cooldown_next_v;
+        logic burst_ready_next_v;
         logic [14:0] cluster_tcc_anchor_next_v;
         logic [14:0] cluster_ecc_anchor_next_v;
         logic [4:0]  cluster_fine_anchor_next_v;
@@ -322,8 +343,9 @@ module hit_generator
         logic consume_cluster_word_v;
         logic candidate_local_valid_v;
         logic l2_push_valid_v;
-        logic l2_pop_valid_v;
-        logic pending_slot_free_v;
+        logic l2_pop_from_mem_v;
+        logic l2_pop_from_pending_v;
+        logic accept_capacity_v;
         logic pending_valid_next_v;
         logic [47:0] pending_word_next_v;
         logic [4:0] poisson_t_fine_v;
@@ -337,6 +359,7 @@ module hit_generator
             burst_remaining      <= '0;
             burst_global_ch      <= '0;
             burst_cooldown       <= '0;
+            burst_ready          <= 1'b1;
             inject_burst_pending <= 1'b0;
             cluster_tcc_anchor   <= LFSR15_INIT;
             cluster_ecc_anchor   <= LFSR15_INIT;
@@ -351,13 +374,35 @@ module hit_generator
             hit_wr_data          <= '0;
         end else begin
             hit_wr_en           <= 1'b0;
-            l2_pop_valid_v      = fifo_rd_en && !fifo_empty;
-            l2_push_valid_v     = pending_valid && ((fifo_count < FIFO_COUNT_WIDTH'(FIFO_DEPTH)) || l2_pop_valid_v);
-            pending_slot_free_v = !pending_valid || l2_push_valid_v;
+            consume_cluster_word_v = 1'b0;
+            candidate_local_valid_v = 1'b0;
+            candidate_global_ch_v = '0;
+            candidate_ch_v = '0;
+            candidate_word_v = '0;
+            burst_start_v = '0;
+            burst_cooldown_next_v = burst_cooldown;
+            burst_ready_next_v = burst_ready;
+            cluster_tcc_anchor_next_v = cluster_tcc_anchor;
+            cluster_ecc_anchor_next_v = cluster_ecc_anchor;
+            cluster_fine_anchor_next_v = cluster_fine_anchor;
+            inject_pulse_seen_v = inject_pulse;
+            inject_burst_pending_next_v = inject_burst_pending | inject_pulse_seen_v;
+            burst_remaining_next_v = burst_remaining;
+            burst_global_next_v = burst_global_ch;
+            poisson_t_fine_v = prng_state[4:0];
+            poisson_e_fine_v = prng2_state[4:0];
+            l2_pop_from_mem_v     = fifo_rd_en && (fifo_count != FIFO_COUNT_WIDTH'(0));
+            l2_pop_from_pending_v = fifo_rd_en && (fifo_count == FIFO_COUNT_WIDTH'(0)) && pending_valid;
+            l2_push_valid_v       = pending_valid && !l2_pop_from_pending_v;
+            // Total visible occupancy is full only in 2 legal states:
+            //   1. RAM holds all 256 words (`fifo_count == FIFO_DEPTH`)
+            //   2. RAM holds 255 words and the pending slot holds the 256th
+            accept_capacity_v     = (fifo_count != FIFO_COUNT_WIDTH'(FIFO_DEPTH)) &&
+                                    !(pending_valid && (fifo_count == FIFO_COUNT_WIDTH'(FIFO_DEPTH - 1)));
             pending_valid_next_v = pending_valid;
             pending_word_next_v  = pending_word;
 
-            if (l2_push_valid_v)
+            if (l2_push_valid_v || l2_pop_from_pending_v)
                 pending_valid_next_v = 1'b0;
 
             if (enable) begin
@@ -377,26 +422,11 @@ module hit_generator
                 else
                     scan_pos <= scan_pos + GLOBAL_CHANNEL_WIDTH'(1);
 
-                burst_cooldown_next_v       = burst_cooldown;
-                cluster_tcc_anchor_next_v   = cluster_tcc_anchor;
-                cluster_ecc_anchor_next_v   = cluster_ecc_anchor;
-                cluster_fine_anchor_next_v  = cluster_fine_anchor;
-                inject_pulse_seen_v         = inject_pulse;
-                inject_burst_pending_next_v = inject_burst_pending | inject_pulse_seen_v;
-                burst_remaining_next_v      = burst_remaining;
-                burst_global_next_v         = burst_global_ch;
-                poisson_t_fine_v            = prng_state[4:0];
-                poisson_e_fine_v            = prng2_state[4:0];
-
-                if (burst_cooldown_next_v != 8'd0)
+                if (burst_cooldown != 8'd0) begin
                     burst_cooldown_next_v = burst_cooldown_next_v - 8'd1;
-
-                consume_cluster_word_v = 1'b0;
-                candidate_local_valid_v = 1'b0;
-                candidate_global_ch_v = '0;
-                candidate_ch_v = '0;
-                candidate_word_v = '0;
-                burst_start_v = '0;
+                    if (burst_cooldown == 8'd1)
+                        burst_ready_next_v = 1'b1;
+                end
 
                 case (hit_mode_t'(cfg_hit_mode))
                     HIT_MODE_POISSON: begin
@@ -458,7 +488,7 @@ module hit_generator
                                 burst_global_next_v = burst_global_ch + GLOBAL_CHANNEL_WIDTH'(1);
                             else
                                 burst_global_next_v = burst_global_ch;
-                        end else if (burst_cooldown_next_v == 8'd0) begin
+                        end else if (burst_ready) begin
                             burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
@@ -470,7 +500,8 @@ module hit_generator
                                 burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
                             else
                                 burst_global_next_v = burst_start_v;
-                            burst_cooldown_next_v = 8'd200;
+                            burst_cooldown_next_v = 8'd199;
+                            burst_ready_next_v    = 1'b0;
                         end
                     end
 
@@ -536,7 +567,7 @@ module hit_generator
                                 burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
                             else
                                 burst_global_next_v = burst_start_v;
-                        end else if (burst_cooldown_next_v == 8'd0) begin
+                        end else if (burst_ready) begin
                             burst_start_v = clamp_cluster_start(configured_center_v, cfg_burst_size, domain_channels_v);
                             cluster_tcc_anchor_next_v = tcc_lfsr;
                             cluster_ecc_anchor_next_v = ecc_lfsr;
@@ -548,7 +579,8 @@ module hit_generator
                                 burst_global_next_v = burst_start_v + GLOBAL_CHANNEL_WIDTH'(1);
                             else
                                 burst_global_next_v = burst_start_v;
-                            burst_cooldown_next_v = 8'd200;
+                            burst_cooldown_next_v = 8'd199;
+                            burst_ready_next_v    = 1'b0;
                         end
                     end
                 endcase
@@ -565,39 +597,40 @@ module hit_generator
                 end
 
                 burst_cooldown       <= burst_cooldown_next_v;
+                burst_ready          <= burst_ready_next_v;
                 cluster_tcc_anchor   <= cluster_tcc_anchor_next_v;
                 cluster_ecc_anchor   <= cluster_ecc_anchor_next_v;
                 cluster_fine_anchor  <= cluster_fine_anchor_next_v;
                 inject_burst_pending <= inject_burst_pending_next_v;
                 burst_remaining      <= burst_remaining_next_v;
                 burst_global_ch      <= burst_global_next_v;
+            end
 
-                if (candidate_local_valid_v && pending_slot_free_v) begin
-                    if (consume_cluster_word_v) begin
-                        candidate_word_v = build_l2_hit_cluster(
-                            candidate_ch_v,
-                            cluster_tcc_anchor_next_v,
-                            cluster_ecc_anchor_next_v,
-                            cluster_fine_anchor_next_v,
-                            prng_state[2:0],
-                            prng2_state[2:0],
-                            prng_state[5:3],
-                            prng2_state[4:2]
-                        );
-                    end else begin
-                        candidate_word_v = build_l2_hit_poisson(
-                            candidate_ch_v,
-                            tcc_lfsr,
-                            ecc_lfsr,
-                            poisson_t_fine_v,
-                            poisson_e_fine_v
-                        );
-                    end
-                    pending_valid_next_v = 1'b1;
-                    pending_word_next_v  = candidate_word_v;
-                    hit_wr_en            <= 1'b1;
-                    hit_wr_data          <= candidate_word_v;
+            if (candidate_local_valid_v && accept_capacity_v) begin
+                if (consume_cluster_word_v) begin
+                    candidate_word_v = build_l2_hit_cluster(
+                        candidate_ch_v,
+                        cluster_tcc_anchor_next_v,
+                        cluster_ecc_anchor_next_v,
+                        cluster_fine_anchor_next_v,
+                        prng_state[2:0],
+                        prng2_state[2:0],
+                        prng_state[5:3],
+                        prng2_state[4:2]
+                    );
+                end else begin
+                    candidate_word_v = build_l2_hit_poisson(
+                        candidate_ch_v,
+                        tcc_lfsr,
+                        ecc_lfsr,
+                        poisson_t_fine_v,
+                        poisson_e_fine_v
+                    );
                 end
+                pending_valid_next_v = 1'b1;
+                pending_word_next_v  = candidate_word_v;
+                hit_wr_en            <= 1'b1;
+                hit_wr_data          <= candidate_word_v;
             end
 
             pending_valid <= pending_valid_next_v;
@@ -608,12 +641,14 @@ module hit_generator
                 fifo_wr_ptr              <= fifo_ptr_next(fifo_wr_ptr);
             end
 
-            if (l2_pop_valid_v) begin
+            if (l2_pop_from_mem_v) begin
                 fifo_data   <= l2_fifo_mem[fifo_rd_ptr];
                 fifo_rd_ptr <= fifo_ptr_next(fifo_rd_ptr);
+            end else if (l2_pop_from_pending_v) begin
+                fifo_data   <= pending_word;
             end
 
-            case ({l2_push_valid_v, l2_pop_valid_v})
+            case ({l2_push_valid_v, l2_pop_from_mem_v})
                 2'b10:   fifo_count <= fifo_count + FIFO_COUNT_WIDTH'(1);
                 2'b01:   fifo_count <= fifo_count - FIFO_COUNT_WIDTH'(1);
                 default: fifo_count <= fifo_count;
