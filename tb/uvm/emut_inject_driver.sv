@@ -19,15 +19,22 @@ class emut_inject_driver extends uvm_driver #(emut_inject_item);
     emut_inject_item item;
 
     vif.pulse <= 1'b0;
+    vif.masked_pulse <= 1'b0;
     forever begin
       seq_item_port.get_next_item(item);
       repeat (item.start_delay_cycles)
         @(posedge vif.clk);
       #(item.phase_ps * 1ps);
-      vif.pulse        <= 1'b1;
+      if (item.masked)
+        vif.masked_pulse <= 1'b1;
+      else
+        vif.pulse <= 1'b1;
       item.rise_time_ps = $time;
       #(item.width_ps * 1ps);
-      vif.pulse        <= 1'b0;
+      if (item.masked)
+        vif.masked_pulse <= 1'b0;
+      else
+        vif.pulse <= 1'b0;
       item.fall_time_ps = $time;
       ap.write(item);
       seq_item_port.item_done();

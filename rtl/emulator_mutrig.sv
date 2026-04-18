@@ -15,11 +15,11 @@
 //   - Conduit input for charge-injection pulses (from mutrig_injector datapath IP)
 //
 // Author: Yifeng Wang
-// Version : 26.1.7
+// Version : 26.1.8
 // Date    : 20260418
 // Change  : Keep the single-lane wrapper aligned with the compact 8-lane bank
-//           contract for asic_id clamping, run-control frame gating, and the
-//           raw-compatible latency/parity signoff flow.
+//           while adding a dedicated masked-trigger conduit and per-channel
+//           injection mask CSR for frame-marker-aligned latency studies.
 
 module emulator_mutrig
     import emulator_mutrig_pkg::*;
@@ -55,6 +55,7 @@ module emulator_mutrig
 
     // Conduit [inject] — datapath charge-injection pulse
     input  logic        coe_inject_pulse,
+    input  logic        coe_inject_masked_pulse,
 
     // Avalon-MM slave [csr] — configuration registers
     input  logic [CSR_ADDR_WIDTH-1:0] avs_csr_address,
@@ -83,7 +84,9 @@ module emulator_mutrig
     logic       emu_rst;        // session reset on cold reset / RUN_PREPARE / RESET
     logic       frame_rst;      // frame-generator reset outside the active drain window
     logic [1:0] inject_sync;
+    logic [1:0] inject_masked_sync;
     logic       inject_pulse_clk;
+    logic       inject_masked_pulse_clk;
 
     // Latch the last accepted one-hot run state. New hit generation is only
     // allowed in RUNNING, but the buffered FIFO contents must survive into
@@ -118,12 +121,25 @@ module emulator_mutrig
 
     assign inject_pulse_clk = inject_sync[0] & ~inject_sync[1];
 
+    always_ff @(posedge i_clk) begin
+        if (emu_rst)
+            inject_masked_sync <= 2'b00;
+        else
+            inject_masked_sync <= {inject_masked_sync[0], coe_inject_masked_pulse};
+    end
+
+    assign inject_masked_pulse_clk = inject_masked_sync[0] & ~inject_masked_sync[1];
+
     // ========================================
     // CSR registers
     // ========================================
     // Addr 0: Control
     //   [0]     enable (1=enabled)
-    //   [2:1]   hit_mode (00=poisson, 01=burst, 10=noise, 11=mixed)
+    //   [2:1]   hit_mode
+    //             00 = legacy folded Poisson
+    //             01 = burst / injected cluster replay
+    //             10 = folded per-channel IID Poisson
+    //             11 = folded per-channel periodic
     //   [3]     short_mode (1=short, 0=long)
     //   [7:4]   reserved
     // Addr 1: Hit rate (16-bit, 8.8 fixed-point)
@@ -145,6 +161,8 @@ module emulator_mutrig
     // Addr 5: Status (read-only)
     //   [15:0]  frame_count
     //   [25:16] last_event_count
+    // Addr 6: Inject mask
+    //   [31:0] inject_channel_mask (1=channel participates in masked trigger)
 
     logic        csr_enable;
     logic [1:0]  csr_hit_mode;
@@ -161,6 +179,7 @@ module emulator_mutrig
     logic [2:0]  csr_tx_mode;
     logic        csr_gen_idle;
     logic [3:0]  csr_asic_id;
+    logic [31:0] csr_inject_channel_mask;
     logic [31:0] csr_readdata_comb;
 
     // Status
@@ -175,6 +194,7 @@ module emulator_mutrig
             'd3: csr_readdata_comb = csr_prng_seed;
             'd4: csr_readdata_comb = {24'b0, csr_asic_id, csr_gen_idle, csr_tx_mode};
             'd5: csr_readdata_comb = {6'b0, status_event_count, status_frame_count};
+            'd6: csr_readdata_comb = csr_inject_channel_mask;
             default: csr_readdata_comb = '0;
         endcase
     end
@@ -199,6 +219,7 @@ module emulator_mutrig
             csr_tx_mode      <= 3'b000;   // long mode
             csr_gen_idle     <= 1'b1;
             csr_asic_id      <= clamp_asic_id(ASIC_ID_DEFAULT);
+            csr_inject_channel_mask <= 32'hFFFF_FFFF;
         end else begin
             if (avs_csr_write) begin
                 case (avs_csr_address)
@@ -226,6 +247,9 @@ module emulator_mutrig
                         csr_tx_mode  <= avs_csr_writedata[2:0];
                         csr_gen_idle <= avs_csr_writedata[3];
                         csr_asic_id  <= clamp_asic_id(avs_csr_writedata[7:4]);
+                    end
+                    'd6: begin
+                        csr_inject_channel_mask <= avs_csr_writedata;
                     end
                     default: ;
                 endcase
@@ -328,6 +352,8 @@ module emulator_mutrig
         .cfg_prng_seed   (csr_prng_seed),
         .cfg_short_mode  (csr_short_mode),
         .inject_pulse    (inject_pulse_clk),
+        .inject_masked_pulse(inject_masked_pulse_clk),
+        .cfg_inject_channel_mask(csr_inject_channel_mask),
         .sim_offer_valid (1'b0),
         .sim_offer_word  ('0),
         .sim_offer_ready (),

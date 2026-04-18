@@ -1,10 +1,11 @@
 // emulator_mutrig_pkg.sv
 // MuTRiG 3 emulator constants and types
 // Author: Yifeng Wang
-// Version : 26.1.7
+// Version : 26.1.8
 // Date    : 20260418
 // Change  : Keep the raw-compatible field layout and compact shared-bank
-//           release constants aligned with the true-A/B signoff harness.
+//           release constants aligned with the true-A/B harness and the new
+//           masked-trigger latency-injection path.
 //
 // Based on the MuTRiG 3 ASIC digital readout (Huangshan Chen, KIP Heidelberg)
 // Reference: kbriggl-mutrig3-c3cce8d41dcb RTL
@@ -123,11 +124,24 @@ package emulator_mutrig_pkg;
     // Hit generator modes
     // ========================================
     typedef enum logic [1:0] {
-        HIT_MODE_POISSON  = 2'b00,  // i.i.d. Poisson across channels
-        HIT_MODE_BURST    = 2'b01,  // burst of correlated/cluster hits
-        HIT_MODE_NOISE    = 2'b10,  // noise-like random hits
-        HIT_MODE_MIXED    = 2'b11   // mixed Poisson + burst
+        // Legacy compact mode: one folded Bernoulli decision per cycle, with
+        // the current scan position selecting which local channel owns it.
+        HIT_MODE_POISSON          = 2'b00,
+        // Cluster replay / injected burst mode.
+        HIT_MODE_BURST            = 2'b01,
+        // Folded per-channel IID mode: each local channel owns an independent
+        // PRNG stream and the configured per-channel rate is folded by the
+        // number of local channels.
+        HIT_MODE_POISSON_IID      = 2'b10,
+        // Folded per-channel periodic mode: each local channel owns a phase
+        // accumulator and the configured per-channel rate is folded by the
+        // number of local channels.
+        HIT_MODE_PERIODIC         = 2'b11
     } hit_mode_t;
+
+    // Backward-compatible aliases kept for older benches and reports.
+    localparam hit_mode_t HIT_MODE_NOISE = HIT_MODE_POISSON_IID;
+    localparam hit_mode_t HIT_MODE_MIXED = HIT_MODE_PERIODIC;
 
     // ========================================
     // Helper functions

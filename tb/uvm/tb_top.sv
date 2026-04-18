@@ -42,6 +42,7 @@ module tb_top;
     .asi_ctrl_valid     (ctrl_if.valid),
     .asi_ctrl_ready     (ctrl_if.ready),
     .coe_inject_pulse   (inject_if.pulse),
+    .coe_inject_masked_pulse(inject_if.masked_pulse),
     .avs_csr_address    (csr_if.address),
     .avs_csr_read       (csr_if.read),
     .avs_csr_write      (csr_if.write),

@@ -56,6 +56,7 @@ module tb_emulator_mutrig;
     logic        asi_ctrl_valid;
     logic        asi_ctrl_ready;
     logic        coe_inject_pulse;
+    logic        coe_inject_masked_pulse;
 
     logic [3:0]  avs_csr_address;
     logic        avs_csr_read;
@@ -116,6 +117,7 @@ module tb_emulator_mutrig;
         .asi_ctrl_valid     (asi_ctrl_valid),
         .asi_ctrl_ready     (asi_ctrl_ready),
         .coe_inject_pulse   (coe_inject_pulse),
+        .coe_inject_masked_pulse(coe_inject_masked_pulse),
         .avs_csr_address    (avs_csr_address),
         .avs_csr_read       (avs_csr_read),
         .avs_csr_write      (avs_csr_write),
@@ -437,6 +439,13 @@ module tb_emulator_mutrig;
         coe_inject_pulse <= 1'b0;
     endtask
 
+    task automatic pulse_inject_masked_once();
+        @(posedge clk);
+        coe_inject_masked_pulse <= 1'b1;
+        @(posedge clk);
+        coe_inject_masked_pulse <= 1'b0;
+    endtask
+
     task automatic wait_for_generated_hit(output logic [47:0] hit_word);
         int timeout_cycles;
         hit_word = '0;
@@ -751,6 +760,10 @@ module tb_emulator_mutrig;
         csr_read(4'd4, rdata);
         check("CSR[4] readback asic_id", rdata[7:4] == 4'd5);
         check("CSR[4] readback gen_idle", rdata[3] == 1'b1);
+
+        csr_write(4'd6, 32'hA5A5_5A5A);
+        csr_read(4'd6, rdata);
+        check("CSR[6] readback inject mask", rdata == 32'hA5A5_5A5A);
     endtask
 
     // ========================================
@@ -1075,6 +1088,52 @@ module tb_emulator_mutrig;
     endtask
 
     // ========================================
+    // Test T11: Masked trigger injects selected channels at one anchor time
+    // ========================================
+    task automatic test_T11_masked_trigger();
+        int frame_len;
+        int evt_count;
+        int hit_idx;
+        logic [47:0] seen_hits [0:2];
+
+        $display("\n=== Test T11: Masked trigger injection ===");
+
+        csr_write(4'd0, 32'h0000_0001);
+        csr_write(4'd1, 32'h0000_0000);
+        csr_write(4'd3, 32'h1122_3344);
+        csr_write(4'd4, 32'h0000_0018);
+        csr_write(4'd6, 32'h8000_0021);  // channels 31, 5, 0
+        clear_hit_generator_state();
+
+        run_sequence_start();
+        repeat (20) @(posedge clk);
+        pulse_inject_masked_once();
+
+`ifndef EMUT_GATE_SIM
+        hit_idx = 0;
+        while (hit_idx < 3) begin
+            @(negedge clk);
+            if (dut.u_hit_gen.hit_wr_en && !dut.u_hit_gen.fifo_full) begin
+                seen_hits[hit_idx] = dut.u_hit_gen.hit_wr_data;
+                hit_idx++;
+            end
+        end
+
+        check("Masked inject hit 0 channel", seen_hits[0][47:43] == 5'd0);
+        check("Masked inject hit 1 channel", seen_hits[1][47:43] == 5'd5);
+        check("Masked inject hit 2 channel", seen_hits[2][47:43] == 5'd31);
+        check("Masked inject keeps common TCC", seen_hits[0][41:27] == seen_hits[2][41:27]);
+        check("Masked inject keeps common ECC", seen_hits[0][20:6] == seen_hits[2][20:6]);
+`else
+        repeat (64) @(posedge clk);
+`endif
+
+        capture_next_nonempty_frame(frame_len, evt_count);
+        check("Masked inject frame carries selected hit count", evt_count == 3);
+        run_sequence_stop();
+    endtask
+
+    // ========================================
     // Test E03: Back-to-back frames
     // ========================================
     task automatic test_E03_back2back();
@@ -1114,6 +1173,7 @@ module tb_emulator_mutrig;
         asi_ctrl_data   = '0;
         asi_ctrl_valid  = 1'b0;
         coe_inject_pulse = 1'b0;
+        coe_inject_masked_pulse = 1'b0;
         avs_csr_address = '0;
         avs_csr_read    = 1'b0;
         avs_csr_write   = 1'b0;
@@ -1179,6 +1239,9 @@ module tb_emulator_mutrig;
 
         if (test_name == "ALL" || test_name == "T10_cross_asic_cluster_slice")
             test_T10_cross_asic_cluster_slice();
+
+        if (test_name == "ALL" || test_name == "T11_masked_trigger")
+            test_T11_masked_trigger();
 
         if (test_name == "ALL" || test_name == "E03_back2back")
             test_E03_back2back();

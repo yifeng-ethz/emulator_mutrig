@@ -1,9 +1,10 @@
 // emulator_mutrig_bank8.sv
 // Standalone 8-lane MuTRiG emulator bank with shared control/timebase.
-// Version : 26.1.7
+// Version : 26.1.8
 // Date    : 20260418
 // Change  : Maintain the compact 8-lane standalone bank as the timing-closed
-//           signoff vehicle for raw-compatible latency and throughput parity.
+//           signoff vehicle while adding a broadcast masked-trigger input and
+//           per-lane local channel mask for controlled latency injection.
 
 module emulator_mutrig_bank8
     import emulator_mutrig_pkg::*;
@@ -18,8 +19,10 @@ module emulator_mutrig_bank8
     input  logic        asi_ctrl_valid,
     output logic        asi_ctrl_ready,
     input  logic        coe_inject_pulse,
+    input  logic        coe_inject_masked_pulse,
 
     input  logic [LANE_COUNT-1:0] cfg_enable_mask,
+    input  logic [N_CHANNELS-1:0] cfg_inject_channel_mask,
     input  logic [1:0]  cfg_hit_mode,
     input  logic        cfg_short_mode,
     input  logic [15:0] cfg_hit_rate,
@@ -47,7 +50,9 @@ module emulator_mutrig_bank8
     logic       emu_rst;
     logic       frame_rst;
     logic [1:0] inject_sync;
+    logic [1:0] inject_masked_sync;
     logic       inject_pulse_clk;
+    logic       inject_masked_pulse_clk;
     logic       lfsr_en;
     logic [14:0] tcc_lfsr;
     logic [14:0] ecc_lfsr;
@@ -82,6 +87,15 @@ module emulator_mutrig_bank8
     end
 
     assign inject_pulse_clk = inject_sync[0] & ~inject_sync[1];
+
+    always_ff @(posedge i_clk) begin
+        if (emu_rst)
+            inject_masked_sync <= 2'b00;
+        else
+            inject_masked_sync <= {inject_masked_sync[0], coe_inject_masked_pulse};
+    end
+
+    assign inject_masked_pulse_clk = inject_masked_sync[0] & ~inject_masked_sync[1];
     assign lfsr_en = ~emu_rst;
     assign frame_interval_max = cfg_short_mode ? 11'(FRAME_INTERVAL_SHORT) : 11'(FRAME_INTERVAL_LONG);
 
@@ -145,9 +159,11 @@ module emulator_mutrig_bank8
                 .run_generating         (run_generating),
                 .run_draining           (run_draining),
                 .inject_pulse           (inject_pulse_clk),
+                .inject_masked_pulse    (inject_masked_pulse_clk),
                 .tcc_lfsr               (tcc_lfsr_commit),
                 .ecc_lfsr               (ecc_lfsr_commit),
                 .cfg_enable             (cfg_enable_mask[lane_idx]),
+                .cfg_inject_channel_mask(cfg_inject_channel_mask),
                 .cfg_hit_mode           (cfg_hit_mode),
                 .cfg_short_mode         (cfg_short_mode),
                 .cfg_hit_rate           (cfg_hit_rate),

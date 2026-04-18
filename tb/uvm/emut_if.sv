@@ -35,14 +35,15 @@ endinterface
 
 interface emut_inject_if(input logic clk, input logic rst);
   logic pulse;
+  logic masked_pulse;
 
   modport drv (
-    output pulse,
+    output pulse, masked_pulse,
     input  clk, rst
   );
 
   modport mon (
-    input pulse, clk, rst
+    input pulse, masked_pulse, clk, rst
   );
 endinterface
 

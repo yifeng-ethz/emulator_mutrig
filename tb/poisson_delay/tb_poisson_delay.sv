@@ -42,6 +42,7 @@ module tb_poisson_delay;
     logic        asi_ctrl_valid;
     logic        asi_ctrl_ready;
     logic        coe_inject_pulse;
+    logic        coe_inject_masked_pulse;
 
     logic [3:0]  avs_csr_address;
     logic        avs_csr_read;
@@ -166,6 +167,7 @@ module tb_poisson_delay;
         .asi_ctrl_valid      (asi_ctrl_valid),
         .asi_ctrl_ready      (asi_ctrl_ready),
         .coe_inject_pulse    (coe_inject_pulse),
+        .coe_inject_masked_pulse(coe_inject_masked_pulse),
         .avs_csr_address     (avs_csr_address),
         .avs_csr_read        (avs_csr_read),
         .avs_csr_write       (avs_csr_write),
@@ -367,6 +369,7 @@ module tb_poisson_delay;
         asi_ctrl_data      = '0;
         asi_ctrl_valid     = 1'b0;
         coe_inject_pulse   = 1'b0;
+        coe_inject_masked_pulse = 1'b0;
         avs_csr_address    = '0;
         avs_csr_read       = 1'b0;
         avs_csr_write      = 1'b0;

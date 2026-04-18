@@ -1,9 +1,10 @@
 // emulator_mutrig_lane_shared.sv
 // Shared-control MuTRiG lane core used by the standalone 8-lane area bank.
-// Version : 26.1.7
+// Version : 26.1.8
 // Date    : 20260418
 // Change  : Keep the shared-lane wrapper aligned with the compact raw-style
-//           frame semantics used by the bank8 signoff and true-A/B checks.
+//           frame semantics while threading the dedicated masked-trigger path
+//           into each lane-local generator.
 
 module emulator_mutrig_lane_shared
     import emulator_mutrig_pkg::*;
@@ -17,6 +18,7 @@ module emulator_mutrig_lane_shared
     input  logic        run_generating,
     input  logic        run_draining,
     input  logic        inject_pulse,
+    input  logic        inject_masked_pulse,
     input  logic [14:0] tcc_lfsr,
     input  logic [14:0] ecc_lfsr,
 
@@ -35,6 +37,7 @@ module emulator_mutrig_lane_shared
     input  logic [2:0]  cfg_tx_mode,
     input  logic        cfg_gen_idle,
     input  logic [3:0]  cfg_asic_id,
+    input  logic [N_CHANNELS-1:0] cfg_inject_channel_mask,
 
     output logic [8:0]  aso_tx8b1k_data,
     output logic        aso_tx8b1k_valid,
@@ -72,6 +75,8 @@ module emulator_mutrig_lane_shared
         .cfg_prng_seed        (cfg_prng_seed),
         .cfg_short_mode       (cfg_short_mode),
         .inject_pulse         (inject_pulse),
+        .inject_masked_pulse  (inject_masked_pulse),
+        .cfg_inject_channel_mask(cfg_inject_channel_mask),
         .sim_offer_valid      (1'b0),
         .sim_offer_word       ('0),
         .sim_offer_ready      (),

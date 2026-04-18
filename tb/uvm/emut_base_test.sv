@@ -312,12 +312,13 @@ class emut_test_noise_mode extends emut_base_test;
   task run_phase(uvm_phase phase);
     phase.raise_objection(this);
     wait_for_reset_release();
-    program_common_cfg(2'b10, 1'b0, 16'h0000, 16'h3000, 5'd2, 5'd5, 32'h0BAD_C0DE, TX_MODE_LONG, 1'b1, 4'd7);
+    program_common_cfg(HIT_MODE_POISSON_IID, 1'b0, 16'h0020, 16'h0000, 5'd2, 5'd5,
+      32'h0BAD_C0DE, TX_MODE_LONG, 1'b1, 4'd7);
     start_run();
     wait_for_parser_nonempty_frames(2, 400000);
     stop_run();
     if (m_env.m_parser_mon.max_frame_len_seen == 0)
-      `uvm_error("EMUT_NOISE", "Noise mode never produced a non-empty frame")
+      `uvm_error("EMUT_NOISE", "Per-channel IID mode never produced a non-empty frame")
     phase.drop_objection(this);
   endtask
 endclass
@@ -387,8 +388,8 @@ class emut_test_mixed_random extends emut_base_test;
           hit_mode   = 2'b10;
           short_mode = 1'b0;
           burst_size = 5'd2;
-          hit_rate   = 16'h0000;
-          noise_rate = 16'($urandom_range(16'h0008, 16'h0040));
+          hit_rate   = 16'($urandom_range(16'h0008, 16'h0040));
+          noise_rate = 16'h0000;
           tx_mode    = TX_MODE_LONG;
         end
         default: begin
@@ -447,10 +448,10 @@ class emut_test_disable_and_status extends emut_base_test;
     csr_expect_eq(4'd5, 32'h0000_0000, "CSR5 status default");
     csr_expect_eq(4'd6, 32'h0000_0000, "CSR6 default");
 
-    program_common_cfg(HIT_MODE_NOISE, 1'b0, 16'hF800, 16'hC000, 5'd31, 5'd31,
+    program_common_cfg(HIT_MODE_POISSON_IID, 1'b0, 16'h0020, 16'h0000, 5'd31, 5'd31,
       32'h55AA_33CC, TX_MODE_PRBS_SAT, 1'b0, 4'hF);
     csr_write(4'd6, 32'hFFFF_FFFF);
-    csr_write(4'd0, 32'h0000_0004); // disable + noise + long
+    csr_write(4'd0, 32'h0000_0004); // disable + per-channel IID + long
 
     start_run();
     wait_clocks(64);
@@ -661,7 +662,7 @@ class emut_test_auto_low_center extends emut_base_test;
     wait_for_parser_nonempty_frames(parser_base + 1, 400000);
     stop_run();
 
-    program_common_cfg(HIT_MODE_MIXED, 1'b0, 16'h0000, 16'h0000, 5'd8, 5'd1,
+    program_common_cfg(HIT_MODE_PERIODIC, 1'b0, 16'h0020, 16'h0000, 5'd8, 5'd1,
       32'h1234_AA55, TX_MODE_LONG, 1'b1, 4'd3);
     parser_base = m_env.m_parser_mon.nonempty_frame_count_seen;
     start_run();
@@ -850,7 +851,7 @@ class emut_frame_suite_base extends emut_base_test;
     wait_for_parser_nonempty_frames(parser_base + 1, 400000);
     stop_run();
 
-    program_common_cfg(HIT_MODE_MIXED, 1'b0, 16'h0000, 16'h0000, 5'd8, 5'd1,
+    program_common_cfg(HIT_MODE_PERIODIC, 1'b0, 16'h0020, 16'h0000, 5'd8, 5'd1,
       32'h1234_AA55, TX_MODE_LONG, 1'b1, 4'd3);
     parser_base = m_env.m_parser_mon.nonempty_frame_count_seen;
     start_run();

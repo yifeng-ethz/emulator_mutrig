@@ -80,10 +80,10 @@ class emut_coverage extends uvm_component;
     option.per_instance = 1;
 
     cp_hit_mode : coverpoint hit_mode {
-      bins poisson = {HIT_MODE_POISSON};
-      bins burst   = {HIT_MODE_BURST};
-      bins noise   = {HIT_MODE_NOISE};
-      bins mixed   = {HIT_MODE_MIXED};
+      bins poisson_legacy = {HIT_MODE_POISSON};
+      bins burst          = {HIT_MODE_BURST};
+      bins poisson_iid    = {HIT_MODE_POISSON_IID};
+      bins periodic       = {HIT_MODE_PERIODIC};
     }
 
     cp_tx_mode : coverpoint tx_mode {

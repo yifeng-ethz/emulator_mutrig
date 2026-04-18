@@ -82,6 +82,7 @@ package emut_env_pkg;
     rand int unsigned start_delay_cycles;
     rand int unsigned phase_ps;
     rand int unsigned width_ps;
+    rand bit          masked;
     time              rise_time_ps;
     time              fall_time_ps;
 
@@ -90,6 +91,7 @@ package emut_env_pkg;
 
     function new(string name = "emut_inject_item");
       super.new(name);
+      masked = 1'b0;
     endfunction
   endclass
 

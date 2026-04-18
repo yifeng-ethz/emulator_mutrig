@@ -23,7 +23,7 @@ set RUN_CONTROL_WIDTH_CONST     9
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 1
-set VERSION_PATCH_DEFAULT_CONST 7
+set VERSION_PATCH_DEFAULT_CONST 8
 set BUILD_DEFAULT_CONST         418
 set VERSION_DATE_DEFAULT_CONST  20260418
 set VERSION_GIT_DEFAULT_CONST   0
@@ -85,6 +85,7 @@ set CSR_TABLE_HTML {<html><table border="1" cellpadding="3" width="100%">
 <tr><td>0x03</td><td>0x00C</td><td>PRNG_SEED</td><td>RW</td><td>[31:0] PRNG seed for hit generator</td></tr>
 <tr><td>0x04</td><td>0x010</td><td>TX_MODE</td><td>RW</td><td>[2:0] tx_mode, [3] gen_idle, [7:4] asic_id</td></tr>
 <tr><td>0x05</td><td>0x014</td><td>STATUS</td><td>RO</td><td>[15:0] frame_count, [25:16] last_event_count</td></tr>
+<tr><td>0x06</td><td>0x018</td><td>INJECT_MASK</td><td>RW</td><td>[31:0] per-channel mask for the masked trigger input</td></tr>
 </table></html>}
 
 # ========================================================================
@@ -125,10 +126,14 @@ Single synchronous <b>data_clock</b> domain. The emulator models the MuTRiG\
 Depth: <b>${fifo_depth}</b> entries; storage estimate <b>${storage_bits}</b> bits\
  in one 48-bit lane-local L2 FIFO inferred into M10Ks<br/><br/>\
 <b>Hit modes</b><br/>\
-<b>00</b> Poisson &mdash; stochastic hits with optional cluster length from <b>burst_size</b><br/>\
+<b>00</b> Legacy folded Poisson &mdash; stochastic hits with optional cluster length from <b>burst_size</b><br/>\
 <b>01</b> Burst &mdash; periodic cluster hits on neighbouring channels<br/>\
-<b>10</b> Noise &mdash; random dark-count-like hits<br/>\
-<b>11</b> Mixed &mdash; Poisson signal clusters plus periodic burst clusters<br/><br/>\
+<b>10</b> Folded per-channel IID Poisson &mdash; one PRNG stream per local channel<br/>\
+<b>11</b> Folded per-channel periodic &mdash; one phase accumulator per local channel<br/><br/>\
+<b>External masked trigger</b><br/>\
+<b>inject.masked_pulse</b> snapshots the current coarse time and the programmed\
+ <b>INJECT_MASK</b> CSR, then emits the selected local channels ahead of background\
+ traffic so a frame-marker-aligned injector can create a narrow latency peak.<br/><br/>\
 <b>Cross-ASIC cluster replay</b><br/>\
 Optional lane-domain slicing lets neighbouring emulator instances replay one shared cluster across multiple MuTRiG lanes when they share the same seed and run-control timing.</html>"
     }
@@ -485,11 +490,16 @@ Word-addressed, 4-bit address, 32-bit data.  Read wait = 1 cycle, write wait = 0
 </html>}
 
 add_html_text "Injection" inject_html {<html>
-<b>inject</b> &mdash; 1-bit conduit sink<br/>
-External pulse input used to trigger an immediate burst around the configured
+<b>inject</b> &mdash; 2-bit conduit sink<br/>
+<b>pulse</b> triggers the legacy burst/cluster replay path around the configured
 local <b>burst_center</b> channel, or around <b>cluster_center_global</b> when
-cross-ASIC cluster replay is enabled. The pulse is sampled in the <b>data_clock</b>
-domain and feeds the same burst path used by the normal hit modes.
+cross-ASIC cluster replay is enabled.<br/>
+<b>masked_pulse</b> snapshots the current coarse timestamp and the programmed
+<b>INJECT_MASK</b> CSR, then emits one hit on every selected local channel.
+This path is intended to be driven by <b>mutrig_injector_multiheader</b> in its
+header-detect mode so the downstream latency peak follows the injector delay
+relative to the framing marker.<br/>
+Both pulses are resynchronized into the <b>data_clock</b> domain before use.
 </html>}
 
 # ========================================================================
@@ -504,7 +514,7 @@ add_html_text "CONTROL Fields (0x00)" control_fields_html {<html>
 <table border="1" cellpadding="3" width="100%">
 <tr><th>Bit</th><th>Name</th><th>Access</th><th>Reset</th><th>Description</th></tr>
 <tr><td>0</td><td>enable</td><td>RW</td><td>1</td><td>Emulator enable (1=active)</td></tr>
-<tr><td>2:1</td><td>hit_mode</td><td>RW</td><td>00</td><td>00=Poisson, 01=Burst, 10=Noise, 11=Mixed</td></tr>
+<tr><td>2:1</td><td>hit_mode</td><td>RW</td><td>00</td><td>00=legacy folded Poisson, 01=Burst, 10=folded IID Poisson, 11=folded periodic</td></tr>
 <tr><td>3</td><td>short_mode</td><td>RW</td><td>0</td><td>1=short hit format, 0=long</td></tr>
 <tr><td>31:4</td><td>reserved</td><td>RO</td><td>0</td><td>Reserved, read as zero</td></tr>
 </table></html>}
@@ -548,6 +558,13 @@ add_html_text "STATUS Fields (0x05)" status_fields_html {<html>
 <tr><td>15:0</td><td>frame_count</td><td>RO</td><td>0</td><td>Running count of assembled frames</td></tr>
 <tr><td>25:16</td><td>last_event_count</td><td>RO</td><td>0</td><td>Hit count in the most recently assembled frame</td></tr>
 <tr><td>31:26</td><td>reserved</td><td>RO</td><td>0</td><td>Reserved</td></tr>
+</table></html>}
+
+add_display_item $TAB_REGMAP "INJECT_MASK Fields (0x06)" GROUP
+add_html_text "INJECT_MASK Fields (0x06)" injectmask_fields_html {<html>
+<table border="1" cellpadding="3" width="100%">
+<tr><th>Bit</th><th>Name</th><th>Access</th><th>Reset</th><th>Description</th></tr>
+<tr><td>31:0</td><td>inject_channel_mask</td><td>RW</td><td>0xFFFF_FFFF</td><td>Per-channel enable mask for the <b>inject.masked_pulse</b> path. Bit <b>n</b> selects local channel <b>n</b>.</td></tr>
 </table></html>}
 
 # ========================================================================
@@ -602,6 +619,7 @@ set_interface_property inject associatedClock data_clock
 set_interface_property inject associatedReset data_reset
 set_interface_property inject ENABLED true
 add_interface_port inject coe_inject_pulse pulse Input 1
+add_interface_port inject coe_inject_masked_pulse masked_pulse Input 1
 
 # Avalon-MM slave [csr] — configuration registers
 add_interface csr avalon end
