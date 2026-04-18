@@ -22,6 +22,7 @@ WARMUP_CYCLES        ?= 50000
 MEASURE_CYCLES       ?= 200000
 DRAIN_TIMEOUT_CYCLES ?= 400000
 OUT_CSV              ?= $(CURDIR)/results/poisson_delay.csv
+OUT_FRAME_CSV        ?= $(CURDIR)/results/poisson_frames.csv
 OUT_SUMMARY          ?= $(CURDIR)/results/poisson_delay.summary
 
 .PHONY: license_check compile run clean
@@ -68,6 +69,7 @@ run: compile
 	  +MEASURE_CYCLES=$(MEASURE_CYCLES) \
 	  +DRAIN_TIMEOUT_CYCLES=$(DRAIN_TIMEOUT_CYCLES) \
 	  +OUT_CSV=$(OUT_CSV) \
+	  +OUT_FRAME_CSV=$(OUT_FRAME_CSV) \
 	  +OUT_SUMMARY=$(OUT_SUMMARY) \
 	  $(TB_TOP)
 

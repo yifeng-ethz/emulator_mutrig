@@ -19,7 +19,7 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 | PASS | isolated_uvm | `15 / 15 passed` |
 | PASS | merged_ucdb_refresh | current isolated UCDB and text report are present |
 | PASS | hit_contract_checks | `asic_id 0..7`, hit channel `0..31`, raw `E_Flag`, and default `T <= E` timestamp semantics verified |
-| PASS | poisson_timestamp_study | true `E-ts -> pop` measured from idle to the raw full-link reference |
+| PASS | poisson_timestamp_study | corrected frame-marker study measures true `E-ts -> frame_start` and `E-ts -> output` from idle to the raw full-link reference |
 | PARTIAL | cross_mode_dv | continuous-frame evidence not refreshed |
 | PARTIAL | gate_level | not rerun in this refresh |
 
@@ -30,7 +30,7 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 | PASS | directed bench | `make -C tb run_all` -> `54 passed, 0 failed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
 | PASS | isolated UVM | `make -C tb/uvm clean closure SEEDS=1` -> `15 / 15 passed` | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
 | PASS | targeted contract checks | directed bench covers `asic_id`, hit channel bounds, `E_Flag`, and `T <= E` semantics | [../tb/DV_REPORT.md](../tb/DV_REPORT.md) |
-| PASS | Poisson timestamp study | short-mode true `E-ts -> pop` sweep from `0%` to `100%` raw offered load captured | [../tb/poisson_delay/results/POISSON_DELAY_REPORT.md](../tb/poisson_delay/results/POISSON_DELAY_REPORT.md) |
+| PASS | Poisson timestamp study | short-mode corrected frame-marker sweep from `0%` to `100%` raw offered load captured | [../tb/poisson_delay/results/POISSON_DELAY_REPORT.md](../tb/poisson_delay/results/POISSON_DELAY_REPORT.md) |
 | PARTIAL | code coverage | isolated merged UCDB refreshed, multi-mode coverage still open | [../tb/DV_COV.md](../tb/DV_COV.md) |
 
 ## Synthesis
@@ -50,16 +50,20 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 
 Supplemental short-mode Poisson characterization shows:
 
-- the primary latency metric is true `E-ts -> pop`, because the default long-hit
-  contract commits on the encoded `E` timestamp
-- at `10%` raw full rate, true `E-ts -> pop` spans almost one full short-frame
-  window with a `~32` cycle floor from frame-header overhead
-- at `100%` raw full rate, true `E-ts -> pop` stays mostly in the
-  `0.8 .. 1.15` frame range rather than filling a full `0 .. 1820` cycle box
+- the corrected raw-style observables are `true E-ts -> frame_start` and
+  `true E-ts -> output`
+- at `10%` raw full rate, `true E-ts -> frame_start` is the expected one-frame
+  box: `2.0 / 444.0 / 816.0 / 902.0 / 911.0` cycles for min / p50 / p90 / p99 / max
+- at `100%` raw full rate, `true E-ts -> output` stays bounded near one frame
+  plus tail: `702.0 / 903.0 / 943.0 / 990.0 / 1052.0`
+- the raw-style TLM matches the RTL frame assignment at about `99.8%` exact
+  agreement across the sweep
 - occasional FIFO-full cycles begin around `60%` raw full rate, but accepted
   throughput still tracks the offered rate closely through the mid-load points
 - at `100%` raw full rate, accepted throughput is `0.2698 hits/cycle`, about
   `3.71 cycles / accepted hit`
+- the high-load distribution does not become a flat `0 .. 1820` cycle box; the
+  surviving-hit population is biased toward newer visible hits near saturation
 
 ## Fixes In Scope
 

@@ -89,8 +89,9 @@ Artifacts:
 
 Expected outputs:
 
-- true `E-ts -> pop` latency distribution
-- commit-cycle-to-pop cross-check distribution
+- true `E-ts -> frame_start` latency distribution
+- true `E-ts -> output` latency distribution
+- true `E-ts -> pop` secondary cross-check distribution
 - average and peak L2 FIFO occupancy
 - `full_cycles` as the saturation indicator
 - accepted throughput versus the raw `1 hit / 3.5 cycles` reference
@@ -100,8 +101,9 @@ Expected outputs:
 - directed smoke passes cleanly at `54 passed, 0 failed`
 - isolated UVM regression passes cleanly
 - coverage refresh is present and reviewable (`72.26%` filtered merged total)
-- Poisson delay sweep is present and reports true `E-ts -> pop` latency across
-  the full requested `0% .. 100%` raw-load range
+- Poisson delay sweep is present and reports the corrected raw-style
+  `true E-ts -> frame_start` and `true E-ts -> output` distributions across the
+  full requested `0% .. 100%` raw-load range
 - bank8 standalone compile meets the area target at `3958 ALMs`
 - tightened `137.5 MHz` timing closes with slow `85C` setup slack `+0.139 ns`
 

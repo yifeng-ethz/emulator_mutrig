@@ -96,7 +96,9 @@ release fixes:
 4. default long-hit timing keeps `T <= E`, uses the encoded `E` time as the
    true commit timestamp, keeps raw-compatible `E_Flag = 1`, and uses random
    Poisson fine time versus about `1 ns` cluster fine spread
-5. UVM reset-default checks now match the live cluster defaults
+5. the corrected Poisson study now checks raw-style `frame_start` snapshot
+   latency plus parser-visible output tail against a matching frame-marker TLM
+6. UVM reset-default checks now match the live cluster defaults
 
 ## 6. Open Items
 

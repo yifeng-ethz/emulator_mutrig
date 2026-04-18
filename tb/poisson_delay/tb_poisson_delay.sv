@@ -7,16 +7,22 @@ module tb_poisson_delay;
 
     typedef struct {
         longint unsigned enq_cycle;
+        longint unsigned pop_cycle;
+        longint unsigned frame_start_cycle;
         logic [14:0]     hit_tcc;
         logic [4:0]      hit_tfine;
         logic [14:0]     hit_ecc;
         logic [4:0]      hit_efine;
+        logic [14:0]     pop_tcc;
+        logic [14:0]     pop_ecc;
         bit              measure;
     } enq_item_t;
 
     string out_csv_path;
+    string out_frame_csv_path;
     string out_summary_path;
     int    out_csv_fd;
+    int    out_frame_csv_fd;
     int    out_summary_fd;
 
     int hit_rate_cfg;
@@ -74,14 +80,17 @@ module tb_poisson_delay;
     localparam logic [8:0] CTRL_RUNNING     = 9'b000001000;
 
     enq_item_t accept_q[$];
+    enq_item_t pop_q[$];
 
     longint unsigned cycle_count;
+    longint unsigned current_frame_start_cycle;
+    longint unsigned frame_start_count;
     longint unsigned measure_start_cycle;
     longint unsigned measure_end_cycle;
     longint unsigned total_accepted_hits;
     longint unsigned measured_accepted_hits;
     longint unsigned measured_popped_hits;
-    longint unsigned measured_parser_hits;
+    longint unsigned measured_output_hits;
     longint unsigned parser_header_count;
     longint unsigned total_parser_hits;
     longint unsigned occupancy_sum;
@@ -212,15 +221,15 @@ module tb_poisson_delay;
         enq_item_t acc_item;
         longint unsigned sample_cycle;
         int commit_to_pop_cycles;
-        logic [14:0] pop_tcc;
-        logic [14:0] pop_ecc;
 
         if (rst) begin
             cycle_count           = 0;
+            current_frame_start_cycle = 0;
+            frame_start_count     = 0;
             total_accepted_hits   = 0;
             measured_accepted_hits = 0;
             measured_popped_hits   = 0;
-            measured_parser_hits  = 0;
+            measured_output_hits  = 0;
             parser_header_count   = 0;
             total_parser_hits     = 0;
             occupancy_sum         = 0;
@@ -231,9 +240,26 @@ module tb_poisson_delay;
             underflow_errors      = 0;
             measure_window_active = 1'b0;
             accept_q.delete();
+            pop_q.delete();
         end else begin
             cycle_count = cycle_count + 1;
             sample_cycle = cycle_count;
+
+            if (dut.frame_start) begin
+                current_frame_start_cycle = sample_cycle;
+                frame_start_count         = frame_start_count + 1;
+                if (out_frame_csv_fd != 0) begin
+                    $fdisplay(out_frame_csv_fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d",
+                              frame_start_count,
+                              sample_cycle,
+                              dut.event_count,
+                              dut.u_hit_gen.fifo_count,
+                              dut.u_hit_gen.pending_valid ? 1 : 0,
+                              dut.u_hit_gen.pending_valid ? (dut.u_hit_gen.fifo_count + 1) : dut.u_hit_gen.fifo_count,
+                              dut.fifo_almost_full ? 1 : 0,
+                              measure_cycle(sample_cycle) ? 1 : 0);
+                end
+            end
 
             if (measure_cycle(sample_cycle)) begin
                 occupancy_sum     = occupancy_sum + dut.u_hit_gen.fifo_count;
@@ -246,17 +272,21 @@ module tb_poisson_delay;
 
             if (dut.u_hit_gen.hit_wr_en) begin
                 acc_item.enq_cycle = sample_cycle;
+                acc_item.pop_cycle = 0;
+                acc_item.frame_start_cycle = 0;
                 acc_item.hit_tcc   = dut.u_hit_gen.hit_wr_data[41:27];
                 acc_item.hit_tfine = dut.u_hit_gen.hit_wr_data[26:22];
                 acc_item.hit_ecc   = dut.u_hit_gen.hit_wr_data[19:5];
                 acc_item.hit_efine = dut.u_hit_gen.hit_wr_data[4:0];
+                acc_item.pop_tcc   = '0;
+                acc_item.pop_ecc   = '0;
                 acc_item.measure   = measure_cycle(sample_cycle);
                 accept_q.push_back(acc_item);
                 total_accepted_hits = total_accepted_hits + 1;
                 if (acc_item.measure) begin
                     measured_accepted_hits = measured_accepted_hits + 1;
-                    if ((measured_accepted_hits - measured_popped_hits) > max_measured_outstanding)
-                        max_measured_outstanding = measured_accepted_hits - measured_popped_hits;
+                    if ((measured_accepted_hits - measured_output_hits) > max_measured_outstanding)
+                        max_measured_outstanding = measured_accepted_hits - measured_output_hits;
                 end
             end
 
@@ -265,23 +295,13 @@ module tb_poisson_delay;
                     underflow_errors = underflow_errors + 1;
                 end else begin
                     acc_item = accept_q.pop_front();
-                    pop_tcc = dut.tcc_lfsr;
-                    pop_ecc = dut.ecc_lfsr;
+                    acc_item.pop_cycle = sample_cycle;
+                    acc_item.frame_start_cycle = current_frame_start_cycle;
+                    acc_item.pop_tcc = dut.tcc_lfsr;
+                    acc_item.pop_ecc = dut.ecc_lfsr;
+                    pop_q.push_back(acc_item);
                     if (acc_item.measure) begin
-                        commit_to_pop_cycles = sample_cycle - acc_item.enq_cycle;
                         measured_popped_hits = measured_popped_hits + 1;
-                        $fdisplay(out_csv_fd, "%0d,%0d,%0d,%0d,%0d,0x%04h,%0d,0x%04h,%0d,0x%04h,0x%04h",
-                                  acc_item.enq_cycle,
-                                  sample_cycle,
-                                  commit_to_pop_cycles,
-                                  sample_cycle - measure_start_cycle,
-                                  measured_accepted_hits - measured_popped_hits,
-                                  acc_item.hit_tcc,
-                                  acc_item.hit_tfine,
-                                  acc_item.hit_ecc,
-                                  acc_item.hit_efine,
-                                  pop_tcc,
-                                  pop_ecc);
                     end
                 end
             end
@@ -289,8 +309,34 @@ module tb_poisson_delay;
             if (parser_headerinfo_valid)
                 parser_header_count = parser_header_count + 1;
 
-            if (parser_hit_valid)
+            if (parser_hit_valid) begin
                 total_parser_hits = total_parser_hits + 1;
+                if (pop_q.size() == 0) begin
+                    underflow_errors = underflow_errors + 1;
+                end else begin
+                    acc_item = pop_q.pop_front();
+                    commit_to_pop_cycles = acc_item.pop_cycle - acc_item.enq_cycle;
+                    $fdisplay(out_csv_fd, "%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,0x%04h,%0d,0x%04h,%0d,0x%04h,0x%04h,%0d",
+                              acc_item.enq_cycle,
+                              acc_item.pop_cycle,
+                              sample_cycle,
+                              acc_item.frame_start_cycle,
+                              commit_to_pop_cycles,
+                              sample_cycle - acc_item.enq_cycle,
+                              acc_item.pop_cycle - acc_item.frame_start_cycle,
+                              sample_cycle - acc_item.frame_start_cycle,
+                              acc_item.hit_tcc,
+                              acc_item.hit_tfine,
+                              acc_item.hit_ecc,
+                              acc_item.hit_efine,
+                              acc_item.pop_tcc,
+                              acc_item.pop_ecc,
+                              acc_item.measure ? 1 : 0);
+                    if (acc_item.measure) begin
+                        measured_output_hits = measured_output_hits + 1;
+                    end
+                end
+            end
         end
     end
 
@@ -309,6 +355,8 @@ module tb_poisson_delay;
             drain_timeout_cycles = 400000;
         if (!$value$plusargs("OUT_CSV=%s", out_csv_path))
             out_csv_path = "poisson_delay.csv";
+        if (!$value$plusargs("OUT_FRAME_CSV=%s", out_frame_csv_path))
+            out_frame_csv_path = "poisson_frames.csv";
         if (!$value$plusargs("OUT_SUMMARY=%s", out_summary_path))
             out_summary_path = "poisson_delay.summary";
 
@@ -329,7 +377,12 @@ module tb_poisson_delay;
         out_csv_fd = $fopen(out_csv_path, "w");
         if (out_csv_fd == 0)
             $fatal(1, "failed to open OUT_CSV=%s", out_csv_path);
-        $fdisplay(out_csv_fd, "commit_cycle,pop_cycle,commit_to_pop_cycles,window_pop_cycle,measured_outstanding_after_pop,hit_tcc,hit_tfine,hit_ecc,hit_efine,pop_tcc,pop_ecc");
+        $fdisplay(out_csv_fd, "commit_cycle,pop_cycle,parser_cycle,frame_start_cycle,commit_to_pop_cycles,commit_to_parser_cycles,frame_start_to_pop_cycles,frame_start_to_parser_cycles,hit_tcc,hit_tfine,hit_ecc,hit_efine,pop_tcc,pop_ecc,measure_window");
+
+        out_frame_csv_fd = $fopen(out_frame_csv_path, "w");
+        if (out_frame_csv_fd == 0)
+            $fatal(1, "failed to open OUT_FRAME_CSV=%s", out_frame_csv_path);
+        $fdisplay(out_frame_csv_fd, "frame_seq,frame_start_cycle,event_count,fifo_count,pending_valid,total_visible_count,fifo_almost_full,measure_window");
 
         out_summary_fd = $fopen(out_summary_path, "w");
         if (out_summary_fd == 0)
@@ -354,7 +407,7 @@ module tb_poisson_delay;
         measure_window_active = 1'b0;
 
         tail_waited = 0;
-        while ((measured_popped_hits != measured_accepted_hits) &&
+        while ((measured_output_hits != measured_accepted_hits) &&
                (tail_waited < drain_timeout_cycles)) begin
             @(posedge clk);
             tail_waited++;
@@ -363,7 +416,7 @@ module tb_poisson_delay;
         csr_write(4'd1, 32'h0000_0000);
 
         drain_waited = 0;
-        while (((accept_q.size() != 0) || (dut.u_hit_gen.fifo_count != 0)) &&
+        while (((accept_q.size() != 0) || (pop_q.size() != 0) || (dut.u_hit_gen.fifo_count != 0)) &&
                (drain_waited < drain_timeout_cycles)) begin
             @(posedge clk);
             drain_waited++;
@@ -377,9 +430,11 @@ module tb_poisson_delay;
         $fdisplay(out_summary_fd, "measure_cycles=%0d", measure_cycles);
         $fdisplay(out_summary_fd, "measure_start_cycle=%0d", measure_start_cycle);
         $fdisplay(out_summary_fd, "measure_end_cycle=%0d", measure_end_cycle);
+        $fdisplay(out_summary_fd, "frame_start_count=%0d", frame_start_count);
         $fdisplay(out_summary_fd, "total_accepted_hits=%0d", total_accepted_hits);
         $fdisplay(out_summary_fd, "measured_accepted_hits=%0d", measured_accepted_hits);
         $fdisplay(out_summary_fd, "measured_popped_hits=%0d", measured_popped_hits);
+        $fdisplay(out_summary_fd, "measured_output_hits=%0d", measured_output_hits);
         $fdisplay(out_summary_fd, "parser_header_count=%0d", parser_header_count);
         $fdisplay(out_summary_fd, "total_parser_hits=%0d", total_parser_hits);
         $fdisplay(out_summary_fd, "occupancy_samples=%0d", occupancy_samples);
@@ -390,22 +445,24 @@ module tb_poisson_delay;
         $fdisplay(out_summary_fd, "drain_waited_cycles=%0d", drain_waited);
         $fdisplay(out_summary_fd, "max_measured_outstanding=%0d", max_measured_outstanding);
         $fdisplay(out_summary_fd, "accept_queue_remaining=%0d", accept_q.size());
+        $fdisplay(out_summary_fd, "pop_queue_remaining=%0d", pop_q.size());
         $fdisplay(out_summary_fd, "fifo_count_remaining=%0d", dut.u_hit_gen.fifo_count);
         $fdisplay(out_summary_fd, "underflow_errors=%0d", underflow_errors);
 
-        $display("SUMMARY hit_rate_cfg=%0d measured_accepted_hits=%0d measured_popped_hits=%0d max_occupancy=%0d full_cycles=%0d avg_occupancy=%.3f tail_waited=%0d drain_waited=%0d remaining_fifo=%0d underflow_errors=%0d",
-                 hit_rate_cfg, measured_accepted_hits, measured_popped_hits, max_occupancy, full_cycles,
+        $display("SUMMARY hit_rate_cfg=%0d measured_accepted_hits=%0d measured_popped_hits=%0d measured_output_hits=%0d max_occupancy=%0d full_cycles=%0d avg_occupancy=%.3f tail_waited=%0d drain_waited=%0d remaining_fifo=%0d underflow_errors=%0d",
+                 hit_rate_cfg, measured_accepted_hits, measured_popped_hits, measured_output_hits, max_occupancy, full_cycles,
                  average_occupancy_milli / 1000.0, tail_waited, drain_waited, dut.u_hit_gen.fifo_count,
                  underflow_errors);
 
         if (underflow_errors != 0)
             $display("WARNING: latency monitor observed %0d off-window underflow events near saturation", underflow_errors);
-        if (measured_accepted_hits != measured_popped_hits)
-            $fatal(1, "measured hit mismatch accepted=%0d popped=%0d", measured_accepted_hits, measured_popped_hits);
-        if (accept_q.size() != 0 || dut.u_hit_gen.fifo_count != 0)
-            $fatal(1, "drain timeout accept_q=%0d fifo_count=%0d", accept_q.size(), dut.u_hit_gen.fifo_count);
+        if (measured_accepted_hits != measured_output_hits)
+            $fatal(1, "measured hit mismatch accepted=%0d output=%0d", measured_accepted_hits, measured_output_hits);
+        if (accept_q.size() != 0 || pop_q.size() != 0 || dut.u_hit_gen.fifo_count != 0)
+            $fatal(1, "drain timeout accept_q=%0d pop_q=%0d fifo_count=%0d", accept_q.size(), pop_q.size(), dut.u_hit_gen.fifo_count);
 
         $fclose(out_csv_fd);
+        $fclose(out_frame_csv_fd);
         $fclose(out_summary_fd);
         $finish;
     end

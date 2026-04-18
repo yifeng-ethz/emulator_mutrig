@@ -58,7 +58,7 @@ Each lane still keeps:
   - `u_frame_asm`: branch `93.05%`, statement `96.03%`, toggle `86.27%`
   - filtered merged total: `72.26%`
 
-### Poisson timestamp-to-pop characterization
+### Poisson frame-marker latency characterization
 
 - Sweep report: [tb/poisson_delay/results/POISSON_DELAY_REPORT.md](tb/poisson_delay/results/POISSON_DELAY_REPORT.md)
 - Study mode: single-lane short-mode Poisson, `burst_size=1`, `noise=0`
@@ -67,16 +67,25 @@ Each lane still keeps:
   - default long-hit mode uses encoded `E` timestamp as the true hit commit time
   - encoded `T` timestamp is constrained to `T <= E`
   - `E_Flag` stays on the raw RTL-compatible default
+- Corrected observables:
+  - `true_ts -> frame_start` checks the raw MuTRiG marker-latch behavior directly
+  - `true_ts -> output` adds the short-mode serializer tail
 - Measured shape:
-  - at `10%` raw full rate, true `E-ts -> pop` latency spans almost one full short-frame window: `32 / 512.5 / 846.9 / 911.0 / 944.0` cycles for min / p50 / p90 / p99 / max
-  - the low-load floor is about `32` cycles because the earliest read still sits behind the frame header and event-count bytes
-  - at `100%` raw full rate, true `E-ts -> pop` latency stays mostly in `0.8 .. 1.15` frames: `793.0 / 895.0 / 936.0 / 982.0 / 1045.0` cycles for p01 / p50 / p90 / p99 / max
+  - at `10%` raw full rate, `true_ts -> frame_start` is the expected one-frame box:
+    `2.0 / 444.0 / 816.0 / 902.0 / 911.0` cycles for min / p50 / p90 / p99 / max
+  - at `10%` raw full rate, `true_ts -> output` is the same box plus wrapper packing overhead:
+    `40.0 / 520.0 / 854.0 / 918.0 / 951.0`
+  - at `100%` raw full rate, `true_ts -> frame_start` still stays near one frame:
+    `2.0 / 461.0 / 820.0 / 902.0 / 1042.0`
+  - at `100%` raw full rate, `true_ts -> output` does not fill a flat `0 .. 1820` box; it clusters around one frame with a bounded tail:
+    `702.0 / 903.0 / 943.0 / 990.0 / 1052.0`
 - Occupancy and throughput:
   - occasional FIFO-full cycles first appear around `60%` raw full rate, but the lane still tracks the offered rate closely through the mid-load points
   - at `100%` raw full rate, accepted throughput is `0.2698 hits/cycle`, or about `3.71 cycles / accepted hit`
 - Interpretation:
-  - the measured high-load distribution does not fill a full `0 .. 1820` cycle box at `<=100%` raw full rate
-  - once a short frame is open, the packer keeps draining continuously inside that frame instead of behaving like a pure frame-boundary-gated queue
+  - the raw-style TLM that snapshots hits at the frame marker matches the RTL frame assignment to about `99.8%`
+  - at `100%` raw full rate, `59.0%` of surviving hits still complete inside one frame and `41.0%` land in the `1 .. 2 frame` band, with none beyond `2` frames
+  - the simple “flat `0 .. 2 frame` box” intuition is therefore too loose for this Poisson source; both RTL and TLM are biased toward newer visible hits near saturation
 
 ### Standalone 8-lane synthesis
 

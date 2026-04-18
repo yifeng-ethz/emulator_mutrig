@@ -18,8 +18,7 @@ WARMUP_CYCLES = 50_000
 MEASURE_CYCLES = 200_000
 DRAIN_TIMEOUT_CYCLES = 400_000
 FRAME_INTERVAL_SHORT = 910
-PRBS15_INIT = 0x7FFF
-PRBS15_PERIOD = 0x7FFF
+RAW_FIFO_DEPTH = 256
 
 
 def run_cmd(cmd):
@@ -54,38 +53,6 @@ def percentile(values, pct):
     return values[lo] + (values[hi] - values[lo]) * frac
 
 
-def prbs15_step(state):
-    return ((state << 1) & 0x7FFE) | (((state >> 14) ^ state) & 0x1)
-
-
-def build_prbs15_rank():
-    ranks = {}
-    state = PRBS15_INIT
-    for idx in range(PRBS15_PERIOD):
-        ranks[state] = idx
-        state = prbs15_step(state)
-    return ranks
-
-
-PRBS15_RANK = build_prbs15_rank()
-
-
-def prbs15_delta_cycles(hit_tcc, pop_tcc):
-    return (PRBS15_RANK[pop_tcc] - PRBS15_RANK[hit_tcc]) % PRBS15_PERIOD
-
-
-def frame_band_counts(latencies):
-    counts = [0, 0, 0]
-    for latency in latencies:
-        if latency < FRAME_INTERVAL_SHORT:
-            counts[0] += 1
-        elif latency < (2 * FRAME_INTERVAL_SHORT):
-            counts[1] += 1
-        else:
-            counts[2] += 1
-    return counts
-
-
 def histogram(values, lo, hi, bins):
     if bins <= 0:
         return []
@@ -107,89 +74,45 @@ def histogram(values, lo, hi, bins):
         counts[idx] += 1
     out = []
     for idx, count in enumerate(counts):
-        bin_lo = lo + idx * width
-        bin_hi = lo + (idx + 1) * width
-        out.append({"lo": bin_lo, "hi": bin_hi, "count": count})
+        out.append({
+            "lo": lo + idx * width,
+            "hi": lo + (idx + 1) * width,
+            "count": count,
+        })
     return out
 
 
-def summarize_latency(csv_path):
-    commit_to_pop_latencies = []
-    true_ts_pop_latencies = []
-    t_ts_pop_latencies = []
-    with open(csv_path, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            commit_to_pop_latencies.append(int(row["commit_to_pop_cycles"]))
-            hit_tcc = int(row["hit_tcc"], 0)
-            hit_tfine = int(row["hit_tfine"])
-            hit_ecc = int(row["hit_ecc"], 0)
-            hit_efine = int(row["hit_efine"])
-            pop_tcc = int(row["pop_tcc"], 0)
-            pop_ecc = int(row["pop_ecc"], 0)
-            t_coarse_delta = prbs15_delta_cycles(hit_tcc, pop_tcc)
-            e_coarse_delta = prbs15_delta_cycles(hit_ecc, pop_ecc)
-            t_ts_pop_latencies.append(t_coarse_delta - (hit_tfine / 32.0))
-            true_ts_pop_latencies.append(e_coarse_delta - (hit_efine / 32.0))
+def frame_band_counts(latencies):
+    counts = [0, 0, 0]
+    for latency in latencies:
+        if latency < FRAME_INTERVAL_SHORT:
+            counts[0] += 1
+        elif latency < (2 * FRAME_INTERVAL_SHORT):
+            counts[1] += 1
+        else:
+            counts[2] += 1
+    return counts
 
-    if not commit_to_pop_latencies:
+
+def summarize_values(values):
+    if not values:
         return {
-            "samples": 0,
-            "commit_mean": None,
-            "commit_p50": None,
-            "commit_p90": None,
-            "commit_p99": None,
-            "commit_min": None,
-            "commit_max": None,
-            "true_ts_pop_mean": None,
-            "true_ts_pop_p01": None,
-            "true_ts_pop_p50": None,
-            "true_ts_pop_p90": None,
-            "true_ts_pop_p99": None,
-            "true_ts_pop_min": None,
-            "true_ts_pop_max": None,
-            "t_ts_pop_mean": None,
-            "t_ts_pop_p01": None,
-            "t_ts_pop_p50": None,
-            "t_ts_pop_p90": None,
-            "t_ts_pop_p99": None,
-            "t_ts_pop_min": None,
-            "t_ts_pop_max": None,
-            "in_1f": 0,
-            "in_2f_only": 0,
-            "ge_2f": 0,
-            "hist_1f": [],
-            "hist_2f": [],
+            "mean": None,
+            "p01": None,
+            "p50": None,
+            "p90": None,
+            "p99": None,
+            "min": None,
+            "max": None,
         }
-
-    in_1f, in_2f_only, ge_2f = frame_band_counts(true_ts_pop_latencies)
     return {
-        "samples": len(commit_to_pop_latencies),
-        "commit_mean": statistics.fmean(commit_to_pop_latencies),
-        "commit_min": min(commit_to_pop_latencies),
-        "commit_p50": percentile(commit_to_pop_latencies, 0.50),
-        "commit_p90": percentile(commit_to_pop_latencies, 0.90),
-        "commit_p99": percentile(commit_to_pop_latencies, 0.99),
-        "commit_max": max(commit_to_pop_latencies),
-        "true_ts_pop_mean": statistics.fmean(true_ts_pop_latencies),
-        "true_ts_pop_p01": percentile(true_ts_pop_latencies, 0.01),
-        "true_ts_pop_p50": percentile(true_ts_pop_latencies, 0.50),
-        "true_ts_pop_p90": percentile(true_ts_pop_latencies, 0.90),
-        "true_ts_pop_p99": percentile(true_ts_pop_latencies, 0.99),
-        "true_ts_pop_min": min(true_ts_pop_latencies),
-        "true_ts_pop_max": max(true_ts_pop_latencies),
-        "t_ts_pop_mean": statistics.fmean(t_ts_pop_latencies),
-        "t_ts_pop_p01": percentile(t_ts_pop_latencies, 0.01),
-        "t_ts_pop_p50": percentile(t_ts_pop_latencies, 0.50),
-        "t_ts_pop_p90": percentile(t_ts_pop_latencies, 0.90),
-        "t_ts_pop_p99": percentile(t_ts_pop_latencies, 0.99),
-        "t_ts_pop_min": min(t_ts_pop_latencies),
-        "t_ts_pop_max": max(t_ts_pop_latencies),
-        "in_1f": in_1f,
-        "in_2f_only": in_2f_only,
-        "ge_2f": ge_2f,
-        "hist_1f": histogram(true_ts_pop_latencies, 0.0, FRAME_INTERVAL_SHORT, 14),
-        "hist_2f": histogram(true_ts_pop_latencies, 0.0, 2 * FRAME_INTERVAL_SHORT, 14),
+        "mean": statistics.fmean(values),
+        "p01": percentile(values, 0.01),
+        "p50": percentile(values, 0.50),
+        "p90": percentile(values, 0.90),
+        "p99": percentile(values, 0.99),
+        "min": min(values),
+        "max": max(values),
     }
 
 
@@ -201,10 +124,205 @@ def fmt_num(value):
     return str(value)
 
 
+def parser_complete_offset(slot_index):
+    base = 10 + (slot_index // 2) * 7
+    if slot_index & 1:
+        return base + 3
+    return base
+
+
+def load_hit_rows(csv_path):
+    rows = []
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            hit_efine = int(row["hit_efine"])
+            commit_cycle = int(row["commit_cycle"])
+            pop_cycle = int(row["pop_cycle"])
+            parser_cycle = int(row["parser_cycle"])
+            frame_start_cycle = int(row["frame_start_cycle"])
+            true_ts = commit_cycle + (hit_efine / 32.0)
+            rows.append({
+                "commit_cycle": commit_cycle,
+                "pop_cycle": pop_cycle,
+                "parser_cycle": parser_cycle,
+                "frame_start_cycle": frame_start_cycle,
+                "commit_to_pop_cycles": int(row["commit_to_pop_cycles"]),
+                "commit_to_parser_cycles": int(row["commit_to_parser_cycles"]),
+                "frame_start_to_pop_cycles": int(row["frame_start_to_pop_cycles"]),
+                "frame_start_to_parser_cycles": int(row["frame_start_to_parser_cycles"]),
+                "hit_tcc": int(row["hit_tcc"], 0),
+                "hit_tfine": int(row["hit_tfine"]),
+                "hit_ecc": int(row["hit_ecc"], 0),
+                "hit_efine": hit_efine,
+                "measure_window": int(row["measure_window"]),
+                "true_ts": true_ts,
+                "true_ts_to_pop": pop_cycle - true_ts,
+                "true_ts_to_frame_start": frame_start_cycle - true_ts,
+                "true_ts_to_output": parser_cycle - true_ts,
+            })
+    return rows
+
+
+def load_frame_rows(csv_path):
+    rows = []
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append({
+                "frame_seq": int(row["frame_seq"]),
+                "frame_start_cycle": int(row["frame_start_cycle"]),
+                "event_count": int(row["event_count"]),
+                "fifo_count": int(row["fifo_count"]),
+                "pending_valid": int(row["pending_valid"]),
+                "total_visible_count": int(row["total_visible_count"]),
+                "fifo_almost_full": int(row["fifo_almost_full"]),
+                "measure_window": int(row["measure_window"]),
+            })
+    rows.sort(key=lambda item: item["frame_start_cycle"])
+    return rows
+
+
+def build_tlm_assignments(hit_rows, frame_rows):
+    if len(frame_rows) < 2:
+        return {
+            "assigned": {},
+            "dropped": 0,
+            "unassigned": len(hit_rows),
+        }
+
+    assigned = {}
+    dropped = 0
+    hit_idx = 0
+
+    frame_cycles = [row["frame_start_cycle"] for row in frame_rows]
+    for prev_cycle, curr_cycle in zip(frame_cycles, frame_cycles[1:]):
+        window_indices = []
+        while hit_idx < len(hit_rows) and hit_rows[hit_idx]["commit_cycle"] < curr_cycle:
+            if hit_rows[hit_idx]["commit_cycle"] >= prev_cycle:
+                window_indices.append(hit_idx)
+            hit_idx += 1
+        if len(window_indices) > RAW_FIFO_DEPTH:
+            dropped += len(window_indices) - RAW_FIFO_DEPTH
+            window_indices = window_indices[-RAW_FIFO_DEPTH:]
+        for slot, row_idx in enumerate(window_indices):
+            assigned[row_idx] = {
+                "tlm_frame_start_cycle": curr_cycle,
+                "tlm_parser_cycle": curr_cycle + parser_complete_offset(slot),
+                "slot": slot,
+            }
+
+    unassigned = len(hit_rows) - len(assigned)
+    return {
+        "assigned": assigned,
+        "dropped": dropped,
+        "unassigned": unassigned,
+    }
+
+
+def summarize_trace(hit_csv_path, frame_csv_path):
+    hit_rows = load_hit_rows(hit_csv_path)
+    frame_rows = load_frame_rows(frame_csv_path)
+    tlm = build_tlm_assignments(hit_rows, frame_rows)
+    measured_indices = [idx for idx, row in enumerate(hit_rows) if row["measure_window"]]
+    measured_rows = [hit_rows[idx] for idx in measured_indices]
+
+    actual_frame_lat = [row["true_ts_to_frame_start"] for row in measured_rows]
+    actual_output_lat = [row["true_ts_to_output"] for row in measured_rows]
+    actual_pop_lat = [row["true_ts_to_pop"] for row in measured_rows]
+
+    tlm_frame_lat = []
+    tlm_output_lat = []
+    frame_delta = []
+    output_delta = []
+    exact_frame_matches = 0
+    exact_output_matches = 0
+    within_one_output_matches = 0
+
+    measured_dropped_hits = 0
+    measured_unassigned_hits = 0
+    for row_idx in measured_indices:
+        row = hit_rows[row_idx]
+        if row_idx not in tlm["assigned"]:
+            measured_unassigned_hits += 1
+            continue
+        assignment = tlm["assigned"][row_idx]
+        tlm_frame = assignment["tlm_frame_start_cycle"] - row["true_ts"]
+        tlm_output = assignment["tlm_parser_cycle"] - row["true_ts"]
+        frame_err = row["frame_start_cycle"] - assignment["tlm_frame_start_cycle"]
+        output_err = row["parser_cycle"] - assignment["tlm_parser_cycle"]
+
+        tlm_frame_lat.append(tlm_frame)
+        tlm_output_lat.append(tlm_output)
+        frame_delta.append(frame_err)
+        output_delta.append(output_err)
+        if frame_err == 0:
+            exact_frame_matches += 1
+        if output_err == 0:
+            exact_output_matches += 1
+        if abs(output_err) <= 1:
+            within_one_output_matches += 1
+
+    for row_idx, row in enumerate(hit_rows):
+        if row["measure_window"] and row_idx not in tlm["assigned"]:
+            measured_dropped_hits += 1
+
+    actual_output_1f, actual_output_2f, actual_output_ge2 = frame_band_counts(actual_output_lat)
+    actual_frame_1f, actual_frame_2f, actual_frame_ge2 = frame_band_counts(actual_frame_lat)
+    tlm_output_1f, tlm_output_2f, tlm_output_ge2 = frame_band_counts(tlm_output_lat)
+
+    assigned_count = len(tlm_frame_lat)
+
+    return {
+        "samples": len(measured_rows),
+        "actual_pop": summarize_values(actual_pop_lat),
+        "actual_frame": summarize_values(actual_frame_lat),
+        "actual_output": summarize_values(actual_output_lat),
+        "tlm_frame": summarize_values(tlm_frame_lat),
+        "tlm_output": summarize_values(tlm_output_lat),
+        "frame_delta": summarize_values(frame_delta),
+        "output_delta": summarize_values(output_delta),
+        "actual_frame_in_1f": actual_frame_1f,
+        "actual_frame_in_2f_only": actual_frame_2f,
+        "actual_frame_ge_2f": actual_frame_ge2,
+        "actual_output_in_1f": actual_output_1f,
+        "actual_output_in_2f_only": actual_output_2f,
+        "actual_output_ge_2f": actual_output_ge2,
+        "tlm_output_in_1f": tlm_output_1f,
+        "tlm_output_in_2f_only": tlm_output_2f,
+        "tlm_output_ge_2f": tlm_output_ge2,
+        "tlm_assigned_hits": assigned_count,
+        "tlm_dropped_hits": measured_dropped_hits,
+        "tlm_unassigned_hits": measured_unassigned_hits,
+        "rtl_tlm_frame_exact_pct": (100.0 * exact_frame_matches / assigned_count) if assigned_count else 0.0,
+        "rtl_tlm_output_exact_pct": (100.0 * exact_output_matches / assigned_count) if assigned_count else 0.0,
+        "rtl_tlm_output_within1_pct": (100.0 * within_one_output_matches / assigned_count) if assigned_count else 0.0,
+        "actual_frame_hist_1f": histogram(actual_frame_lat, 0.0, FRAME_INTERVAL_SHORT, 14),
+        "actual_output_hist_1f": histogram(actual_output_lat, 0.0, FRAME_INTERVAL_SHORT, 14),
+        "actual_output_hist_2f": histogram(actual_output_lat, 0.0, 2 * FRAME_INTERVAL_SHORT, 14),
+        "tlm_output_hist_2f": histogram(tlm_output_lat, 0.0, 2 * FRAME_INTERVAL_SHORT, 14),
+    }
+
+
+def write_histogram_section(handle, title, hist_rows, samples):
+    handle.write(f"\n### {title}\n\n")
+    handle.write("| bin | latency range (cycles) | samples | pct |\n")
+    handle.write("|---:|---|---:|---:|\n")
+    for idx, hist_row in enumerate(hist_rows):
+        pct = 100.0 * hist_row["count"] / (samples or 1)
+        handle.write(
+            f"| {idx:02d} | {hist_row['lo']:.1f} .. {hist_row['hi']:.1f} | "
+            f"{hist_row['count']} | {pct:.2f}% |\n"
+        )
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--reuse-existing", action="store_true",
-                        help="skip simulation runs and summarize the existing results directory")
+    parser.add_argument(
+        "--reuse-existing",
+        action="store_true",
+        help="skip simulation runs and summarize the existing results directory",
+    )
     args = parser.parse_args()
 
     if not args.reuse_existing:
@@ -214,7 +332,8 @@ def main():
     for frac in FRACTIONS:
         hit_rate = round(frac * FULL_LINK_HITS_PER_CYCLE * 65536.0)
         tag = f"f{int(round(frac * 100)):03d}_hr{hit_rate:05d}"
-        csv_path = RESULTS / f"{tag}.csv"
+        hit_csv_path = RESULTS / f"{tag}.csv"
+        frame_csv_path = RESULTS / f"{tag}.frames.csv"
         summary_path = RESULTS / f"{tag}.summary"
 
         if not args.reuse_existing:
@@ -224,120 +343,186 @@ def main():
                 f"WARMUP_CYCLES={WARMUP_CYCLES}",
                 f"MEASURE_CYCLES={MEASURE_CYCLES}",
                 f"DRAIN_TIMEOUT_CYCLES={DRAIN_TIMEOUT_CYCLES}",
-                f"OUT_CSV={csv_path}",
+                f"OUT_CSV={hit_csv_path}",
+                f"OUT_FRAME_CSV={frame_csv_path}",
                 f"OUT_SUMMARY={summary_path}",
             ])
 
         summary = parse_summary(summary_path)
-        latency = summarize_latency(csv_path)
+        trace = summarize_trace(hit_csv_path, frame_csv_path)
 
-        target_hits_per_cycle = frac * FULL_LINK_HITS_PER_CYCLE
         accepted_hits_per_cycle = summary["measured_accepted_hits"] / MEASURE_CYCLES
-        util_of_raw_full = accepted_hits_per_cycle / FULL_LINK_HITS_PER_CYCLE if FULL_LINK_HITS_PER_CYCLE else 0.0
-
         row = {
             "fraction_of_raw_full": frac,
             "hit_rate_cfg": hit_rate,
-            "target_hits_per_cycle": target_hits_per_cycle,
+            "target_hits_per_cycle": frac * FULL_LINK_HITS_PER_CYCLE,
             "accepted_hits_per_cycle": accepted_hits_per_cycle,
-            "util_of_raw_full": util_of_raw_full,
-            "measured_hits": summary["measured_popped_hits"],
+            "util_of_raw_full": accepted_hits_per_cycle / FULL_LINK_HITS_PER_CYCLE if FULL_LINK_HITS_PER_CYCLE else 0.0,
+            "measured_hits": summary["measured_output_hits"],
             "avg_occupancy": summary["average_occupancy_milli"] / 1000.0,
             "max_occupancy": summary["max_occupancy"],
             "full_cycles": summary["full_cycles"],
+            "frame_start_count": summary["frame_start_count"],
             "max_measured_outstanding": summary["max_measured_outstanding"],
-            **latency,
+            **trace,
         }
         rows.append(row)
 
     summary_csv = RESULTS / "poisson_delay_summary.csv"
     with open(summary_csv, "w", encoding="utf-8", newline="") as f:
         fieldnames = [
-            "fraction_of_raw_full", "hit_rate_cfg",
-            "target_hits_per_cycle", "accepted_hits_per_cycle", "util_of_raw_full",
-            "measured_hits", "samples", "avg_occupancy", "max_occupancy", "full_cycles",
-            "commit_mean", "commit_min", "commit_p50", "commit_p90", "commit_p99", "commit_max",
-            "true_ts_pop_mean", "true_ts_pop_p01", "true_ts_pop_p50", "true_ts_pop_p90", "true_ts_pop_p99", "true_ts_pop_min", "true_ts_pop_max",
-            "t_ts_pop_mean", "t_ts_pop_p01", "t_ts_pop_p50", "t_ts_pop_p90", "t_ts_pop_p99", "t_ts_pop_min", "t_ts_pop_max",
-            "in_1f", "in_2f_only", "ge_2f", "max_measured_outstanding",
+            "fraction_of_raw_full", "hit_rate_cfg", "target_hits_per_cycle",
+            "accepted_hits_per_cycle", "util_of_raw_full", "measured_hits",
+            "avg_occupancy", "max_occupancy", "full_cycles", "frame_start_count",
+            "samples", "tlm_assigned_hits", "tlm_dropped_hits", "tlm_unassigned_hits",
+            "max_measured_outstanding", "rtl_tlm_frame_exact_pct",
+            "rtl_tlm_output_exact_pct", "rtl_tlm_output_within1_pct",
+            "actual_frame_min", "actual_frame_p50", "actual_frame_p90", "actual_frame_p99", "actual_frame_max",
+            "actual_output_min", "actual_output_p50", "actual_output_p90", "actual_output_p99", "actual_output_max",
+            "tlm_frame_min", "tlm_frame_p50", "tlm_frame_p90", "tlm_frame_p99", "tlm_frame_max",
+            "tlm_output_min", "tlm_output_p50", "tlm_output_p90", "tlm_output_p99", "tlm_output_max",
+            "frame_delta_mean", "output_delta_mean", "output_delta_p99",
+            "actual_output_in_1f", "actual_output_in_2f_only", "actual_output_ge_2f",
         ]
         writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         for row in rows:
-            out_row = dict(row)
-            out_row.pop("hist_1f", None)
-            out_row.pop("hist_2f", None)
-            writer.writerow(out_row)
+            writer.writerow({
+                "fraction_of_raw_full": row["fraction_of_raw_full"],
+                "hit_rate_cfg": row["hit_rate_cfg"],
+                "target_hits_per_cycle": row["target_hits_per_cycle"],
+                "accepted_hits_per_cycle": row["accepted_hits_per_cycle"],
+                "util_of_raw_full": row["util_of_raw_full"],
+                "measured_hits": row["measured_hits"],
+                "avg_occupancy": row["avg_occupancy"],
+                "max_occupancy": row["max_occupancy"],
+                "full_cycles": row["full_cycles"],
+                "frame_start_count": row["frame_start_count"],
+                "samples": row["samples"],
+                "tlm_assigned_hits": row["tlm_assigned_hits"],
+                "tlm_dropped_hits": row["tlm_dropped_hits"],
+                "tlm_unassigned_hits": row["tlm_unassigned_hits"],
+                "max_measured_outstanding": row["max_measured_outstanding"],
+                "rtl_tlm_frame_exact_pct": row["rtl_tlm_frame_exact_pct"],
+                "rtl_tlm_output_exact_pct": row["rtl_tlm_output_exact_pct"],
+                "rtl_tlm_output_within1_pct": row["rtl_tlm_output_within1_pct"],
+                "actual_frame_min": row["actual_frame"]["min"],
+                "actual_frame_p50": row["actual_frame"]["p50"],
+                "actual_frame_p90": row["actual_frame"]["p90"],
+                "actual_frame_p99": row["actual_frame"]["p99"],
+                "actual_frame_max": row["actual_frame"]["max"],
+                "actual_output_min": row["actual_output"]["min"],
+                "actual_output_p50": row["actual_output"]["p50"],
+                "actual_output_p90": row["actual_output"]["p90"],
+                "actual_output_p99": row["actual_output"]["p99"],
+                "actual_output_max": row["actual_output"]["max"],
+                "tlm_frame_min": row["tlm_frame"]["min"],
+                "tlm_frame_p50": row["tlm_frame"]["p50"],
+                "tlm_frame_p90": row["tlm_frame"]["p90"],
+                "tlm_frame_p99": row["tlm_frame"]["p99"],
+                "tlm_frame_max": row["tlm_frame"]["max"],
+                "tlm_output_min": row["tlm_output"]["min"],
+                "tlm_output_p50": row["tlm_output"]["p50"],
+                "tlm_output_p90": row["tlm_output"]["p90"],
+                "tlm_output_p99": row["tlm_output"]["p99"],
+                "tlm_output_max": row["tlm_output"]["max"],
+                "frame_delta_mean": row["frame_delta"]["mean"],
+                "output_delta_mean": row["output_delta"]["mean"],
+                "output_delta_p99": row["output_delta"]["p99"],
+                "actual_output_in_1f": row["actual_output_in_1f"],
+                "actual_output_in_2f_only": row["actual_output_in_2f_only"],
+                "actual_output_ge_2f": row["actual_output_ge_2f"],
+            })
 
     report_md = RESULTS / "POISSON_DELAY_REPORT.md"
     with open(report_md, "w", encoding="utf-8") as f:
         f.write("# Poisson Delay Sweep\n\n")
-        f.write(f"- Mode: short-mode Poisson, burst_size=1, noise=0\n")
+        f.write("- Mode: short-mode Poisson, burst_size=1, noise=0\n")
         f.write(f"- Raw full-link reference: {FULL_LINK_HITS_PER_CYCLE:.6f} hits/cycle = 1 hit / 3.5 cycles\n")
         f.write(f"- Warmup cycles per point: {WARMUP_CYCLES}\n")
         f.write(f"- Measured cycles per point: {MEASURE_CYCLES}\n")
         f.write(f"- Drain timeout cycles: {DRAIN_TIMEOUT_CYCLES}\n\n")
-        f.write("Default timestamp contract for this sweep:\n\n")
-        f.write("- long-hit `E` timestamp is the true commit timestamp\n")
-        f.write("- long-hit `T` timestamp is constrained to `T <= E`\n")
-        f.write("- the primary latency metric is therefore `E-ts -> pop`\n\n")
+        f.write("Corrected latency model used in this report:\n\n")
+        f.write("- the true hit timestamp is the committed `E` timestamp, so `true_ts = commit_cycle + E_fine/32`\n")
+        f.write("- raw MuTRiG `frame_gen` latches `i_event_counts` at frame start and only then drains that frame payload\n")
+        f.write("- the frame-marker TLM therefore groups hits by frame window, keeps at most the most recent `256` hits at the marker, and emits them across the next frame with the short-mode `3/4` byte cadence\n")
+        f.write("- two latency observables are reported: `true_ts -> frame_start` and `true_ts -> parser_hit_valid`\n\n")
 
         f.write("## Summary Table\n\n")
-        f.write("| raw full % | hit_rate | accepted hits/cycle | avg occ | max occ | full cycles | true-ts -> pop min/p50/p90/p99/max | <1 frame | 1..2 frames | >=2 frames |\n")
-        f.write("|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|\n")
+        f.write("| raw full % | accepted hits/cycle | avg occ | max occ | full cycles | actual true-ts -> frame-start min/p50/p90/p99/max | actual true-ts -> output min/p50/p90/p99/max |\n")
+        f.write("|---:|---:|---:|---:|---:|---|---|\n")
         for row in rows:
             f.write(
-                f"| {row['fraction_of_raw_full']*100:.0f} | {row['hit_rate_cfg']} | "
-                f"{row['accepted_hits_per_cycle']:.4f} | {row['avg_occupancy']:.1f} | "
-                f"{row['max_occupancy']} | {row['full_cycles']} | "
-                f"{fmt_num(row['true_ts_pop_min'])}/{fmt_num(row['true_ts_pop_p50'])}/{fmt_num(row['true_ts_pop_p90'])}/{fmt_num(row['true_ts_pop_p99'])}/{fmt_num(row['true_ts_pop_max'])} | "
-                f"{100.0*row['in_1f']/(row['samples'] or 1):.2f}% | "
-                f"{100.0*row['in_2f_only']/(row['samples'] or 1):.2f}% | "
-                f"{100.0*row['ge_2f']/(row['samples'] or 1):.2f}% |\n"
+                f"| {row['fraction_of_raw_full']*100:.0f} | {row['accepted_hits_per_cycle']:.4f} | "
+                f"{row['avg_occupancy']:.1f} | {row['max_occupancy']} | {row['full_cycles']} | "
+                f"{fmt_num(row['actual_frame']['min'])}/{fmt_num(row['actual_frame']['p50'])}/{fmt_num(row['actual_frame']['p90'])}/{fmt_num(row['actual_frame']['p99'])}/{fmt_num(row['actual_frame']['max'])} | "
+                f"{fmt_num(row['actual_output']['min'])}/{fmt_num(row['actual_output']['p50'])}/{fmt_num(row['actual_output']['p90'])}/{fmt_num(row['actual_output']['p99'])}/{fmt_num(row['actual_output']['max'])} |\n"
             )
 
-        f.write("\n## Cross-Checks\n\n")
-        f.write("| raw full % | commit-cycle -> pop p50/p90/p99/max | true-ts -> pop p01/p50/p90/p99/max | T-ts -> pop p01/p50/p90/p99/max | max measured outstanding |\n")
-        f.write("|---:|---|---|---|---:|\n")
+        f.write("\n## TLM Comparison\n\n")
+        f.write("| raw full % | TLM assigned/dropped/unassigned | TLM true-ts -> frame-start p50/p90/p99/max | TLM true-ts -> output p50/p90/p99/max | RTL frame exact | RTL output exact | RTL output +/-1 cyc |\n")
+        f.write("|---:|---:|---|---|---:|---:|---:|\n")
         for row in rows:
             f.write(
                 f"| {row['fraction_of_raw_full']*100:.0f} | "
-                f"{fmt_num(row['commit_p50'])}/{fmt_num(row['commit_p90'])}/{fmt_num(row['commit_p99'])}/{fmt_num(row['commit_max'])} | "
-                f"{fmt_num(row['true_ts_pop_p01'])}/{fmt_num(row['true_ts_pop_p50'])}/{fmt_num(row['true_ts_pop_p90'])}/{fmt_num(row['true_ts_pop_p99'])}/{fmt_num(row['true_ts_pop_max'])} | "
-                f"{fmt_num(row['t_ts_pop_p01'])}/{fmt_num(row['t_ts_pop_p50'])}/{fmt_num(row['t_ts_pop_p90'])}/{fmt_num(row['t_ts_pop_p99'])}/{fmt_num(row['t_ts_pop_max'])} | "
-                f"{row['max_measured_outstanding']} |\n"
+                f"{row['tlm_assigned_hits']}/{row['tlm_dropped_hits']}/{row['tlm_unassigned_hits']} | "
+                f"{fmt_num(row['tlm_frame']['p50'])}/{fmt_num(row['tlm_frame']['p90'])}/{fmt_num(row['tlm_frame']['p99'])}/{fmt_num(row['tlm_frame']['max'])} | "
+                f"{fmt_num(row['tlm_output']['p50'])}/{fmt_num(row['tlm_output']['p90'])}/{fmt_num(row['tlm_output']['p99'])}/{fmt_num(row['tlm_output']['max'])} | "
+                f"{row['rtl_tlm_frame_exact_pct']:.2f}% | "
+                f"{row['rtl_tlm_output_exact_pct']:.2f}% | "
+                f"{row['rtl_tlm_output_within1_pct']:.2f}% |\n"
             )
 
-        def write_histogram_section(title, hist_rows, samples):
-            f.write(f"\n### {title}\n\n")
-            f.write("| bin | latency range (cycles) | samples | pct |\n")
-            f.write("|---:|---|---:|---:|\n")
-            for idx, hist_row in enumerate(hist_rows):
-                pct = 100.0 * hist_row["count"] / (samples or 1)
-                f.write(
-                    f"| {idx:02d} | {hist_row['lo']:.1f} .. {hist_row['hi']:.1f} | "
-                    f"{hist_row['count']} | {pct:.2f}% |\n"
-                )
+        f.write("\n## Cross-Checks\n\n")
+        f.write("| raw full % | actual true-ts -> pop p50/p90/p99/max | actual output <1f | actual output 1..2f | actual output >=2f | frame delta mean | output delta mean/p99 |\n")
+        f.write("|---:|---|---:|---:|---:|---:|---|\n")
+        for row in rows:
+            f.write(
+                f"| {row['fraction_of_raw_full']*100:.0f} | "
+                f"{fmt_num(row['actual_pop']['p50'])}/{fmt_num(row['actual_pop']['p90'])}/{fmt_num(row['actual_pop']['p99'])}/{fmt_num(row['actual_pop']['max'])} | "
+                f"{100.0*row['actual_output_in_1f']/(row['samples'] or 1):.2f}% | "
+                f"{100.0*row['actual_output_in_2f_only']/(row['samples'] or 1):.2f}% | "
+                f"{100.0*row['actual_output_ge_2f']/(row['samples'] or 1):.2f}% | "
+                f"{fmt_num(row['frame_delta']['mean'])} | "
+                f"{fmt_num(row['output_delta']['mean'])}/{fmt_num(row['output_delta']['p99'])} |\n"
+            )
 
         low_row = next((row for row in rows if row["fraction_of_raw_full"] == 0.10), None)
         high_row = next((row for row in rows if row["fraction_of_raw_full"] == 1.00), None)
 
         if low_row is not None:
-            write_histogram_section("Low-Load Shape (10% of raw full rate, true-ts -> pop, 0..1 frame window)",
-                                    low_row["hist_1f"], low_row["samples"])
+            write_histogram_section(
+                f,
+                "Low-Load Shape (10% raw full, actual true-ts -> frame-start, 0..1 frame)",
+                low_row["actual_frame_hist_1f"],
+                low_row["samples"],
+            )
+            write_histogram_section(
+                f,
+                "Low-Load Shape (10% raw full, actual true-ts -> output, 0..1 frame)",
+                low_row["actual_output_hist_1f"],
+                low_row["samples"],
+            )
         if high_row is not None:
-            write_histogram_section("Full-Load Shape (100% of raw full rate, true-ts -> pop, 0..2 frame window)",
-                                    high_row["hist_2f"], high_row["samples"])
+            write_histogram_section(
+                f,
+                "Full-Load Shape (100% raw full, actual true-ts -> output, 0..2 frames)",
+                high_row["actual_output_hist_2f"],
+                high_row["samples"],
+            )
+            write_histogram_section(
+                f,
+                "Full-Load Shape (100% raw full, TLM true-ts -> output, 0..2 frames)",
+                high_row["tlm_output_hist_2f"],
+                high_row["tlm_assigned_hits"],
+            )
 
         f.write("\n## Notes\n\n")
-        f.write("- `true-ts -> pop` is reconstructed as `prbs_delta(pop_ecc, hit_ecc) - hit_efine/32`. In the default mode under test this is the true hit timestamp because the hit commits on the encoded `E` timestamp.\n")
-        f.write("- `commit-cycle -> pop` is kept as a same-cycle sanity cross-check that ignores the sub-cycle fine timestamp fraction.\n")
-        f.write("- `T-ts -> pop` is kept as a consistency cross-check for the `T <= E` timing contract.\n")
-        f.write("- Pop is defined as the cycle where the frame assembler asserts the L2 FIFO read handshake.\n")
-        f.write("- The low-load minimum is not exactly zero because the earliest eligible pop still sits behind the frame header and event-count bytes, which costs about `32` byte clocks in this wrapper.\n")
-        f.write("- At `100%` of the raw `1 hit / 3.5 cycles` reference, the measured true-timestamp latency stays mostly in the `0.8 .. 1.15` frame range rather than filling a full `0 .. 2` frame box. The short-mode packer keeps draining continuously inside an already-open frame, so this regime is not a pure whole-frame-queued service model.\n")
-        f.write("- The bench keeps the lane running after the main measurement window until every measured hit has popped, so pop-time coarse counters stay valid.\n")
-        f.write("- `full_cycles > 0` indicates the lane FIFO reached saturation during the measured window.\n")
+        f.write("- `true-ts -> frame-start` is the direct check for the marker-latch model you described. Its minimum should stay near zero because hits can land immediately before the next marker.\n")
+        f.write("- `true-ts -> output` adds the within-frame serialization tail. In short mode the parser completes hits at offsets `9, 12, 16, 19, ...` cycles from the frame-start pulse, which is the measured wrapper-level equivalent of the raw `3.5 cycles / hit` packing cadence.\n")
+        f.write("- `actual true-ts -> pop` is kept only as a secondary cross-check because it ignores the serializer tail and was the metric that made the previous report misleading.\n")
+        f.write("- `TLM dropped` counts the hits that the corrected frame-marker model would discard when more than `256` hits land between adjacent frame markers.\n")
+        f.write("- `RTL frame exact` and `RTL output exact` compare the live RTL trace against that TLM assignment on a per-hit basis.\n")
 
     print(f"Wrote {summary_csv}")
     print(f"Wrote {report_md}")

@@ -34,7 +34,8 @@ the tightened `137.5 MHz` standalone timing target.
 - standalone bank8 area target passes at `3958 ALMs`
 - tightened `137.5 MHz` timing now passes with slow `85C` setup slack `+0.139 ns`
 - the final bank8 compile uses `16` RAM blocks and `0` DSP blocks
-- the Poisson timestamp study now reports true `E-ts -> pop` latency directly
+- the Poisson timestamp study now reports corrected raw-style
+  `true E-ts -> frame_start` and `true E-ts -> output` latency directly
 
 ## Active Review Pages
 

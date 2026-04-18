@@ -13,7 +13,7 @@ This is the active DV dashboard for the compact MuTRiG refresh.
 | PASS | isolated_uvm | `15 / 15 passed` |
 | PASS | compact_contract_checks | `asic_id 0..7`, hit channel `0..31`, raw `E_Flag`, and `T <= E` checks are green in the directed bench |
 | PASS | merged_ucdb_refresh | `tb/uvm/cov/merged.ucdb` present |
-| PASS | poisson_delay_sweep | true `E-ts -> pop` latency measured from `0%` to `100%` of the raw full-link reference |
+| PASS | poisson_delay_sweep | corrected frame-marker latency study measured true `E-ts -> frame_start` and `E-ts -> output` from `0%` to `100%` of the raw full-link reference |
 | PARTIAL | continuous_frame | not rerun in this refresh |
 | PARTIAL | gate_level | not rerun in this refresh |
 
@@ -63,34 +63,34 @@ Configuration:
 
 Key findings:
 
-- the primary latency metric is true `E-ts -> pop`, because the default
-  long-hit mode commits on the encoded `E` timestamp
-- at `10%` raw full rate, the observed true latency spans almost one full short
-  frame with a `~32` cycle floor from frame header overhead:
-  `32 / 512.5 / 846.9 / 911.0 / 944.0` cycles for min / p50 / p90 / p99 / max
+- the corrected raw-style observables are `true E-ts -> frame_start` and
+  `true E-ts -> output`
+- at `10%` raw full rate, `true E-ts -> frame_start` is the expected one-frame
+  box: `2.0 / 444.0 / 816.0 / 902.0 / 911.0` cycles for min / p50 / p90 / p99 / max
+- at `10%` raw full rate, `true E-ts -> output` adds only the fixed short-mode
+  packer overhead: `40.0 / 520.0 / 854.0 / 918.0 / 951.0`
 - occasional FIFO-full cycles first appear at `60%` raw full rate, but the lane
   still tracks the offered rate closely through the mid-load points
 - at `100%` raw full rate, accepted throughput is `0.2698 hits/cycle`, about
   `3.71 cycles / accepted hit`
-- at `100%` raw full rate, true `E-ts -> pop` latency stays mostly in the
-  `0.8 .. 1.15` frame range:
-  `793.0 / 895.0 / 936.0 / 982.0 / 1045.0` cycles for p01 / p50 / p90 / p99 / max
-- the measured high-load distribution does not fill a full `0 .. 1820` cycle
-  box at `<=100%` raw full rate because the short-mode packer keeps draining
-  continuously inside an already-open frame
+- at `100%` raw full rate, `true E-ts -> output` stays bounded near one frame
+  plus tail rather than flattening across `0 .. 1820`:
+  `702.0 / 903.0 / 943.0 / 990.0 / 1052.0` cycles for min / p50 / p90 / p99 / max
+- the simple frame-marker TLM matches the RTL frame assignment at about `99.8%`
+  exact agreement; output timing stays within a few cycles of that model
 
 Representative points:
 
-| raw full % | accepted hits/cycle | avg occ | max occ | full cycles | true `E-ts -> pop` p50/p90/p99/max |
-|---:|---:|---:|---:|---:|---|
-| 10 | `0.0310` | `16.0` | `138` | `0` | `512.5 / 846.9 / 911.0 / 944.0` |
-| 60 | `0.1744` | `129.5` | `256` | `270` | `752.0 / 894.0 / 967.0 / 1057.0` |
-| 100 | `0.2698` | `240.3` | `256` | `10703` | `895.0 / 936.0 / 982.0 / 1045.0` |
+| raw full % | accepted hits/cycle | avg occ | max occ | full cycles | true `E-ts -> frame_start` p50/p90/p99/max | true `E-ts -> output` p50/p90/p99/max |
+|---:|---:|---:|---:|---:|---|---|
+| 10 | `0.0310` | `16.0` | `138` | `0` | `444.0 / 816.0 / 902.0 / 911.0` | `520.0 / 854.0 / 918.0 / 951.0` |
+| 60 | `0.1744` | `129.5` | `256` | `270` | `458.0 / 822.0 / 902.0 / 1011.0` | `759.0 / 901.0 / 975.0 / 1064.0` |
+| 100 | `0.2698` | `240.3` | `256` | `10703` | `461.0 / 820.0 / 902.0 / 1042.0` | `903.0 / 943.0 / 990.0 / 1052.0` |
 
 ## Verdict
 
 DV status for the compact refresh is `PASS` for the promoted directed and
-isolated UVM runs, and the supplemental Poisson sweep now measures the requested
-true timestamp semantics directly. The extended continuous-frame and gate-level
+isolated UVM runs, and the supplemental Poisson sweep now measures the corrected
+frame-marker timestamp semantics directly. The extended continuous-frame and gate-level
 collateral were not refreshed in this turn and remain separate from the active
 compact-bank release scope.
