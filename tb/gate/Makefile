@@ -1,18 +1,6 @@
-QUESTA_HOME ?= /data1/intelFPGA_pro/23.1/questa_fse
+include ../../../scripts/questa_one.mk
+
 Q18_SIMLIB  ?= /data1/intelFPGA/18.1/quartus/eda/sim_lib
-
-VLIB  = $(QUESTA_HOME)/bin/vlib
-VMAP  = $(QUESTA_HOME)/bin/vmap
-VCOM  = $(QUESTA_HOME)/bin/vcom
-VLOG  = $(QUESTA_HOME)/bin/vlog
-VSIM  = $(QUESTA_HOME)/bin/vsim
-LMUTIL = $(QUESTA_HOME)/linux_x86_64/lmutil
-
-QUESTA_LICENSE := $(QUESTA_HOME)/LR-287689_License.dat
-ETH_LIC_SERVER := 8161@lic-mentor.ethz.ch
-
-export LM_LICENSE_FILE   := $(ETH_LIC_SERVER):$(QUESTA_LICENSE)
-export MGLS_LICENSE_FILE := $(LM_LICENSE_FILE)
 
 PARSER_SRC  = $(realpath ../../../mutrig_frame_deassembly)
 IP_SRC      = $(realpath ../../rtl)
@@ -29,9 +17,9 @@ SEED ?= 42
 .PHONY: license_check gate_netlist libs compile run run_all clean
 
 license_check:
-	@echo "═══ Checking Mentor floating license at $(ETH_LIC_SERVER) ═══"
-	@$(LMUTIL) lmstat -f mtiverification -c $(ETH_LIC_SERVER) >/dev/null 2>&1 || \
-	  { echo "ERROR: mtiverification feature not visible via $(ETH_LIC_SERVER)"; exit 1; }
+	@echo "═══ Checking Mentor floating license at $(QUESTA_LICENSE_SERVER) ═══"
+	@$(LMUTIL) lmstat -f mtiverification -c $(QUESTA_LICENSE_SERVER) >/dev/null 2>&1 || \
+	  { echo "ERROR: mtiverification feature not visible via $(QUESTA_LICENSE_SERVER)"; exit 1; }
 
 gate_netlist:
 	@echo "═══ Regenerating Quartus post-fit functional gate netlist ═══"

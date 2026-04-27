@@ -1,11 +1,10 @@
 // frame_assembler.sv
 // MuTRiG frame assembler — raw-frame_gen-compatible 8b/1k output
-// Version : 26.1.7
-// Date    : 20260418
-// Change  : Replace the simplified packer with a literal raw-style state
-//           machine and register the transmitted byte exactly like raw
-//           frame_gen so short/long mode timing and frozen-count drain match
-//           the MuTRiG VHDL semantics.
+// Version : 26.1.10
+// Date    : 20260425
+// Change  : Match the raw MuTRiG frame_gen CRC/trailer byte stream exactly:
+//           the internal FS_DELAY cycle stalls CRC only and must not emit an
+//           extra data byte before the two CRC bytes.
 
 module frame_assembler
     import emulator_mutrig_pkg::*;
@@ -43,7 +42,6 @@ module frame_assembler
         FS_PACK,
         FS_PACK_EXTRA,
         FS_DELAY,
-        FS_DELAY_EMIT,
         FS_CRC_REM,
         FS_TRAILER
     } fsm_t;
@@ -332,14 +330,6 @@ module frame_assembler
             end
 
             FS_DELAY: begin
-                n_dbyte      = 8'h00;
-                n_dbyteisk   = 1'b0;
-                n_crc_rst    = 1'b0;
-                n_crc_dvalid = 1'b0;
-                n_state      = FS_DELAY_EMIT;
-            end
-
-            FS_DELAY_EMIT: begin
                 n_crc_rst    = 1'b0;
                 n_crc_dvalid = 1'b0;
                 n_state      = FS_CRC_REM;

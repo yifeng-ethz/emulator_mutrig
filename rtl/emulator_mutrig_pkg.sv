@@ -1,8 +1,8 @@
 // emulator_mutrig_pkg.sv
 // MuTRiG 3 emulator constants and types
 // Author: Yifeng Wang
-// Version : 26.1.8
-// Date    : 20260418
+// Version : 26.1.10
+// Date    : 20260425
 // Change  : Keep the raw-compatible field layout and compact shared-bank
 //           release constants aligned with the true-A/B harness and the new
 //           masked-trigger latency-injection path.

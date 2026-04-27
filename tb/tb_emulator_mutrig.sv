@@ -254,6 +254,17 @@ module tb_emulator_mutrig;
         parser_ctrl_valid <= 1'b0;
     endtask
 
+    task automatic parser_csr_read_reg(input logic [1:0] addr, output logic [31:0] data);
+        @(posedge clk);
+        parser_csr_address <= addr;
+        parser_csr_read    <= 1'b1;
+        parser_csr_write   <= 1'b0;
+        @(posedge clk);
+        while (parser_csr_waitrequest) @(posedge clk);
+        data = parser_csr_readdata;
+        parser_csr_read <= 1'b0;
+    endtask
+
     task automatic parser_prepare_for_replay();
         parser_rst          <= 1'b1;
         parser_rx_data      <= '0;
@@ -620,8 +631,8 @@ module tb_emulator_mutrig;
 
         $display("  Frame length: %0d bytes", flen);
 
-        // Verify structure: Header(1) + FrameCount(2) + EventCount(2) + DelayByte(1) + CRC(2) + Trailer(1) = 9
-        check("Empty frame length = 9 bytes", flen == 9);
+        // Verify structure: Header(1) + FrameCount(2) + EventCount(2) + CRC(2) + Trailer(1) = 8
+        check("Empty frame length = 8 bytes", flen == 8);
         check("Header is K28.0", captured_bytes[0] == K28_0 && captured_isk[0] == 1'b1);
         check("Trailer is K28.4", captured_bytes[flen-1] == K28_4 && captured_isk[flen-1] == 1'b1);
 
@@ -633,13 +644,13 @@ module tb_emulator_mutrig;
         end
 
         // Verify CRC
-        // Frame: Header(1) | FC(2) | EC(2) | EventData(n*6) | DelayByte(1) | CRC(2) | Trailer(1)
-        // CRC covers bytes 1..flen-5 (FC + EC + event data, NOT delay byte)
+        // Frame: Header(1) | FC(2) | EC(2) | EventData(n*6) | CRC(2) | Trailer(1)
+        // CRC covers bytes 1..flen-4 (FC + EC + event data)
         begin
             logic [7:0] crc_data [];
             logic [15:0] crc_expected, crc_received;
             int crc_len;
-            crc_len = flen - 5;  // skip header, delay byte, CRC(2), trailer
+            crc_len = flen - 4;  // skip header, CRC(2), trailer
             crc_data = new[crc_len];
             for (int i = 0; i < crc_len; i++)
                 crc_data[i] = captured_bytes[i + 1]; // skip header
@@ -682,7 +693,7 @@ module tb_emulator_mutrig;
             $display("  Event count: %0d", evt_cnt_ext[9:0]);
 
             if (evt_cnt_ext[9:0] == 10'd1) begin
-                check("Single-hit frame length = 15 bytes", flen == 15);
+                check("Single-hit frame length = 14 bytes", flen == 14);
                 // Verify hit data bytes are present (6 bytes at offset 5)
                 check("Hit data byte 0 (channel+T_BadHit)", captured_bytes[5] != 8'h00 || captured_bytes[6] != 8'h00);
             end else begin
@@ -690,12 +701,12 @@ module tb_emulator_mutrig;
             end
         end
 
-        // Always verify CRC (skip header, delay byte, CRC, trailer)
+        // Always verify CRC (skip header, CRC, trailer)
         begin
             logic [7:0] crc_data [];
             logic [15:0] crc_expected, crc_received;
             int crc_len;
-            crc_len = flen - 5;
+            crc_len = flen - 4;
             crc_data = new[crc_len];
             for (int i = 0; i < crc_len; i++)
                 crc_data[i] = captured_bytes[i + 1];
@@ -885,6 +896,44 @@ module tb_emulator_mutrig;
     endtask
 
     // ========================================
+    // Test B09: Long-frame parser CRC
+    // ========================================
+    task automatic test_B09_long_parser_crc();
+        int flen;
+        int evt_count;
+        logic [31:0] parser_crc_errors;
+
+        $display("\n=== Test B09: Long-frame parser CRC ===");
+
+        csr_write(4'd0, 32'h0000_0001);  // enable, Poisson, long
+        csr_write(4'd1, 32'h0000_0000);  // disable Poisson/noise background
+        csr_write(4'd2, 32'h0000_0801);  // burst_center=8, burst_size=1
+        csr_write(4'd3, 32'hFACE_1234);  // deterministic fine-time seeds
+        csr_write(4'd4, 32'h0000_0028);  // asic_id=2, gen_idle=1, tx_mode=long
+        clear_hit_generator_state();
+        run_sequence_start();
+        repeat (20) @(posedge clk);
+
+        pulse_inject_once();
+        capture_next_nonempty_frame(flen, evt_count);
+        run_sequence_stop();
+
+        $display("  Frame length: %0d bytes, event count: %0d", flen, evt_count);
+        check("Injected long frame carries one hit", evt_count == 1);
+
+        replay_captured_frame(flen);
+        parser_csr_read_reg(2'd1, parser_crc_errors);
+
+        $display("  Parser CRC error counter: %0d", parser_crc_errors);
+        check("Parser saw one headerinfo word", parser_header_count == 1);
+        check("Parser saw one long hit", parser_hit_count == 1);
+        check("Parser long mode flags decoded", parser_last_headerinfo_data[4:2] == TX_MODE_LONG);
+        check("Parser decoded one-hit frame length", parser_last_headerinfo_data[15:6] == 10'd1);
+        check("Parser CRC error bit stays low", !parser_last_hit_error[1]);
+        check("Parser CRC counter stays zero", parser_crc_errors == 32'd0);
+    endtask
+
+    // ========================================
     // Test T01: Multi-hit long frame
     // ========================================
     task automatic test_T01_multi_long();
@@ -909,20 +958,20 @@ module tb_emulator_mutrig;
             evt_cnt_ext = {captured_bytes[3], captured_bytes[4]};
             $display("  Event count: %0d, frame length: %0d bytes", evt_cnt_ext[9:0], flen);
 
-            // Expected: Header(1) + FC(2) + EC(2) + n*6 + DelayByte(1) + CRC(2) + Trailer(1) = 9 + n*6
+            // Expected: Header(1) + FC(2) + EC(2) + n*6 + CRC(2) + Trailer(1) = 8 + n*6
             if (evt_cnt_ext[9:0] > 0) begin
                 int expected_len;
-                expected_len = 9 + evt_cnt_ext[9:0] * 6;
+                expected_len = 8 + evt_cnt_ext[9:0] * 6;
                 check("Long frame length matches event count", flen == expected_len);
             end
         end
 
-        // CRC check (skip header, delay byte, CRC, trailer)
+        // CRC check (skip header, CRC, trailer)
         begin
             logic [7:0] crc_data [];
             logic [15:0] crc_expected, crc_received;
             int crc_len;
-            crc_len = flen - 5;
+            crc_len = flen - 4;
             crc_data = new[crc_len];
             for (int i = 0; i < crc_len; i++)
                 crc_data[i] = captured_bytes[i + 1];
@@ -1011,13 +1060,15 @@ module tb_emulator_mutrig;
     endtask
 
     // ========================================
-    // Test T09: TERMINATING must not start a fresh frame
+    // Test T09: TERMINATING drains queued tail but suppresses idle frames
     // ========================================
     task automatic test_T09_terminate_no_new_frame();
         int frame_len;
         logic [15:0] frames_before_stop;
+        logic [15:0] frames_after_tail;
+        int terminal_frames;
 
-        $display("\n=== Test T09: No fresh frame start during TERMINATING ===");
+        $display("\n=== Test T09: TERMINATING drains queued tail ===");
 
         csr_write(4'd0, 32'h0000_0001); // enable + poisson + long
         csr_write(4'd1, 32'h0000_0000);
@@ -1030,10 +1081,18 @@ module tb_emulator_mutrig;
         frames_before_stop = dut.status_frame_count;
         pulse_inject_once();
         repeat (8) @(posedge clk);
-        run_sequence_stop_with_hold(FRAME_INTERVAL_LONG + 32);
+        run_sequence_stop_with_hold(FRAME_INTERVAL_LONG + 64);
+        frames_after_tail = dut.status_frame_count;
+        terminal_frames = frames_after_tail - frames_before_stop;
 
-        check("TERMINATING hold does not start a new frame",
-              dut.status_frame_count == frames_before_stop);
+        check("TERMINATING hold opens a queued tail frame",
+              terminal_frames >= 1);
+        check("Terminal tail frame carries queued hits",
+              dut.status_event_count != 10'd0);
+
+        repeat (FRAME_INTERVAL_LONG + 64) @(posedge clk);
+        check("No idle-only frames after terminal tail is clean",
+              dut.status_frame_count == frames_after_tail);
     endtask
 
     // ========================================
@@ -1134,6 +1193,44 @@ module tb_emulator_mutrig;
     endtask
 
     // ========================================
+    // Test T12: SYNC hold does not age timestamp
+    // ========================================
+    task automatic test_T12_sync_hold_timestamp();
+        logic [14:0] tcc_after_sync;
+        logic [14:0] tcc_after_hold;
+
+        $display("\n=== Test T12: SYNC hold keeps timestamp epoch idle ===");
+
+        csr_write(4'd0, 32'h0000_0001);
+        csr_write(4'd1, 32'h0000_0000);
+        csr_write(4'd4, 32'h0000_0008);
+
+        send_run_state(CTRL_RUN_PREPARE);
+        repeat (5) @(posedge clk);
+        send_run_state(CTRL_SYNC);
+        repeat (2) @(posedge clk);
+
+`ifndef EMUT_GATE_SIM
+        tcc_after_sync = dut.tcc_lfsr;
+        repeat (128) @(posedge clk);
+        tcc_after_hold = dut.tcc_lfsr;
+
+        check("Coarse timestamp holds during SYNC", tcc_after_hold == tcc_after_sync);
+
+        send_run_state(CTRL_RUNNING);
+        repeat (4) @(posedge clk);
+        check("Coarse timestamp advances after RUNNING", dut.tcc_lfsr != tcc_after_hold);
+`else
+        repeat (128) @(posedge clk);
+        send_run_state(CTRL_RUNNING);
+        repeat (4) @(posedge clk);
+        $display("  NOTE: Gate-level netlist hides internal coarse timestamp; structural SYNC-hold check skipped");
+`endif
+
+        run_sequence_stop();
+    endtask
+
+    // ========================================
     // Test E03: Back-to-back frames
     // ========================================
     task automatic test_E03_back2back();
@@ -1222,6 +1319,9 @@ module tb_emulator_mutrig;
         if (test_name == "ALL" || test_name == "B08_long_hit_timing")
             test_B08_long_hit_timing();
 
+        if (test_name == "ALL" || test_name == "B09_long_parser_crc")
+            test_B09_long_parser_crc();
+
         if (test_name == "ALL" || test_name == "T01_multi_long")
             test_T01_multi_long();
 
@@ -1242,6 +1342,9 @@ module tb_emulator_mutrig;
 
         if (test_name == "ALL" || test_name == "T11_masked_trigger")
             test_T11_masked_trigger();
+
+        if (test_name == "ALL" || test_name == "T12_sync_hold_timestamp")
+            test_T12_sync_hold_timestamp();
 
         if (test_name == "ALL" || test_name == "E03_back2back")
             test_E03_back2back();

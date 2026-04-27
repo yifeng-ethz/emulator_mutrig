@@ -14,9 +14,8 @@ from pathlib import Path
 THIS_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = THIS_DIR / "results"
 
-QUESTA_HOME = Path("/data1/intelFPGA_pro/23.1/questa_fse")
+QUESTA_HOME = Path(os.environ.get("QUESTA_HOME", "/data1/questaone_sim/questasim"))
 ETH_LIC_SERVER = "8161@lic-mentor.ethz.ch"
-QUESTA_LICENSE = QUESTA_HOME / "LR-287689_License.dat"
 
 RATE_POINTS = [0, 10, 20, 40, 60, 80, 90, 100]
 MODES = [
@@ -123,8 +122,10 @@ def run_case(mode: dict[str, object], pct: int) -> dict[str, object]:
     out_summary = RESULTS_DIR / f"{tag}.summary"
 
     env = os.environ.copy()
-    env["LM_LICENSE_FILE"] = f"{ETH_LIC_SERVER}:{QUESTA_LICENSE}"
-    env["MGLS_LICENSE_FILE"] = env["LM_LICENSE_FILE"]
+    env.setdefault("QUESTA_HOME", str(QUESTA_HOME))
+    env.setdefault("LM_LICENSE_FILE", ETH_LIC_SERVER)
+    env.setdefault("MGLS_LICENSE_FILE", env["LM_LICENSE_FILE"])
+    env.setdefault("SALT_LICENSE_SERVER", ETH_LIC_SERVER)
 
     cmd = [
         "make",

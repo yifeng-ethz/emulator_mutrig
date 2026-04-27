@@ -1,10 +1,9 @@
 // emulator_mutrig_lane_shared.sv
 // Shared-control MuTRiG lane core used by the standalone 8-lane area bank.
-// Version : 26.1.9
-// Date    : 20260418
-// Change  : Keep the shared-lane wrapper aligned with the compact raw-style
-//           frame semantics while accepting one shared masked-offer stream so
-//           the bank8 signoff shell stays below the 4k ALM target.
+// Version : 26.1.13
+// Date    : 20260425
+// Change  : Drain queued FIFO tail during TERMINATING without committing
+//           new hits.
 
 module emulator_mutrig_lane_shared
     import emulator_mutrig_pkg::*;
@@ -58,6 +57,7 @@ module emulator_mutrig_lane_shared
     logic        fifo_full;
     logic        fifo_almost_full;
     logic        frame_start;
+    logic        frame_start_allowed;
     logic [8:0]  tx_data_int;
     logic        tx_valid_int;
 
@@ -95,10 +95,12 @@ module emulator_mutrig_lane_shared
         .fifo_almost_full     (fifo_almost_full)
     );
 
+    assign frame_start_allowed = cfg_enable && (run_generating || (run_draining && !fifo_empty));
+
     frame_assembler u_frame_asm (
         .clk              (clk),
         .rst              (frame_rst),
-        .frame_start_req  (frame_start_req & run_generating & cfg_enable),
+        .frame_start_req  (frame_start_req & frame_start_allowed),
         .cfg_short_mode   (cfg_short_mode),
         .cfg_gen_idle     (cfg_gen_idle),
         .cfg_tx_mode      (cfg_tx_mode),

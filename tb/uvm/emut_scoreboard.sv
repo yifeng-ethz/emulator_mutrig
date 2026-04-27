@@ -155,12 +155,12 @@ class emut_scoreboard extends uvm_component;
     end
 
     expected_payload_bytes = is_short ? emut_ceil_div(txf.event_count * 28, 8) : (txf.event_count * 6);
-    if (txf.frame_len !== (9 + expected_payload_bytes))
+    if (txf.frame_len !== (8 + expected_payload_bytes))
       fail_check("EMUT_SCB", $sformatf(
         "Frame %0d length mismatch got=%0d expected=%0d mode=%s event_count=%0d",
-        txf.frame_count, txf.frame_len, 9 + expected_payload_bytes, is_short ? "short" : "long", txf.event_count));
+        txf.frame_count, txf.frame_len, 8 + expected_payload_bytes, is_short ? "short" : "long", txf.event_count));
 
-    for (int i = 5; i <= txf.frame_len - 5; i++)
+    for (int i = 5; i <= txf.frame_len - 4; i++)
       payload.push_back(txf.bytes[i]);
 
     if (payload.size() !== expected_payload_bytes)

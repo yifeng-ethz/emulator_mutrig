@@ -23,9 +23,9 @@ set RUN_CONTROL_WIDTH_CONST     9
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 1
-set VERSION_PATCH_DEFAULT_CONST 9
-set BUILD_DEFAULT_CONST         418
-set VERSION_DATE_DEFAULT_CONST  20260418
+set VERSION_PATCH_DEFAULT_CONST 13
+set BUILD_DEFAULT_CONST         425
+set VERSION_DATE_DEFAULT_CONST  20260425
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -54,7 +54,7 @@ set_module_property VERSION                 $VERSION_STRING_DEFAULT_CONST
 set_module_property DESCRIPTION             "MuTRiG Emulator Mu3e IP Core"
 set_module_property GROUP                   "Mu3e Emulators/Modules"
 set_module_property AUTHOR                  "Yifeng Wang"
-set_module_property ICON_PATH               ../quartus_system/logo/mu3e_logo.png
+set_module_property ICON_PATH               ../quartus_system/misc/logo/mu3e_logo.png
 set_module_property INTERNAL                false
 set_module_property OPAQUE_ADDRESS_MAP      true
 set_module_property INSTANTIATE_IN_SYSTEM_MODULE true
@@ -114,8 +114,9 @@ run-control + inject pulse + CSR config &rarr; <b>hit_generator</b> &rarr; compa
  lane-local L2 FIFO &rarr; <b>frame_assembler</b> &rarr; <b>tx8b1k</b><br/><br/>\
 <b>Run-state contract</b><br/>\
 <b>RUNNING</b> enables new hit commits and fresh frame starts.<br/>\
-<b>TERMINATING</b> keeps an in-flight frame draining but blocks any new frame\
-header from opening out of the idle state.<br/><br/>\
+<b>TERMINATING</b> blocks new hit commits but permits frame starts while the\
+lane FIFO is nonempty, draining the pre-termination tail without opening\
+new idle frames after the FIFO is clean.<br/><br/>\
 <b>Clocking</b><br/>\
 Single synchronous <b>data_clock</b> domain. The emulator models the MuTRiG\
 625&nbsp;MHz datapath at the Mu3e 125&nbsp;MHz byte-clock boundary.</html>"
@@ -148,8 +149,9 @@ Short mode: <b>910</b> byte-clocks (~7.3 &micro;s at 125 MHz, datapath-matched)<
 Long: <b>48</b> bits (6 bytes per event)<br/>\
 Short: <b>28</b> bits (3.5 bytes, alternating 3/4 byte packing)<br/><br/>\
 <b>Termination alignment</b><br/>\
-Once <b>RUNNING</b> closes, the frame assembler may finish the current frame but\
-may not start a fresh header from <b>FS_IDLE</b> during <b>TERMINATING</b>.</html>"
+Once <b>RUNNING</b> closes, new hit commits stop.  Any hit already queued in\
+the lane FIFO can still open the next scheduled frame during <b>TERMINATING</b>,\
+so the downstream parser sees the tail before the run ends cleanly.</html>"
     }
     catch {
         set_display_item_property profile_html TEXT [format {<html><b>Catalog revision</b><br/>This release is packaged as <b>%s</b>.<br/><br/><b>Catalog provenance</b><br/>Packaged git stamp default <b>%s</b> (<b>%s</b>).<br/>Git describe: <b>%s</b>.<br/><br/><b>Delivered behavior</b><br/>The packaged single-lane wrapper now matches the compact shared-bank contract: <b>asic_id</b> is clamped to <b>0..7</b>, long-hit <b>E_Flag</b> stays on the raw MuTRiG-compatible default, the default timestamp mode keeps <b>T &le; E</b>, and Poisson versus cluster fine timing follows the compact lane-local FIFO release behavior used by the standalone bank8 signoff build.</html>} \
@@ -481,8 +483,8 @@ add_html_text "Control Path" control_html {<html>
 <tr><td>8</td><td>OUT_OF_DAQ</td></tr>
 </table><br/>
 <b>RUNNING</b> enables new hit commits and fresh frame starts.<br/>
-<b>TERMINATING</b> keeps an already-open frame draining but blocks a fresh header
-from opening once the assembler is idle.<br/>
+<b>TERMINATING</b> blocks new hit commits but permits fresh headers while the
+lane FIFO is nonempty, then suppresses idle-only frames once clean.<br/>
 <b>asi_ctrl_ready</b> remains constantly asserted in this delivered standalone
 revision.<br/><br/>
 <b>csr</b> &mdash; Avalon-MM slave<br/>

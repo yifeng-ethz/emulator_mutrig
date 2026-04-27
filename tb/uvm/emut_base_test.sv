@@ -195,6 +195,7 @@ class emut_test_idle_and_runctl extends emut_base_test;
 
   task run_phase(uvm_phase phase);
     int unsigned frames_before_stop;
+    int unsigned frames_after_tail;
     phase.raise_objection(this);
     wait_for_reset_release();
     program_common_cfg(2'b00, 1'b0, 16'h0800, 16'h0000, 5'd1, 5'd10, 32'h1234_5678, TX_MODE_LONG, 1'b1, 4'd1);
@@ -682,23 +683,33 @@ class emut_test_terminate_no_new_frame extends emut_base_test;
 
   task run_phase(uvm_phase phase);
     int unsigned frames_before_stop;
+    int unsigned frames_after_tail;
     phase.raise_objection(this);
     wait_for_reset_release();
 
     program_common_cfg(HIT_MODE_POISSON, 1'b0, 16'h0000, 16'h0000, 5'd31, 5'd16,
       32'hC001_D00D, TX_MODE_LONG, 1'b1, 4'd10);
+    m_cfg.system_terminating_hold_cycles = (2 * FRAME_INTERVAL_LONG) + 128;
     start_run();
     wait_for_tx_frames(1, 600000);
     frames_before_stop = m_env.m_tx_mon.frame_count_seen;
     inject_pulse(0, 1000, 16000);
-    wait_clocks(8);
+    wait_clocks(48);
     stop_run_system();
+    frames_after_tail = m_env.m_tx_mon.frame_count_seen;
 
-    if (m_env.m_tx_mon.frame_count_seen != frames_before_stop)
+    if (frames_after_tail <= frames_before_stop)
       `uvm_error("EMUT_TERM", $sformatf(
-        "Observed %0d new frame(s) during TERMINATING hold (before=%0d after=%0d)",
-        m_env.m_tx_mon.frame_count_seen - frames_before_stop,
+        "Expected queued tail frame during TERMINATING hold (before=%0d after=%0d)",
         frames_before_stop,
+        frames_after_tail))
+    if (m_env.m_tx_mon.last_frame == null || m_env.m_tx_mon.last_frame.event_count == 0)
+      `uvm_error("EMUT_TERM", "Terminal tail did not carry queued hits")
+    wait_clocks(m_cfg.system_terminating_hold_cycles + 64);
+    if (m_env.m_tx_mon.frame_count_seen != frames_after_tail)
+      `uvm_error("EMUT_TERM", $sformatf(
+        "Observed idle-only frame(s) after terminal tail cleaned (tail=%0d final=%0d)",
+        frames_after_tail,
         m_env.m_tx_mon.frame_count_seen))
 
     phase.drop_objection(this);
@@ -863,23 +874,33 @@ class emut_frame_suite_base extends emut_base_test;
   task automatic frame_case_terminate_no_new_frame();
     int unsigned frames_before_stop;
     int unsigned frames_base;
+    int unsigned frames_after_tail;
 
-    log_case("emut_test_terminate_no_new_frame");
+    log_case("emut_test_terminate_tail_drain");
     program_common_cfg(HIT_MODE_POISSON, 1'b0, 16'h0000, 16'h0000, 5'd31, 5'd16,
       32'hC001_D00D, TX_MODE_LONG, 1'b1, 4'd10);
+    m_cfg.system_terminating_hold_cycles = (2 * FRAME_INTERVAL_LONG) + 128;
     start_run();
     frames_base = m_env.m_tx_mon.frame_count_seen;
     wait_for_tx_frames(frames_base + 1, 600000);
     frames_before_stop = m_env.m_tx_mon.frame_count_seen;
     inject_pulse(0, 1000, 16000);
-    wait_clocks(8);
+    wait_clocks(48);
     stop_run_system();
+    frames_after_tail = m_env.m_tx_mon.frame_count_seen;
 
-    if (m_env.m_tx_mon.frame_count_seen != frames_before_stop)
+    if (frames_after_tail <= frames_before_stop)
       `uvm_error("EMUT_TERM", $sformatf(
-        "Observed %0d new frame(s) during TERMINATING hold (before=%0d after=%0d)",
-        m_env.m_tx_mon.frame_count_seen - frames_before_stop,
+        "Expected queued tail frame during TERMINATING hold (before=%0d after=%0d)",
         frames_before_stop,
+        frames_after_tail))
+    if (m_env.m_tx_mon.last_frame == null || m_env.m_tx_mon.last_frame.event_count == 0)
+      `uvm_error("EMUT_TERM", "Terminal tail did not carry queued hits")
+    wait_clocks(m_cfg.system_terminating_hold_cycles + 64);
+    if (m_env.m_tx_mon.frame_count_seen != frames_after_tail)
+      `uvm_error("EMUT_TERM", $sformatf(
+        "Observed idle-only frame(s) after terminal tail cleaned (tail=%0d final=%0d)",
+        frames_after_tail,
         m_env.m_tx_mon.frame_count_seen))
     wait_clocks(16);
   endtask

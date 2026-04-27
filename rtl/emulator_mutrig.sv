@@ -15,11 +15,10 @@
 //   - Conduit input for charge-injection pulses (from mutrig_injector datapath IP)
 //
 // Author: Yifeng Wang
-// Version : 26.1.8
-// Date    : 20260418
-// Change  : Keep the single-lane wrapper aligned with the compact 8-lane bank
-//           while adding a dedicated masked-trigger conduit and per-channel
-//           injection mask CSR for frame-marker-aligned latency studies.
+// Version : 26.1.13
+// Date    : 20260425
+// Change  : Drain queued FIFO tail during TERMINATING without committing
+//           new hits.
 
 module emulator_mutrig
     import emulator_mutrig_pkg::*;
@@ -81,7 +80,7 @@ module emulator_mutrig
     logic [8:0] ctrl_state_q;   // last accepted run-control word
     logic       run_generating; // allow new hit commits into the FIFO
     logic       run_draining;   // keep buffered hits draining downstream
-    logic       emu_rst;        // session reset on cold reset / RUN_PREPARE / RESET
+    logic       emu_rst;        // session reset on cold reset / SYNC / RESET
     logic       frame_rst;      // frame-generator reset outside the active drain window
     logic [1:0] inject_sync;
     logic [1:0] inject_masked_sync;
@@ -100,8 +99,8 @@ module emulator_mutrig
     end
     assign asi_ctrl_ready = 1'b1;
 
-    // RUNNING allows new hit commits. TERMINATING lets an already-open frame
-    // finish draining, but it must not open a fresh header from the idle state.
+    // RUNNING allows new hit commits. TERMINATING keeps generation stopped but
+    // still lets pre-termination FIFO contents open scheduled tail frames.
     // The datapath timestamp epoch must reset on the same SYNC boundary as the
     // downstream MTS processor. RUN_PREPARE can still flush local state via
     // frame_rst, but the dark coarse counter must not start early.
@@ -272,7 +271,7 @@ module emulator_mutrig
 `ifndef SYNTHESIS
     logic [47:0] true_gts_8n;
 `endif
-    assign lfsr_en = ~emu_rst;
+    assign lfsr_en = run_draining;
     assign frame_interval_max = csr_short_mode ? 11'(FRAME_INTERVAL_SHORT) : 11'(FRAME_INTERVAL_LONG);
 
     always_ff @(posedge i_clk) begin
@@ -333,6 +332,7 @@ module emulator_mutrig
     logic [9:0]  event_count;
     logic        fifo_empty, fifo_full, fifo_almost_full;
     logic        frame_start;
+    logic        frame_start_allowed;
 
     hit_generator #(
         .FIFO_DEPTH (FIFO_DEPTH)
@@ -373,10 +373,12 @@ module emulator_mutrig
     logic [8:0] tx_data_int;
     logic       tx_valid_int;
 
+    assign frame_start_allowed = csr_enable && (run_generating || (run_draining && !fifo_empty));
+
     frame_assembler u_frame_asm (
         .clk            (i_clk),
         .rst            (frame_rst),
-        .frame_start_req(frame_start_req & run_generating & csr_enable),
+        .frame_start_req(frame_start_req & frame_start_allowed),
         .cfg_short_mode (csr_short_mode),
         .cfg_gen_idle   (csr_gen_idle),
         .cfg_tx_mode    (csr_tx_mode),

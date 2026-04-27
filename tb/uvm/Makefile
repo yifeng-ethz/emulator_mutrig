@@ -1,17 +1,4 @@
-QUESTA_HOME ?= /data1/intelFPGA_pro/23.1/questa_fse
-VLIB        = $(QUESTA_HOME)/bin/vlib
-VMAP        = $(QUESTA_HOME)/bin/vmap
-VCOM        = $(QUESTA_HOME)/bin/vcom
-VLOG        = $(QUESTA_HOME)/bin/vlog
-VSIM        = $(QUESTA_HOME)/bin/vsim
-VCOVER      = $(QUESTA_HOME)/bin/vcover
-LMUTIL      = $(QUESTA_HOME)/linux_x86_64/lmutil
-
-QUESTA_LICENSE := $(QUESTA_HOME)/LR-287689_License.dat
-ETH_LIC_SERVER := 8161@lic-mentor.ethz.ch
-
-export LM_LICENSE_FILE   := $(ETH_LIC_SERVER):$(QUESTA_LICENSE)
-export MGLS_LICENSE_FILE := $(LM_LICENSE_FILE)
+include ../../../scripts/questa_one.mk
 
 UVM_DIR         := $(abspath .)
 IP_ROOT         := $(abspath ../..)
@@ -21,9 +8,10 @@ PARSER_DIR      := $(WORKSPACE_ROOT)/mutrig_frame_deassembly
 WORK_DIR        := $(UVM_DIR)/work_uvm
 LOG_DIR         := $(UVM_DIR)/logs
 COV_DIR         := $(UVM_DIR)/cov
-UVM_HOME        ?= $(abspath $(QUESTA_HOME)/verilog_src/uvm-1.2)
+MODELSIM_INI    := modelsim.ini
+UVM_HOME        ?= $(QUESTA_UVM_HOME)
 UVM_SRC         := $(UVM_HOME)/src
-UVM_DPI_SO      := $(firstword $(wildcard $(QUESTA_HOME)/uvm-1.2/linux_x86_64/uvm_dpi.so $(QUESTA_HOME)/verilog_src/uvm-1.2/linux_x86_64/uvm_dpi.so))
+UVM_DPI_SO      := $(QUESTA_UVM_DPI_SO)
 UVM_DPI_LIB     := $(basename $(UVM_DPI_SO))
 DPI_CPP         ?= /usr/bin/gcc
 
@@ -77,9 +65,9 @@ RANDOM_TESTS = \
 .PHONY: license_check compile run run_isolated run_bucket_frame_basic run_all_buckets_frame regress merge_cov report closure clean
 
 license_check:
-	@echo "═══ Checking Mentor floating license at $(ETH_LIC_SERVER) ═══"
-	@$(LMUTIL) lmstat -f mtiverification -c $(ETH_LIC_SERVER) >/dev/null 2>&1 || \
-	  { echo "ERROR: mtiverification feature not visible via $(ETH_LIC_SERVER)"; exit 1; }
+	@echo "═══ Checking Mentor floating license at $(QUESTA_LICENSE_SERVER) ═══"
+	@$(LMUTIL) lmstat -f mtiverification -c $(QUESTA_LICENSE_SERVER) >/dev/null 2>&1 || \
+	  { echo "ERROR: mtiverification feature not visible via $(QUESTA_LICENSE_SERVER)"; exit 1; }
 
 compile: license_check $(WORK_DIR)/.compiled
 
@@ -96,18 +84,19 @@ $(WORK_DIR)/.compiled: $(RTL_DIR)/emulator_mutrig_pkg.sv \
 	@rm -rf $(WORK_DIR)
 	@mkdir -p $(WORK_DIR) $(LOG_DIR) $(COV_DIR)
 	@cd $(WORK_DIR) && $(VLIB) work
-	@cd $(WORK_DIR) && $(VMAP) -c > /dev/null
-	@cd $(WORK_DIR) && $(VMAP) -modelsimini modelsim.ini work work > /dev/null
-	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini modelsim.ini -work work $(PARSER_DIR)/crc16_calc.vhd
-	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini modelsim.ini -work work $(PARSER_DIR)/frame_rcv_ip.vhd
-	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(RTL_DIR)/emulator_mutrig_pkg.sv
-	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(RTL_DIR)/prbs15_lfsr.sv
-	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(RTL_DIR)/crc16_8.sv
-	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(RTL_DIR)/hit_generator.sv
-	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(RTL_DIR)/frame_assembler.sv
-	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(RTL_DIR)/emulator_mutrig.sv
-	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -sv $(UVM_DIR)/emut_if.sv
-	@cd $(WORK_DIR) && $(VLOG) -modelsimini modelsim.ini -work work $(VLOG_COV) -mfcu \
+	@cp $(QSIM_INI) $(WORK_DIR)/$(MODELSIM_INI)
+	@chmod u+w $(WORK_DIR)/$(MODELSIM_INI)
+	@cd $(WORK_DIR) && $(VMAP) -modelsimini $(MODELSIM_INI) work work > /dev/null
+	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini $(MODELSIM_INI) -work work $(PARSER_DIR)/crc16_calc.vhd
+	@cd $(WORK_DIR) && $(VCOM) -2008 $(VCOM_COV) -modelsimini $(MODELSIM_INI) -work work $(PARSER_DIR)/frame_rcv_ip.vhd
+	@cd $(WORK_DIR) && $(VLOG) -modelsimini $(MODELSIM_INI) -work work $(VLOG_COV) -sv $(RTL_DIR)/emulator_mutrig_pkg.sv
+	@cd $(WORK_DIR) && $(VLOG) -modelsimini $(MODELSIM_INI) -work work $(VLOG_COV) -sv $(RTL_DIR)/prbs15_lfsr.sv
+	@cd $(WORK_DIR) && $(VLOG) -modelsimini $(MODELSIM_INI) -work work $(VLOG_COV) -sv $(RTL_DIR)/crc16_8.sv
+	@cd $(WORK_DIR) && $(VLOG) -modelsimini $(MODELSIM_INI) -work work $(VLOG_COV) -sv $(RTL_DIR)/hit_generator.sv
+	@cd $(WORK_DIR) && $(VLOG) -modelsimini $(MODELSIM_INI) -work work $(VLOG_COV) -sv $(RTL_DIR)/frame_assembler.sv
+	@cd $(WORK_DIR) && $(VLOG) -modelsimini $(MODELSIM_INI) -work work $(VLOG_COV) -sv $(RTL_DIR)/emulator_mutrig.sv
+	@cd $(WORK_DIR) && $(VLOG) -modelsimini $(MODELSIM_INI) -work work $(VLOG_COV) -sv $(UVM_DIR)/emut_if.sv
+	@cd $(WORK_DIR) && $(VLOG) -modelsimini $(MODELSIM_INI) -work work $(VLOG_COV) -mfcu \
 	  +incdir+$(UVM_SRC) +incdir+$(UVM_DIR) -sv \
 	  $(UVM_SRC)/uvm_pkg.sv \
 	  $(UVM_DIR)/emut_env_pkg.sv \
@@ -122,7 +111,7 @@ run: compile
 	@echo "=== Running $(TEST) seed=$(SEED) ==="
 	@mkdir -p $(COV_DIR)
 	@rm -f $(COV_DIR)/$(TEST)_s$(SEED).ucdb
-	@cd $(WORK_DIR) && $(VSIM) -modelsimini modelsim.ini -c -coverage \
+	@cd $(WORK_DIR) && $(VSIM) -modelsimini $(MODELSIM_INI) -c -coverage \
 	  -dpicpppath $(DPI_CPP) -sv_lib $(UVM_DPI_LIB) \
 	  -sv_seed $(SEED) \
 	  +UVM_TESTNAME=$(TEST) +UVM_VERBOSITY=$(VERBOSITY) \

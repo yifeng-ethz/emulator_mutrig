@@ -1,10 +1,9 @@
 // emulator_mutrig_bank8.sv
 // Standalone 8-lane MuTRiG emulator bank with shared control/timebase.
-// Version : 26.1.9
-// Date    : 20260418
-// Change  : Keep the 8-lane standalone bank compact by sharing one masked
-//           offer word plus lane index, recovering the <4k ALM signoff point
-//           without changing lane-visible behavior.
+// Version : 26.1.12
+// Date    : 20260425
+// Change  : Hold the shared dark coarse timestamp through run-control SYNC so
+//           every lane starts from the downstream MTS RUNNING epoch.
 
 module emulator_mutrig_bank8
     import emulator_mutrig_pkg::*;
@@ -136,7 +135,7 @@ module emulator_mutrig_bank8
     end
 
     assign inject_masked_pulse_clk = inject_masked_sync[0] & ~inject_masked_sync[1];
-    assign lfsr_en = ~emu_rst;
+    assign lfsr_en = run_draining;
     assign frame_interval_max = cfg_short_mode ? 11'(FRAME_INTERVAL_SHORT) : 11'(FRAME_INTERVAL_LONG);
 
     always_ff @(posedge i_clk) begin

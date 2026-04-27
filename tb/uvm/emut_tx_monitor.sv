@@ -69,10 +69,9 @@ class emut_tx_monitor extends uvm_monitor;
     tmp16            = {item.bytes[3], item.bytes[4]};
     item.frame_flags = tmp16[15:10];
     item.event_count = tmp16[9:0];
-    item.delay_byte  = item.bytes[item.frame_len-4];
     item.crc_received = {item.bytes[item.frame_len-3], item.bytes[item.frame_len-2]};
 
-    for (int i = 1; i <= item.frame_len - 5; i++)
+    for (int i = 1; i <= item.frame_len - 4; i++)
       crc_bytes.push_back(item.bytes[i]);
 
     item.crc_expected = crc16_reference(crc_bytes);
