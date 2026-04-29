@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<device schemaVersion="1.3" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
+  <vendor>Mu3e</vendor>
+  <vendorID>MU3E</vendorID>
+  <name>MU3E_EMULATOR_MUTRIG</name>
+  <series>MU3E_FPGA_IP</series>
+  <version>26.1.13.0425</version>
+  <description>MuTRiG 3 digital-output emulator CSR aperture.</description>
+  <addressUnitBits>8</addressUnitBits>
+  <width>32</width>
+  <size>32</size>
+  <access>read-write</access>
+  <resetValue>0x00000000</resetValue>
+  <resetMask>0xFFFFFFFF</resetMask>
+  <peripherals>
+    <peripheral>
+      <name>EMULATOR_MUTRIG_CSR</name>
+      <description>Relative 16-word configuration and status window for one emulator instance.</description>
+      <groupName>MU3E_DATA_PATH</groupName>
+      <baseAddress>0x0</baseAddress>
+      <addressBlock><offset>0x0</offset><size>0x40</size><usage>registers</usage></addressBlock>
+      <registers>
+        <register>
+          <name>CONTROL</name>
+          <description>Main emulator enable and hit-generation mode.</description>
+          <addressOffset>0x00</addressOffset>
+          <access>read-write</access>
+          <resetValue>0x00000001</resetValue>
+          <fields>
+            <field><name>enable</name><description>Enable hit generation/output.</description><bitOffset>0</bitOffset><bitWidth>1</bitWidth><access>read-write</access></field>
+            <field><name>hit_mode</name><description>0=legacy folded Poisson, 1=burst/injected cluster replay, 2=folded per-channel IID Poisson, 3=folded per-channel periodic.</description><bitOffset>1</bitOffset><bitWidth>2</bitWidth><access>read-write</access></field>
+            <field><name>short_mode</name><description>1 selects short frame interval; 0 selects long frame interval.</description><bitOffset>3</bitOffset><bitWidth>1</bitWidth><access>read-write</access></field>
+          </fields>
+        </register>
+        <register>
+          <name>HIT_RATE</name>
+          <description>Fixed-point hit and noise rates.</description>
+          <addressOffset>0x04</addressOffset>
+          <access>read-write</access>
+          <resetValue>0x01000800</resetValue>
+          <fields>
+            <field><name>hit_rate</name><description>8.8 fixed-point hit-rate control.</description><bitOffset>0</bitOffset><bitWidth>16</bitWidth><access>read-write</access></field>
+            <field><name>noise_rate</name><description>8.8 fixed-point noise-rate control.</description><bitOffset>16</bitOffset><bitWidth>16</bitWidth><access>read-write</access></field>
+          </fields>
+        </register>
+        <register>
+          <name>BURST_CFG</name>
+          <description>Burst and multi-ASIC cluster configuration.</description>
+          <addressOffset>0x08</addressOffset>
+          <access>read-write</access>
+          <resetValue>0x04041004</resetValue>
+          <fields>
+            <field><name>burst_size</name><description>Local burst size.</description><bitOffset>0</bitOffset><bitWidth>5</bitWidth><access>read-write</access></field>
+            <field><name>burst_center_local</name><description>Local 32-channel burst center.</description><bitOffset>8</bitOffset><bitWidth>5</bitWidth><access>read-write</access></field>
+            <field><name>cluster_cross_asic</name><description>Enable shared global cluster across ASIC lanes.</description><bitOffset>13</bitOffset><bitWidth>1</bitWidth><access>read-write</access></field>
+            <field><name>cluster_center_global</name><description>Global cluster center when cross-ASIC mode is enabled.</description><bitOffset>14</bitOffset><bitWidth>8</bitWidth><access>read-write</access></field>
+            <field><name>cluster_lane_index</name><description>Lane index inside the shared cluster domain.</description><bitOffset>22</bitOffset><bitWidth>4</bitWidth><access>read-write</access></field>
+            <field><name>cluster_lane_count</name><description>Number of lanes in the shared cluster domain.</description><bitOffset>26</bitOffset><bitWidth>4</bitWidth><access>read-write</access></field>
+          </fields>
+        </register>
+        <register><name>PRNG_SEED</name><description>Hit generator PRNG seed.</description><addressOffset>0x0C</addressOffset><access>read-write</access><resetValue>0xDEADBEEF</resetValue><fields><field><name>seed</name><description>32-bit PRNG seed.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields></register>
+        <register>
+          <name>TX_MODE</name>
+          <description>Frame output mode and ASIC channel tag.</description>
+          <addressOffset>0x10</addressOffset>
+          <access>read-write</access>
+          <resetValue>0x00000008</resetValue>
+          <fields>
+            <field><name>tx_mode</name><description>Frame assembler TX mode.</description><bitOffset>0</bitOffset><bitWidth>3</bitWidth><access>read-write</access></field>
+            <field><name>gen_idle</name><description>Generate idle words when enabled.</description><bitOffset>3</bitOffset><bitWidth>1</bitWidth><access>read-write</access></field>
+            <field><name>asic_id</name><description>ASIC ID/channel tag, clamped to 0..7 by RTL.</description><bitOffset>4</bitOffset><bitWidth>4</bitWidth><access>read-write</access></field>
+          </fields>
+        </register>
+        <register>
+          <name>STATUS</name>
+          <description>Frame and event counters captured at frame start.</description>
+          <addressOffset>0x14</addressOffset>
+          <access>read-only</access>
+          <fields>
+            <field><name>frame_count</name><description>Frame-start counter.</description><bitOffset>0</bitOffset><bitWidth>16</bitWidth><access>read-only</access></field>
+            <field><name>last_event_count</name><description>Last event count captured at frame start.</description><bitOffset>16</bitOffset><bitWidth>10</bitWidth><access>read-only</access></field>
+          </fields>
+        </register>
+        <register><name>INJECT_MASK</name><description>Masked injection channel participation mask.</description><addressOffset>0x18</addressOffset><access>read-write</access><resetValue>0xFFFFFFFF</resetValue><fields><field><name>channel_mask</name><description>Bit N enables channel N for masked injection triggers.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields></register>
+      </registers>
+    </peripheral>
+  </peripherals>
+</device>
