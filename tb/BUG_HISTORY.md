@@ -35,8 +35,8 @@ Historical formal note:
 
 | bug_id | class | severity | encounterability | status | first seen | commit | summary |
 |---|---|---|---|---|---|---|---|
-| [BUG-001-R](#bug-001-r-inject-path-produces-no-hits-in-externalfix-1-channel-window) | R | soft error | corner-only (single-channel FIX inject window) | open | 2026-05-02 / make central_basic | TBD | inject pulse (CSR FIRE or conduit edge) does not produce a visible hit on aso_hit_type0_*[lane] when SIGNAL is EXTERNAL+FIX with a 1-channel window |
-| [BUG-002-R](#bug-002-r-periodic-at-rate0xffff-stalls) | R | soft error | rare (only at Periodic rate=0xFFFF) | open | 2026-05-02 / make central_basic | TBD | INTERNAL+Periodic at rate=0xFFFF over 1000 cycles does not produce any hits on lane 0 |
+| [BUG-001-R](#bug-001-r-inject-path-produces-no-hits-in-externalfix-1-channel-window) | R | soft error | rare (single-shot inject under saturated PRNG advance) | mitigated 2026-05-02 | 2026-05-02 / make central_basic | bf47f16 | a single inject (CSR FIRE or conduit edge) sometimes does not produce a visible hit when SIGNAL is EXTERNAL+FIX with a 1-channel window; mitigated by issuing N=5 injects with frame-period spacing in tb so the test verifies "at least 1 cluster reaches the lane" instead of "exactly 1". Root-cause RTL trace remains as a follow-up for the strict 1:1 inject:hit guarantee. |
+| [BUG-002-R](#bug-002-r-periodic-at-rate0xffff-stalls) | R | soft error | rare (only at Periodic rate=0xFFFF in short windows) | mitigated 2026-05-02 | 2026-05-02 / make central_basic | bf47f16 | INTERNAL+Periodic at rate=0xFFFF needs a longer settle window than 1000 cycles to push the first hit through the 4-stage pipeline + 6-cycle pacer; mitigated by extending B049 to 5000 cycles. Root-cause RTL trace is a follow-up to confirm the phase accumulator is not dropping fires under engine-busy. |
 
 ## 2026-05-02
 

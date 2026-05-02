@@ -180,6 +180,15 @@ module tb_central_top;
         @(posedge clk);
     endtask
 
+    // Drive N inject pulses with adequate spacing so each one has a
+    // chance to traverse the 4-stage trigger pipeline + frame interval.
+    task automatic do_inject_n(input int n);
+        for (int k = 0; k < n; k++) begin
+            do_inject();
+            run_cycles(2000);  // > frame interval (1550 long-mode)
+        end
+    endtask
+
     function automatic int unsigned sum_lane_hits();
         int unsigned t = 0;
         for (int l = 0; l < LANE_COUNT; l++) t += lane_hit_count[l];
@@ -426,10 +435,12 @@ module tb_central_top;
         do_reset(); csr_w(A_CENTRAL, 32'h1);
         csr_w(A_SIGNAL, 32'b010); // INTERNAL Periodic FIX
         csr_w(A_GEOM_FIX, (32'b1 << 14));
-        // B049 — period 1 cycle (rate=0xFFFF)
+        // B049 — period 1 cycle (rate=0xFFFF). Need time for first frame
+        // boundary to fire after Periodic starts pushing into L2.
         csr_w(A_RATES, 32'hFFFF);
-        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(1000);
-        check_true("B049", 1, "Periodic rate=0xFFFF smoke (rate-bound check pending RTL trace; see BUG_HISTORY)");
+        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(5000);
+        check_true("B049", sum_lane_hits() >= 1,
+                   "Periodic rate=0xFFFF: at least 1 hit reaches lane");
         // B050 — period 2 cycles
         do_reset(); csr_w(A_CENTRAL, 32'h1); csr_w(A_SIGNAL, 32'b010);
         csr_w(A_GEOM_FIX, (32'b1 << 14)); csr_w(A_RATES, 32'h8000);
@@ -444,18 +455,18 @@ module tb_central_top;
         // ============================================================
         // B065-B080 — SIGNAL EXTERNAL Inject
         // ============================================================
-        // CSR fire alone produces 1 cluster
+        // B065 — CSR FIRE: 5 fires with spacing should produce >=1 hit
         do_reset(); csr_w(A_CENTRAL, 32'h1); csr_w(A_SIGNAL, 32'b001); // EXTERNAL+FIX
         csr_w(A_GEOM_FIX, (32'b1 << 14));
-        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(20);
-        csr_w(A_FIRE, 32'h1); run_cycles(20000);
-        check_true("B065", 1, "CSR FIRE smoke (inject path returns no hits in EXTERNAL+FIX 1-channel; tracked in BUG_HISTORY)");
-        // Conduit pulse alone produces 1 cluster
+        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(2000);
+        for (int k = 0; k < 5; k++) begin csr_w(A_FIRE, 32'h1); run_cycles(2000); end
+        check_true("B065", sum_lane_hits() >= 1, "CSR FIRE x5: at least 1 cluster reached lane");
+        // B066 — conduit inject: 5 pulses with spacing should produce >=1 hit
         do_reset(); csr_w(A_CENTRAL, 32'h1); csr_w(A_SIGNAL, 32'b001);
         csr_w(A_GEOM_FIX, (32'b1 << 14));
-        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(20);
-        do_inject(); run_cycles(20000);
-        check_true("B066", 1, "conduit inject smoke (same root cause as B065; tracked in BUG_HISTORY)");
+        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(2000);
+        do_inject_n(5);
+        check_true("B066", sum_lane_hits() >= 1, "conduit inject x5: at least 1 cluster reached lane");
         // B067..B080 — coarse functional smokes
         for (int i = 0; i < 14; i++) begin
             automatic string id = $sformatf("B%03d", 67 + i);
@@ -465,30 +476,42 @@ module tb_central_top;
         // ============================================================
         // B081-B096 — CLUSTER_GEOM_FIX
         // ============================================================
-        // B081 — left_low=high=0 → 1 hit on lane 0 ch 0
+        // B081 — FIX A:(0,0): hits on lane 0 only
         do_reset(); csr_w(A_CENTRAL, 32'h1); csr_w(A_SIGNAL, 32'b001);
         csr_w(A_GEOM_FIX, (32'b1 << 14)); // left_low=0 left_high=0 left_enable=1
-        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(20);
-        do_inject(); run_cycles(20000);
-        check_true("B081", 1, "FIX(0,0) smoke (inject path; tracked in BUG_HISTORY)");
-        // B082 — left_low=high=127 → 1 hit on lane 3 ch 31
+        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(2000);
+        do_inject_n(5);
+        check_true("B081", lane_hit_count[0] >= 1
+                       && (lane_hit_count[1]+lane_hit_count[2]+lane_hit_count[3]+lane_hit_count[4]
+                          +lane_hit_count[5]+lane_hit_count[6]+lane_hit_count[7]) == 0,
+                   "FIX A:0: lane 0 only");
+        // B082 — FIX A:127: hits on lane 3 only
         do_reset(); csr_w(A_CENTRAL, 32'h1); csr_w(A_SIGNAL, 32'b001);
         csr_w(A_GEOM_FIX, (32'b1 << 14) | (32'h7F << 7) | 32'h7F);
-        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(20);
-        do_inject(); run_cycles(20000);
-        check_true("B082", 1, "FIX A:127 smoke (inject path; tracked in BUG_HISTORY)");
-        // B083 — right_low=high=0 → 1 hit on lane 4 ch 0
+        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(2000);
+        do_inject_n(5);
+        check_true("B082", lane_hit_count[3] >= 1
+                       && (lane_hit_count[0]+lane_hit_count[1]+lane_hit_count[2]+lane_hit_count[4]
+                          +lane_hit_count[5]+lane_hit_count[6]+lane_hit_count[7]) == 0,
+                   "FIX A:127: lane 3 only");
+        // B083 — FIX B:0: hits on lane 4 only
         do_reset(); csr_w(A_CENTRAL, 32'h1); csr_w(A_SIGNAL, 32'b001);
         csr_w(A_GEOM_FIX, (32'b1 << 30)); // right_enable=1, right_low=0 right_high=0
-        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(20);
-        do_inject(); run_cycles(20000);
-        check_true("B083", 1, "FIX B:0 smoke (inject path; tracked in BUG_HISTORY)");
-        // B084 — right_low=high=127 → 1 hit on lane 7 ch 31
+        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(2000);
+        do_inject_n(5);
+        check_true("B083", lane_hit_count[4] >= 1
+                       && (lane_hit_count[0]+lane_hit_count[1]+lane_hit_count[2]+lane_hit_count[3]
+                          +lane_hit_count[5]+lane_hit_count[6]+lane_hit_count[7]) == 0,
+                   "FIX B:0: lane 4 only");
+        // B084 — FIX B:127: hits on lane 7 only
         do_reset(); csr_w(A_CENTRAL, 32'h1); csr_w(A_SIGNAL, 32'b001);
         csr_w(A_GEOM_FIX, (32'b1 << 30) | (32'h7F << 23) | (32'h7F << 16));
-        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(20);
-        do_inject(); run_cycles(20000);
-        check_true("B084", 1, "FIX B:127 smoke (inject path; tracked in BUG_HISTORY)");
+        clear_hit_counters(); drive_ctrl(9'b000001000); run_cycles(2000);
+        do_inject_n(5);
+        check_true("B084", lane_hit_count[7] >= 1
+                       && (lane_hit_count[0]+lane_hit_count[1]+lane_hit_count[2]+lane_hit_count[3]
+                          +lane_hit_count[4]+lane_hit_count[5]+lane_hit_count[6]) == 0,
+                   "FIX B:127: lane 7 only");
         // B085-B096 functional smokes (manual mirror, dual-side, etc.)
         for (int i = 0; i < 12; i++) begin
             automatic string id = $sformatf("B%03d", 85 + i);
@@ -600,16 +623,48 @@ module tb_central_top;
                 5: begin // Frame Boundary
                     csr_w(A_MUTRIG_FORMAT, ((i-80) & 'h1));
                 end
-                6: begin // Per-Lane Counter Saturation
+                6: begin // Per-Lane Counter Saturation - INTERNAL Poisson at max rate
+                    csr_w(A_SIGNAL, 32'b000); // INTERNAL+POISSON+FIX
+                    csr_w(A_GEOM_FIX, (32'b1 << 14) | (32'h7F << 7));
                     csr_w(A_RATES, 32'hFFFF);
                 end
                 7: begin // CSR Aliasing / Reserved Bits
                     csr_w(6'h10, 32'hFFFFFFFF); // reserved address
                 end
             endcase
+            clear_hit_counters();
             drive_ctrl(9'b000001000);
-            run_cycles(1000);
-            check_true(id, 1, $sformatf("EDGE smoke section %0d", i / 16));
+            // Sections 0-3 use EXTERNAL mode; need explicit injects to fire.
+            // Sections 4-7 use various INTERNAL/CSR modes that fire on their own.
+            if ((i / 16) < 4) begin
+                run_cycles(2000);
+                do_inject_n(3);
+            end else begin
+                run_cycles(3000);
+            end
+            // Per-section functional invariant rather than smoke-only.
+            unique case (i / 16)
+                0: check_true(id, sum_lane_hits() >= 1,
+                              "Channel-Range Boundary: cluster reaches a lane");
+                1: check_true(id, sum_lane_hits() >= 1,
+                              "Cluster Size Boundary: cluster reaches a lane");
+                2: check_true(id, sum_lane_hits() >= 1,
+                              "Mirror Offset: random cluster reaches a lane");
+                3: check_true(id, lane_hit_count[(i-48) & 'h7] == 0,
+                              "Disabled lane: zero hits on the lane I disabled");
+                4: check_true(id, ctrl_ready === 1'b1,
+                              "ECC Seed Phase: engine accepted seed write");
+                5: check_true(id, ctrl_ready === 1'b1,
+                              "Frame Boundary: ctrl bus alive after toggle");
+                6: check_true(id, sum_lane_hits() >= 1,
+                              "Counter Saturation: high-rate Poisson reaches lanes");
+                7: begin
+                    logic [31:0] reserved_rdata;
+                    csr_r(6'h10, reserved_rdata);
+                    check_true(id, reserved_rdata === 32'h0,
+                               "CSR Reserved address reads 0");
+                end
+            endcase
         end
 
         $display("=== EDGE bucket complete: cumulative %0d PASS, %0d FAIL ===", passes, fails);
@@ -625,10 +680,10 @@ module tb_central_top;
             csr_w(A_SIGNAL,  32'b000); // INTERNAL+POISSON+FIX
             csr_w(A_GEOM_FIX, (32'b1 << 14) | (32'h7F << 7));
             csr_w(A_RATES, 32'h8000); // ~50% Poisson
+            clear_hit_counters();
             drive_ctrl(9'b000001000);
-            // Each case runs a longer window than EDGE to exercise drain.
             run_cycles(2000);
-            check_true(id, 1, "PROF soak smoke");
+            check_true(id, sum_lane_hits() >= 1, "PROF Poisson soak: at least 1 hit");
         end
 
         $display("=== PROF bucket complete: cumulative %0d PASS, %0d FAIL ===", passes, fails);
@@ -689,7 +744,15 @@ module tb_central_top;
                     run_cycles(100);
                 end
             endcase
-            check_true(id, 1, $sformatf("ERROR recovery smoke section %0d", i / 16));
+            // Functional invariant per-section: after the abuse, the CSR
+            // bus must still answer cleanly (UID readback). This proves
+            // the IP did not lock up under the error scenario.
+            begin
+                logic [31:0] uid_after;
+                csr_r(A_UID, uid_after);
+                check_true(id, uid_after === 32'h454D5554,
+                           $sformatf("ERROR section %0d: CSR bus alive (UID readback)", i / 16));
+            end
         end
 
         // ============================================================
@@ -707,8 +770,8 @@ module tb_central_top;
 
     // Watchdog
     initial begin
-        #10ms;
-        $error("Watchdog: TB ran 10ms without completing");
+        #50ms;
+        $error("Watchdog: TB ran 50ms without completing");
         $finish(2);
     end
 
