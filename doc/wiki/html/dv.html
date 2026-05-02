@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verification — emulator_mutrig wiki</title>
+<link rel="stylesheet" href="../css/wiki.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="nav">
+        <h1>Wiki</h1>
+        <span class="ip-name">emulator_mutrig</span>
+        <span class="ip-version">v26.2.x</span>
+        <ul>
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="csr_map.html">Register Layout</a></li>
+            <li><a href="interfaces.html">Interfaces</a></li>
+            <li><a href="build_axes.html">Build Axes</a></li>
+            <li><a href="dv.html" class="current">Verification</a></li>
+            <li><a href="synthesis.html">Synthesis</a></li>
+            <li><a href="open_issues.html">Open Issues</a></li>
+        </ul>
+    </aside>
+    <main class="content">
+<h1>Verification</h1>
+<h2>TL;DR</h2>
+<p>512 standalone DV cases across 4 buckets (<code>B</code>/<code>E</code>/<code>P</code>/<code>X</code>) and 32</p>
+<p>integration cases under <code>tb_int</code> cover the central-trigger refresh.</p>
+<p>Coverage profiles are pre-computed per case for both isolated runs and</p>
+<p>random-promoted long-run soak in <code>bucket_frame</code> / <code>all_buckets_frame</code></p>
+<p>modes.</p>
+<h2>Why this exists</h2>
+<p>The IP is the trusted hit source for every Mu3e online datapath</p>
+<p>testbench. Any mis-decoded TCC, dropped cluster, or malformed type0</p>
+<p>packet here propagates everywhere downstream. Closure requires per-case</p>
+<p>isolated UCDBs, merged isolated coverage tables, and continuous-frame</p>
+<p>soak runs — not just &quot;the tests pass&quot;.</p>
+<h2>How it works</h2>
+<h3>Standalone bucket layout (<code>tb/</code>)</h3>
+<table>
+<thead><tr>
+<th>Bucket</th>
+<th>File</th>
+<th>Cases</th>
+<th>What it Proves</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>BASIC</td>
+<td><code>tb/DV_BASIC.md</code></td>
+<td>128 (B001-B128)</td>
+<td>Bring-up: golden CSR header, run-control decode, Poisson, Periodic, EXTERNAL inject, FIX, RANDOM mirror modes, BACKGROUND IID</td>
+</tr>
+<tr>
+<td>EDGE</td>
+<td><code>tb/DV_EDGE.md</code></td>
+<td>128 (E001-E128)</td>
+<td>Boundaries: channel range, cluster size, mirror_offset clamp, SMB boundaries, lane-enable interactions, ECC seed phase sweep</td>
+</tr>
+<tr>
+<td>PROF</td>
+<td><code>tb/DV_PROF.md</code></td>
+<td>128 (P001-P128)</td>
+<td>Performance and stress: sustained 100% load, burst throughput, BACKGROUND soak, mixed signal+bkg, drain latency, type0 vs deassembly parity</td>
+</tr>
+<tr>
+<td>ERROR</td>
+<td><code>tb/DV_ERROR.md</code></td>
+<td>128 (X001-X128)</td>
+<td>Reset/illegal/recovery: reset during activity, illegal run-control transitions, ticket overflow, L2 backpressure recovery</td>
+</tr>
+</tbody></table>
+<p>Format-checked by</p>
+<p><code>~/.codex/skills/dv-workflow/scripts/dv_bucket_format_check.py tb</code> —</p>
+<p>all 4 buckets pass clean.</p>
+<h3>Integration bucket layout (<code>tb_int/</code>)</h3>
+<table>
+<thead><tr>
+<th>Bucket</th>
+<th>File</th>
+<th>Cases</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>BASIC</td>
+<td><code>tb_int/DV_BASIC.md</code></td>
+<td>32 (INTB001-INTB032)</td>
+<td>Qsys swap-in compatibility, CSR access via <code>sc_hub</code>, run-control gating, inject path, downstream consumer integrity</td>
+</tr>
+</tbody></table>
+<p>The integration scope is documented in</p>
+<p><a href="../../tb_int/DV_PLAN.md"><code>tb_int/DV_PLAN.md</code></a>. Hardware bring-up is</p>
+<p>deferred pending lab access.</p>
+<h3>Coverage profiles</h3>
+<p><code>tb/cov_profiles.json</code> carries the per-case coverage bin ownership and</p>
+<p>random-promotion knob ranges for all 512 standalone cases. The loader</p>
+<p>at <code>tb/uvm/cov_profile_loader.svh</code> is Questa-FSE compatible (no</p>
+<p><code>covergroup</code>, no <code>rand</code>, no DPI) and provides:</p>
+<ul>
+<li><code>cov_record_bins(string case_id)</code> — increments the per-bin counters</li>
+</ul>
+<p>  this case is responsible for hitting</p>
+<ul>
+<li><code>cov_promoted_value(string case_id, string knob_name)</code> — returns the</li>
+</ul>
+<p>  LCG-randomised value for the named knob, centred on the case&#x27;s</p>
+<p>  directed value (used in <code>bucket_frame</code> / <code>all_buckets_frame</code> soak)</p>
+<ul>
+<li><code>cov_case_is_promoted(string case_id)</code> — true if this case has any</li>
+</ul>
+<p>  knob to promote in soak mode</p>
+<p><strong>Counts:</strong> 273 coverage bins exercised, 1250 total bin-touches, mean</p>
+<p>2.44 bins per case. 408 directed cases stay directed, 104 cases get</p>
+<p>random-promoted in soak.</p>
+<h3>Run modes (per dv-workflow §8-9)</h3>
+<ul>
+<li><strong>isolated</strong> — one case per simulation, fresh DUT start, per-case</li>
+</ul>
+<p>  UCDB. Default mode for sign-off evidence.</p>
+<ul>
+<li><strong>bucket_frame</strong> — all 128 cases in one bucket run in case-id order</li>
+</ul>
+<p>  in one continuous timeframe; random-promoted via <code>cov_profile_loader</code>.</p>
+<ul>
+<li><strong>all_buckets_frame</strong> — all 4 buckets in one continuous timeframe;</li>
+</ul>
+<p>  same random promotion.</p>
+<h3>Formal harness</h3>
+<p><code>tb/formal/emulator_mutrig_formal.sv</code> binds 5 SVA property modules</p>
+<p>(assume/cover/assert) into <code>frontend_run_ctl</code>, <code>frontend_trigger_engine</code>,</p>
+<p><code>prbs15_lfsr</code>, <code>be_mutrig_lane_type0_emit</code>, and</p>
+<p><code>be_mutrig_lane_emitter</code>. Properties cover one-hot run-control,</p>
+<p>RR overflow monotonicity, PRBS-15 never-zero, type0 SOP/EOP/endofrun</p>
+<p>structure, and per-lane counter monotonicity. Bind container compiles</p>
+<p>clean under <code>qverify -modes lint,cdc,rdc,formal</code>.</p>
+<h2>Interfaces and contracts</h2>
+<ul>
+<li>DV bucket files follow the canonical</li>
+</ul>
+<p>  <code>~/.codex/skills/dv-workflow/scripts/dv_bucket_format_check.py</code></p>
+<p>  format (7-column table, <code>## 1. Summary</code> first).</p>
+<ul>
+<li>DV report (<code>tb/DV_REPORT.md</code>) follows the packet_scheduler dashboard</li>
+</ul>
+<p>  template with ✅/⚠️/❌/❓/ℹ️ legend.</p>
+<ul>
+<li>Bug ledger (<code>tb/BUG_HISTORY.md</code>) follows the canonical packet_scheduler</li>
+</ul>
+<p>  template with <code>encounterability</code> index column.</p>
+<h2>Where to look in the code</h2>
+<ul>
+<li>Standalone DV plan: <code>tb/DV_PLAN.md</code></li>
+<li>Coverage tracking: <code>tb/DV_COV.md</code></li>
+<li>Coverage profile JSON: <code>tb/cov_profiles.json</code></li>
+<li>SystemVerilog loader: <code>tb/uvm/cov_profile_loader.svh</code></li>
+<li>Formal harness: <code>tb/formal/emulator_mutrig_formal.sv</code></li>
+<li>Integration plan: <code>tb_int/DV_PLAN.md</code></li>
+</ul>
+<h2>Open questions / gotchas</h2>
+<ul>
+<li>The UVM testbench itself is not yet implemented (case skeletons exist</li>
+</ul>
+<p>  in DV_BASIC etc.; UVM wiring is the next codex2 deliverable).</p>
+<ul>
+<li>Coverage profile loader is hard-coded (no DPI) per the Questa FSE</li>
+</ul>
+<p>  Starter Edition constraint documented in <code>/home/yifeng/CLAUDE.md</code>.</p>
+<p>  Regenerate via <code>python3 tb/script/build_cov_profiles.py</code> if the case</p>
+<p>  set or random profiles change.</p>
+<ul>
+<li>Formal SVA properties compile clean but won&#x27;t be reported as</li>
+</ul>
+<p>  &quot;Proven&quot; by <code>qverify</code> until the bind container module is invoked</p>
+<p>  from a UVM TB top — <code>vlog</code> without <code>-mfcu</code> does not auto-elaborate</p>
+<p>  CU-scope binds. Documented in the harness header.</p>
+    </main>
+    <footer class="page-foot">
+        Generated by <code>doc/wiki/scripts/build_wiki.py</code>.
+        Source: <code>doc/wiki/src/50_dv.md</code>.
+    </footer>
+</div>
+</body>
+</html>

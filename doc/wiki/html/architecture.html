@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture — emulator_mutrig wiki</title>
+<link rel="stylesheet" href="../css/wiki.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="nav">
+        <h1>Wiki</h1>
+        <span class="ip-name">emulator_mutrig</span>
+        <span class="ip-version">v26.2.x</span>
+        <ul>
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="architecture.html" class="current">Architecture</a></li>
+            <li><a href="csr_map.html">Register Layout</a></li>
+            <li><a href="interfaces.html">Interfaces</a></li>
+            <li><a href="build_axes.html">Build Axes</a></li>
+            <li><a href="dv.html">Verification</a></li>
+            <li><a href="synthesis.html">Synthesis</a></li>
+            <li><a href="open_issues.html">Open Issues</a></li>
+        </ul>
+    </aside>
+    <main class="content">
+<h1>Architecture</h1>
+<h2>TL;DR</h2>
+<p>The IP has two layers separated by a single per-lane ticket bus. The</p>
+<p>front-end decides <em>which lanes get a ticket and what&#x27;s on it</em>; the</p>
+<p>back-end decides <em>what hit-word format the ticket becomes</em>. Front-end is</p>
+<p>one block independent of <code>LANE_COUNT</code>; back-end scales linearly per lane.</p>
+<h2>Why this exists</h2>
+<p>The legacy emulator put per-lane launch decisions in 8 copies of one</p>
+<p>module, all relying on identical PRNG seeds to &quot;agree&quot; on cluster</p>
+<p>membership. That coupling was fragile and made it impossible to swap the</p>
+<p>hit-word format (e.g. for MuPix) without rewriting the whole thing. The</p>
+<p>FE/BE split in 26.2.x cleanly separates &quot;decide&quot; from &quot;format&quot;.</p>
+<h2>How it works</h2>
+<h3>The ticket bus contract</h3>
+<p>Each ticket carries <code>{ch_low, ch_high, ts_a, ts_b}</code> where <code>ts_a</code> and</p>
+<p><code>ts_b</code> are <code>TS_WIDTH</code>-bit timestamp anchors (15 bits for MuTRiG, mapped</p>
+<p>to TCC and ECC respectively):</p>
+<pre><code>typedef struct packed {
+    logic [4:0]                ch_low;
+    logic [4:0]                ch_high;
+    logic [TS_WIDTH-1:0]       ts_a;
+    logic [TS_WIDTH-1:0]       ts_b;
+} frontend_ticket_t;</code></pre>
+<p>A ticket targets exactly one lane via the <code>fe_ticket_valid[lane]</code> /</p>
+<p><code>fe_ticket_ready[lane]</code> handshake. There is <strong>no inter-lane talking</strong> on</p>
+<p>the dispatch side.</p>
+<h3>Front-end blocks</h3>
+<table>
+<thead><tr>
+<th>Block</th>
+<th>What it does</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>frontend_csr</code></td>
+<td>AVMM slave; golden 7-word identity header + split mode CSRs</td>
+</tr>
+<tr>
+<td><code>frontend_run_ctl</code></td>
+<td>Decodes the 9-bit one-hot run-control; resyncs <code>coe_inject_pulse</code>; OR-merges with <code>FIRE.fire_inject_pulse</code> W1P</td>
+</tr>
+<tr>
+<td><code>frontend_trigger_engine</code></td>
+<td>SIGNAL launcher (Poisson / Periodic / FIX / RANDOM with mirror modes); round-robin per-lane dispatch</td>
+</tr>
+<tr>
+<td><code>frontend_bkg_generator</code></td>
+<td>BACKGROUND IID per-channel scan, folded by 256, single Bernoulli per cycle</td>
+</tr>
+<tr>
+<td><code>frontend_ticket_distributor</code></td>
+<td>Per-lane fanout of the offer ports to the lane FIFOs (signal wins on same-cycle contention)</td>
+</tr>
+</tbody></table>
+<h3>Back-end blocks (MuTRiG, replicated <code>LANE_COUNT</code> times)</h3>
+<table>
+<thead><tr>
+<th>Block</th>
+<th>What it does</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>be_mutrig_lane_emitter</code></td>
+<td>8-deep ticket FIFO (MLAB) → walk <code>ch_low..ch_high</code> → pack 48-bit MuTRiG long word → push to L2; per-lane 64-bit <code>frame_count</code>/<code>hit_count</code> saturating</td>
+</tr>
+<tr>
+<td><code>be_mutrig_l2_fifo</code></td>
+<td>256×48 M10K wrapper with almost-full</td>
+</tr>
+<tr>
+<td><code>be_mutrig_lane_type0_emit</code></td>
+<td>Repacks the 48-bit L2 word into the 45-bit <code>hit_type0</code> AvST contract; functional <code>ERROR_INJECT</code> OR&#x27;d into error[2:0] when <code>lane_error_target_mask</code> bit set; per-lane <code>endofrun</code> on TERMINATING→IDLE</td>
+</tr>
+<tr>
+<td><code>be_mutrig_frame_assembler</code></td>
+<td>8b/1k MuTRiG framing for the optional byte-stream output; only synthesised when <code>BYTE_STREAM_ENABLE=1</code></td>
+</tr>
+</tbody></table>
+<h3>Cluster geometry</h3>
+<ul>
+<li><code>CLUSTER_GEOM_FIX</code>: explicit <code>hit_channel_low/high</code> in global 0..255;</li>
+</ul>
+<p>  cross-SMB allowed.</p>
+<ul>
+<li><code>CLUSTER_GEOM_RANDOM</code>: random center inside one SMB (128 channels per</li>
+</ul>
+<p>  side); <code>mirror_mode</code> selects <code>LEFT_ONLY</code> / <code>RIGHT_ONLY</code> / <code>MIRRORED</code>;</p>
+<p>  in <code>MIRRORED</code>, <code>mirror_offset</code> (signed <code>−128..+127</code>) shifts the mirror</p>
+<p>  cluster center to model SciFi mechanical mis-alignment.</p>
+<h3>Round-robin lane push order</h3>
+<p>The trigger engine maintains a small rotating pointer across the</p>
+<p><code>LANE_COUNT</code> lanes. Every launch dispatches in RR order starting from</p>
+<p>that pointer; primary and mirror sub-clusters share one RR pointer so</p>
+<p>neither side gets fixed-priority access.</p>
+<h2>Interfaces and contracts</h2>
+<ul>
+<li>FE/BE: per-lane <code>frontend_ticket_t</code> (read-only by BE; FE never inspects</li>
+</ul>
+<p>  back-end FIFO state)</p>
+<ul>
+<li>Run-control to FE: <code>frontend_run_ctl</code> outputs <code>run_generating</code>,</li>
+</ul>
+<p>  <code>run_draining</code>, <code>emu_rst</code>, <code>frame_rst</code>, <code>inject_pulse</code>, <code>ctrl_state_q</code></p>
+<ul>
+<li>CSR to FE blocks: one canonical config bus</li>
+</ul>
+<p>  (<code>cfg_*</code> plus W1P fire bit) emitted by <code>frontend_csr</code></p>
+<ul>
+<li>BE to outputs: per-lane <code>aso_hit_type0_*</code> (always) and per-lane</li>
+</ul>
+<p>  <code>aso_tx8b1k_*</code> (only when <code>BYTE_STREAM_ENABLE=1</code>)</p>
+<h2>Where to look in the code</h2>
+<ul>
+<li>Ticket struct: <code>rtl/common/frontend_ticket_bus_pkg.sv</code></li>
+<li>Engine RR + cluster decode:</li>
+</ul>
+<p>  <code>rtl/frontend/frontend_trigger_engine.sv:107-298</code></p>
+<ul>
+<li>BE word pack: <code>rtl/backend_mutrig/be_mutrig_lane_emitter.sv:84-105</code></li>
+<li>Type0 SOP/EOP/endofrun: <code>rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv:60-100</code></li>
+<li>Architecture spec: <code>doc/RTL_PLAN_central_trigger.md</code> §2</li>
+</ul>
+<h2>Open questions / gotchas</h2>
+<ul>
+<li>The trigger engine does the cluster footprint compute and the RR shred</li>
+</ul>
+<p>  in one cycle. That&#x27;s the path that fails timing at 125 MHz today; a</p>
+<p>  follow-up patch will pipeline the footprint compute.</p>
+<ul>
+<li>The ticket struct&#x27;s <code>ts_a</code>/<code>ts_b</code> are interpreted by the back-end. The</li>
+</ul>
+<p>  MuTRiG back-end maps them to TCC/ECC; a future MuPix back-end may map</p>
+<p>  differently, including ignoring <code>ts_b</code> if MuPix doesn&#x27;t need an energy</p>
+<p>  timestamp.</p>
+    </main>
+    <footer class="page-foot">
+        Generated by <code>doc/wiki/scripts/build_wiki.py</code>.
+        Source: <code>doc/wiki/src/10_architecture.md</code>.
+    </footer>
+</div>
+</body>
+</html>

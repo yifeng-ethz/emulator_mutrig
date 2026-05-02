@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build Axes — emulator_mutrig wiki</title>
+<link rel="stylesheet" href="../css/wiki.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="nav">
+        <h1>Wiki</h1>
+        <span class="ip-name">emulator_mutrig</span>
+        <span class="ip-version">v26.2.x</span>
+        <ul>
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="csr_map.html">Register Layout</a></li>
+            <li><a href="interfaces.html">Interfaces</a></li>
+            <li><a href="build_axes.html" class="current">Build Axes</a></li>
+            <li><a href="dv.html">Verification</a></li>
+            <li><a href="synthesis.html">Synthesis</a></li>
+            <li><a href="open_issues.html">Open Issues</a></li>
+        </ul>
+    </aside>
+    <main class="content">
+<h1>Build Axes</h1>
+<h2>TL;DR</h2>
+<p>The IP has exactly two elaboration-time feature axes: <code>LANE_COUNT</code></p>
+<p>(default 8) and <code>BYTE_STREAM_ENABLE</code> (default 0). Synthesis and DV</p>
+<p>closure must report results at every legal point on both axes; the</p>
+<p><code>(8, 0)</code> point is the gated production build.</p>
+<h2>Why this exists</h2>
+<p>Locking the feature axes makes synthesis closure honest: every &quot;we</p>
+<p>support 4 lanes&quot; claim is a real fitter run, not extrapolation. It also</p>
+<p>keeps the run-time CSR free of build-time-only choices, so a host</p>
+<p>driver does not need to know which build it&#x27;s talking to in order to</p>
+<p>configure the runtime mode.</p>
+<h2>How it works</h2>
+<h3>Axis 1 — Lane count</h3>
+<pre><code>parameter int LANE_COUNT = 8   // legal values: 1, 2, 4, 8</code></pre>
+<ul>
+<li>Replicates <code>be_mutrig_lane_emitter</code>, <code>be_mutrig_l2_fifo</code>,</li>
+</ul>
+<p>  <code>be_mutrig_lane_type0_emit</code>, and <code>be_mutrig_frame_assembler</code> once per</p>
+<p>  lane via a <code>genvar</code> loop.</p>
+<ul>
+<li>Front-end blocks (<code>frontend_csr</code>, <code>frontend_run_ctl</code>,</li>
+</ul>
+<p>  <code>frontend_trigger_engine</code>, <code>frontend_bkg_generator</code>,</p>
+<p>  <code>frontend_ticket_distributor</code>) are instantiated exactly once</p>
+<p>  regardless of <code>LANE_COUNT</code>.</p>
+<ul>
+<li><code>frontend_trigger_engine</code> round-robin pointer is sized to</li>
+</ul>
+<p>  <code>clog2(LANE_COUNT)</code>.</p>
+<ul>
+<li>Per-lane resource scaling is roughly <code>+395 ALM</code> and <code>+2 M10K</code> per</li>
+</ul>
+<p>  lane; the front-end overhead is approximately <code>800 ALM</code> flat.</p>
+<h3>Axis 2 — Byte-stream output</h3>
+<pre><code>parameter bit BYTE_STREAM_ENABLE = 0   // legal values: 0, 1</code></pre>
+<ul>
+<li><code>0</code> (default) — <code>be_mutrig_frame_assembler</code> is <code>generate</code>-removed</li>
+</ul>
+<p>  from the netlist; per-lane <code>aso_tx8b1k_*</code> sources drive K28.5 idle.</p>
+<p>  Saves ~<code>1200 ALM</code> across 8 lanes vs the <code>1</code> build.</p>
+<ul>
+<li><code>1</code> — frame assembler is synthesised; <code>aso_tx8b1k_*</code> sources drive</li>
+</ul>
+<p>  the 8b/1k MuTRiG-format byte stream and can be wired to</p>
+<p>  <code>mutrig_frame_deassembly</code> for back-compat parity tests.</p>
+<p>The choice is build-time, not runtime. Software cannot toggle it via</p>
+<p>CSR (the CSR has no <code>enable_byte_stream</code> bit). This is intentional —</p>
+<p>the byte-stream cost should not be paid by users who do not need it.</p>
+<h3>Gated and reported points</h3>
+<table>
+<thead><tr>
+<th>Axis point</th>
+<th>Status</th>
+<th>Gated for signoff?</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>LANE_COUNT=8, BYTE_STREAM_ENABLE=0</code></td>
+<td>primary (production)</td>
+<td>&lt;span class=&quot;tag good&quot;&gt;YES&lt;/span&gt;</td>
+</tr>
+<tr>
+<td><code>LANE_COUNT=8, BYTE_STREAM_ENABLE=1</code></td>
+<td>compatibility</td>
+<td>&lt;span class=&quot;tag good&quot;&gt;YES&lt;/span&gt; (parity tests only)</td>
+</tr>
+<tr>
+<td><code>LANE_COUNT=4, BYTE_STREAM_ENABLE in {0,1}</code></td>
+<td>informational</td>
+<td>&lt;span class=&quot;tag info&quot;&gt;REPORTED&lt;/span&gt;</td>
+</tr>
+<tr>
+<td><code>LANE_COUNT=2, BYTE_STREAM_ENABLE in {0,1}</code></td>
+<td>informational</td>
+<td>&lt;span class=&quot;tag info&quot;&gt;REPORTED&lt;/span&gt;</td>
+</tr>
+<tr>
+<td><code>LANE_COUNT=1, BYTE_STREAM_ENABLE in {0,1}</code></td>
+<td>informational</td>
+<td>&lt;span class=&quot;tag info&quot;&gt;REPORTED&lt;/span&gt;</td>
+</tr>
+</tbody></table>
+<h3>DV implications</h3>
+<p>Cases that explicitly need <code>BYTE_STREAM_ENABLE=1</code> are flagged in the</p>
+<p><code>Stimulus</code> cell of the per-bucket case tables (search &quot;byte-stream&quot;).</p>
+<p>All other cases pass on either build. The deassembly-parity bucket</p>
+<p>(<code>P081..P096</code> in <code>tb/DV_PROF.md</code>) is the primary user of the</p>
+<p>compatibility build.</p>
+<h2>Interfaces and contracts</h2>
+<ul>
+<li>The IP top-level port list is <strong>identical</strong> across all build axis</li>
+</ul>
+<p>  points. <code>aso_tx8b1k_*</code> ports always exist; they just drive idle K28.5</p>
+<p>  when <code>BYTE_STREAM_ENABLE=0</code>.</p>
+<ul>
+<li><code>LANE_COUNT &lt; 8</code> reduces the port-array width on <code>aso_hit_type0_*</code></li>
+</ul>
+<p>  and <code>aso_tx8b1k_*</code> accordingly.</p>
+<h2>Where to look in the code</h2>
+<ul>
+<li>Top parameters: <code>rtl/emulator_mutrig.sv:9-22</code></li>
+<li>Generate gate for <code>frame_assembler</code>: <code>rtl/emulator_mutrig.sv</code> (search</li>
+</ul>
+<p>  <code>BYTE_STREAM_ENABLE</code>)</p>
+<ul>
+<li>Build axes spec: <code>doc/RTL_PLAN_central_trigger.md</code> §1.1</li>
+<li>Standalone Quartus QSF: <code>syn/quartus/emulator_mutrig_syn.qsf</code></li>
+</ul>
+<h2>Open questions / gotchas</h2>
+<ul>
+<li><code>LANE_COUNT</code> values other than {1, 2, 4, 8} are not part of the</li>
+</ul>
+<p>  legal value set. Extra values will likely elaborate but are not on</p>
+<p>  the closure matrix.</p>
+<ul>
+<li>The 26.2.x measured numbers (<code>SYN_REPORT.md</code>) currently cover only</li>
+</ul>
+<p>  the <code>(8, 0)</code> point. The other gated point (<code>(8, 1)</code>) and the</p>
+<p>  informational points are pending.</p>
+    </main>
+    <footer class="page-foot">
+        Generated by <code>doc/wiki/scripts/build_wiki.py</code>.
+        Source: <code>doc/wiki/src/40_build_axes.md</code>.
+    </footer>
+</div>
+</body>
+</html>

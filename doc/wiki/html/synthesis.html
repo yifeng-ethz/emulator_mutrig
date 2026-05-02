@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthesis — emulator_mutrig wiki</title>
+<link rel="stylesheet" href="../css/wiki.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="nav">
+        <h1>Wiki</h1>
+        <span class="ip-name">emulator_mutrig</span>
+        <span class="ip-version">v26.2.x</span>
+        <ul>
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="csr_map.html">Register Layout</a></li>
+            <li><a href="interfaces.html">Interfaces</a></li>
+            <li><a href="build_axes.html">Build Axes</a></li>
+            <li><a href="dv.html">Verification</a></li>
+            <li><a href="synthesis.html" class="current">Synthesis</a></li>
+            <li><a href="open_issues.html">Open Issues</a></li>
+        </ul>
+    </aside>
+    <main class="content">
+<h1>Synthesis</h1>
+<h2>TL;DR</h2>
+<p>The 26.2.x standalone Quartus syn at <code>LANE_COUNT=8, BYTE_STREAM_ENABLE=0</code></p>
+<p>elaborates clean (0 errors, 146 warnings) on the Arria V Quartus 18.1</p>
+<p>target but currently <strong>fails timing</strong> by <code>-2.573 ns</code> at 125 MHz and is</p>
+<p><strong>14% over the 4000 ALM</strong> target. The static gate (lint+CDC+RDC) passes</p>
+<p>across the whole tree.</p>
+<h2>Why this exists</h2>
+<p>Standalone synthesis closure is the gate that turns &quot;the IP simulates&quot;</p>
+<p>into &quot;the IP can ship&quot;. The numbers below are the first 26.2.x fitter</p>
+<p>result and document where the bottlenecks actually are, so the next</p>
+<p>patch&#x27;s pipelining work is targeted.</p>
+<h2>How it works</h2>
+<h3>Standalone signoff harness</h3>
+<ul>
+<li>Project: <code>syn/quartus/emulator_mutrig_syn.qpf</code></li>
+<li>Top wrapper: <code>syn/quartus/emulator_mutrig_syn_top.sv</code></li>
+<li>QSF: <code>syn/quartus/emulator_mutrig_syn.qsf</code> (Arria V <code>5AGXBA7D4F31C5</code>,</li>
+</ul>
+<p>  Quartus 18.1 SJ Standard Edition)</p>
+<ul>
+<li>SDC: <code>syn/quartus/emulator_mutrig_syn.sdc</code> (<code>clk125</code> at 8 ns period;</li>
+</ul>
+<p>  setup/hold checked at Slow 1100mV 85C and Slow 1100mV 0C)</p>
+<ul>
+<li>Filelist: <code>rtl/emulator_mutrig_central_trigger.f</code></li>
+</ul>
+<p>Invocation:</p>
+<pre><code>cd syn/quartus
+quartus_sh --flow compile emulator_mutrig_syn -c emulator_mutrig_syn</code></pre>
+<h3>Static gate (lint, CDC, RDC, formal)</h3>
+<pre><code>python3 ~/.codex/skills/rtl-linter-and-checker/scripts/questa_static_screen.py \
+    --top emulator_mutrig \
+    --filelist rtl/emulator_mutrig_central_trigger.f \
+    --modes lint,cdc,rdc,formal \
+    --extra-do tb/formal/emulator_mutrig_formal.do \
+    $(awk &#x27;/\.sv$/ {print &quot;rtl/&quot; $0}&#x27; rtl/emulator_mutrig_central_trigger.f) \
+    tb/formal/emulator_mutrig_formal.sv</code></pre>
+<h3>Measured numbers (primary build)</h3>
+<table>
+<thead><tr>
+<th>Field</th>
+<th>Value</th>
+<th>Target</th>
+<th>Status</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>ALMs</td>
+<td><code>4,557 / 91,680 (5%)</code></td>
+<td><code>&lt; 4000</code></td>
+<td>&lt;span class=&quot;tag warn&quot;&gt;over target&lt;/span&gt;</td>
+</tr>
+<tr>
+<td>Registers</td>
+<td><code>6,597</code></td>
+<td>informational</td>
+<td>&lt;span class=&quot;tag info&quot;&gt;info&lt;/span&gt;</td>
+</tr>
+<tr>
+<td>Block memory bits</td>
+<td><code>83,968</code></td>
+<td>informational</td>
+<td>&lt;span class=&quot;tag info&quot;&gt;info&lt;/span&gt;</td>
+</tr>
+<tr>
+<td>RAM blocks (M10K)</td>
+<td><code>16</code></td>
+<td><code>16</code></td>
+<td>&lt;span class=&quot;tag good&quot;&gt;on target&lt;/span&gt;</td>
+</tr>
+<tr>
+<td>DSP blocks</td>
+<td><code>0</code></td>
+<td><code>0</code></td>
+<td>&lt;span class=&quot;tag good&quot;&gt;on target&lt;/span&gt;</td>
+</tr>
+<tr>
+<td>Compile errors</td>
+<td><code>0</code></td>
+<td><code>0</code></td>
+<td>&lt;span class=&quot;tag good&quot;&gt;pass&lt;/span&gt;</td>
+</tr>
+<tr>
+<td>Setup slack (Slow 85C)</td>
+<td><code>-2.573 ns</code></td>
+<td><code>&gt;= 0</code></td>
+<td>&lt;span class=&quot;tag bad&quot;&gt;fails&lt;/span&gt;</td>
+</tr>
+<tr>
+<td>Effective Fmax</td>
+<td><code>~94.5 MHz</code></td>
+<td><code>&gt;= 125 MHz</code></td>
+<td>&lt;span class=&quot;tag bad&quot;&gt;fails&lt;/span&gt;</td>
+</tr>
+</tbody></table>
+<h3>Known critical region</h3>
+<p>The worst path lives in <code>frontend_trigger_engine.sv</code>. The single-cycle</p>
+<p><code>always_ff</code> block does:</p>
+<ol>
+<li><code>clamp_start_128</code> for the primary cluster start</li>
+<li><code>clamp_start_128</code> for the mirror cluster start (if <code>MIRRORED</code>)</li>
+<li>RR pointer advance</li>
+<li>Per-lane channel-range shred (8-iteration loop computing</li>
+</ol>
+<p>   <code>pending_ch_low/high</code> per lane)</p>
+<ol>
+<li>PRNG step</li>
+</ol>
+<p>All in one cycle. Pipelining the cluster footprint compute over 2 cycles</p>
+<p>before pushing into <code>pending_mask</code> should close the timing without</p>
+<p>changing functional behaviour.</p>
+<h2>Interfaces and contracts</h2>
+<ul>
+<li>The standalone wrapper at <code>syn/quartus/emulator_mutrig_syn_top.sv</code></li>
+</ul>
+<p>  exposes the IP&#x27;s external ports as virtual pins so the fitter can</p>
+<p>  measure cone delays without pin packing dominating the result.</p>
+<ul>
+<li>Both build axis points share the same QSF; only the top-wrapper&#x27;s</li>
+</ul>
+<p>  <code>BYTE_STREAM_ENABLE</code> parameter differs.</p>
+<h2>Where to look in the code</h2>
+<ul>
+<li>Standalone QSF: <code>syn/quartus/emulator_mutrig_syn.qsf</code></li>
+<li>Standalone wrapper: <code>syn/quartus/emulator_mutrig_syn_top.sv</code></li>
+<li>Fitter summary: <code>syn/quartus/output_files/emulator_mutrig_syn.fit.summary</code></li>
+<li>Timing summary: <code>syn/quartus/output_files/emulator_mutrig_syn.sta.summary</code></li>
+<li>Sign-off dashboard: <code>syn/SYN_REPORT.md</code></li>
+</ul>
+<h2>Open questions / gotchas</h2>
+<ul>
+<li>Quartus 18.1 Standard&#x27;s parser rejects <code>import pkg::*;</code> in the</li>
+</ul>
+<p>  module port-list position (error 10170). The fix in this build moves</p>
+<p>  imports into the module body and fully qualifies the</p>
+<p>  <code>frontend_ticket_t</code> port type. Future modules must follow the same</p>
+<p>  pattern.</p>
+<ul>
+<li>The compatibility build (<code>BYTE_STREAM_ENABLE=1</code>) and the reduced</li>
+</ul>
+<p>  lane-count points (<code>LANE_COUNT in {1, 2, 4}</code>) are not yet recompiled</p>
+<p>  for the 26.2.x checkpoint.</p>
+    </main>
+    <footer class="page-foot">
+        Generated by <code>doc/wiki/scripts/build_wiki.py</code>.
+        Source: <code>doc/wiki/src/60_synthesis.md</code>.
+    </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interfaces — emulator_mutrig wiki</title>
+<link rel="stylesheet" href="../css/wiki.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="nav">
+        <h1>Wiki</h1>
+        <span class="ip-name">emulator_mutrig</span>
+        <span class="ip-version">v26.2.x</span>
+        <ul>
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="csr_map.html">Register Layout</a></li>
+            <li><a href="interfaces.html" class="current">Interfaces</a></li>
+            <li><a href="build_axes.html">Build Axes</a></li>
+            <li><a href="dv.html">Verification</a></li>
+            <li><a href="synthesis.html">Synthesis</a></li>
+            <li><a href="open_issues.html">Open Issues</a></li>
+        </ul>
+    </aside>
+    <main class="content">
+<h1>Interfaces</h1>
+<h2>TL;DR</h2>
+<p>Five external interface surfaces: AVMM CSR slave, run-control AvST sink,</p>
+<p>inject conduit, per-lane <code>hit_type0</code> AvST sources, and per-lane optional</p>
+<p>8b/1k AvST sources. The CSR and run-control surfaces follow Mu3e</p>
+<p>conventions; the per-lane outputs match <code>mutrig_frame_deassembly</code>&#x27;s</p>
+<p><code>aso_hit_type0_*</code> contract beat-for-beat.</p>
+<h2>Why this exists</h2>
+<p>Downstream Mu3e IPs (<code>mutrig_timestamp_processor</code>, <code>packet_scheduler</code>,</p>
+<p><code>ring_buffer_cam</code>) expect the same wire formats whether the source is a</p>
+<p>real MuTRiG via the deassembly IP or this emulator. Documenting the</p>
+<p>interfaces here lets a downstream owner drop the emulator into their</p>
+<p>testbench without reading the RTL.</p>
+<h2>How it works</h2>
+<h3>AVMM CSR slave (<code>avs_csr_*</code>)</h3>
+<pre><code>input  logic [5:0]  avs_csr_address
+input  logic        avs_csr_read
+input  logic        avs_csr_write
+input  logic [31:0] avs_csr_writedata
+output logic [31:0] avs_csr_readdata
+output logic        avs_csr_waitrequest    // ties to 0</code></pre>
+<p>See <a href="csr_map.html">CSR Map</a> for the field layout. 1-cycle read latency,</p>
+<p>no wait states.</p>
+<h3>Run-control AvST sink (<code>asi_ctrl_*</code>)</h3>
+<pre><code>input  logic [8:0] asi_ctrl_data    // 9-bit one-hot run-control word
+input  logic       asi_ctrl_valid
+output logic       asi_ctrl_ready   // ties to 1</code></pre>
+<p>One-hot encoding: <code>bit[0]=IDLE</code>, <code>bit[1]=RUN_PREPARE</code>, <code>bit[2]=SYNC</code>,</p>
+<p><code>bit[3]=RUNNING</code>, <code>bit[4]=TERMINATING</code>, <code>bit[5]=LINK_TEST</code>,</p>
+<p><code>bit[6]=SYNC_TEST</code>, <code>bit[7]=RESET</code>, <code>bit[8]=OUT_OF_DAQ</code>.</p>
+<p><code>run_generating</code> (gates new launches) = <code>bit[3]</code>. <code>run_draining</code> (keeps</p>
+<p>queued L2 hits flowing) = <code>bit[3] | bit[4]</code>. <code>emu_rst</code> (clears LFSRs +</p>
+<p>FIFOs + counters) = <code>i_rst | (valid &amp;&amp; (bit[2] | bit[7]))</code>.</p>
+<h3>Inject conduit (<code>coe_inject_pulse</code>)</h3>
+<pre><code>input  logic coe_inject_pulse</code></pre>
+<p>Single rising-edge-triggered pulse. 2-FF resynced into the IP clock;</p>
+<p>edge-detected once; OR-merged with the W1P <code>FIRE.fire_inject_pulse</code></p>
+<p>CSR bit. Either source produces one cluster launch (geometry per</p>
+<p><code>cluster_geom_mode</code>), regardless of <code>hit_mode_sig</code>, gated only by</p>
+<p><code>global_enable</code>.</p>
+<h3>Per-lane hit_type0 AvST source (<code>aso_hit_type0_*[lane]</code>)</h3>
+<pre><code>output logic [3:0]  aso_hit_type0_channel
+output logic        aso_hit_type0_startofpacket
+output logic        aso_hit_type0_endofpacket
+output logic        aso_hit_type0_endofrun
+output logic [2:0]  aso_hit_type0_error
+output logic [44:0] aso_hit_type0_data
+output logic        aso_hit_type0_valid</code></pre>
+<p>Word layout matches <code>mutrig_frame_deassembly</code>&#x27;s <code>frame_rcv_ip.vhd:578-587</code>:</p>
+<table>
+<thead><tr>
+<th>Bits</th>
+<th>Field</th>
+<th>Source</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>[44:41]</code></td>
+<td><code>asic</code></td>
+<td><code>asic_id_base + lane_index</code> (clamped to 4 bits)</td>
+</tr>
+<tr>
+<td><code>[40:36]</code></td>
+<td><code>channel</code></td>
+<td>local channel (0..31)</td>
+</tr>
+<tr>
+<td><code>[35:21]</code></td>
+<td><code>T_CC</code></td>
+<td>TCC anchor from PRBS-15 LFSR at commit cycle</td>
+</tr>
+<tr>
+<td><code>[20:16]</code></td>
+<td><code>T_Fine</code></td>
+<td>per-lane fine PRNG sample</td>
+</tr>
+<tr>
+<td><code>[15:1]</code></td>
+<td><code>E_CC</code></td>
+<td>ECC anchor from independent PRBS-15 LFSR</td>
+</tr>
+<tr>
+<td><code>[0]</code></td>
+<td><code>E_Flag</code></td>
+<td>tied to 1 (raw-RTL contract)</td>
+</tr>
+</tbody></table>
+<p><code>E_Fine</code> is <strong>dropped</strong> on this stream per the deassembly contract.</p>
+<p><code>error[2:0]</code> is 0 by default; <code>ERROR_INJECT</code> (<code>0x15</code>) ORs configured</p>
+<p>bits when the targeted lane bit is set. SOP/EOP frame the per-frame hit</p>
+<p>group; <code>endofrun</code> pulses once per lane after the L2 drains on</p>
+<p>TERMINATING→IDLE.</p>
+<h3>Per-lane 8b/1k AvST source (<code>aso_tx8b1k_*[lane]</code>, optional)</h3>
+<pre><code>output logic [8:0] aso_tx8b1k_data    // {is_k, byte}
+output logic       aso_tx8b1k_valid
+output logic [3:0] aso_tx8b1k_channel
+output logic [2:0] aso_tx8b1k_error</code></pre>
+<p>Only synthesised when <code>BYTE_STREAM_ENABLE=1</code>. Otherwise drives K28.5</p>
+<p>idle continuously. Compatible with <code>mutrig_frame_deassembly</code>&#x27;s <code>rx8b1k</code></p>
+<p>sink for back-compat A/B testing.</p>
+<h2>Interfaces and contracts</h2>
+<ul>
+<li>All AvST interfaces follow standard Avalon-ST semantics: <code>valid</code></li>
+</ul>
+<p>  asserts when data is presented; the sink may hold <code>ready</code> low (if</p>
+<p>  applicable) to back-pressure.</p>
+<ul>
+<li><code>hit_type0</code> and <code>tx8b1k</code> per-lane sources are <strong>independent</strong> — both</li>
+</ul>
+<p>  can be active simultaneously, both can back-pressure independently.</p>
+<ul>
+<li>The CSR slave is fully decoupled from run-control: reads and writes</li>
+</ul>
+<p>  work in any state including during <code>i_rst</code>.</p>
+<h2>Where to look in the code</h2>
+<ul>
+<li>AVMM CSR: <code>rtl/frontend/frontend_csr.sv</code></li>
+<li>Run-control decode + inject sync: <code>rtl/frontend/frontend_run_ctl.sv</code></li>
+<li>hit_type0 emit: <code>rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv</code></li>
+<li>8b/1k frame assembly: <code>rtl/backend_mutrig/be_mutrig_frame_assembler.sv</code></li>
+<li>Top-level wiring: <code>rtl/emulator_mutrig.sv</code></li>
+</ul>
+<h2>Open questions / gotchas</h2>
+<ul>
+<li>The hit_type0 path drops <code>E_Fine</code> entirely (matches deassembly). If a</li>
+</ul>
+<p>  downstream consumer needs <code>E_Fine</code>, it must take the byte-stream</p>
+<p>  output and run <code>mutrig_frame_deassembly</code> itself.</p>
+<ul>
+<li><code>aso_tx8b1k_*</code> ports always exist on the module, even when</li>
+</ul>
+<p>  <code>BYTE_STREAM_ENABLE=0</code> — they just drive idle K28.5. This keeps the</p>
+<p>  port list build-axis-independent for Qsys integration.</p>
+    </main>
+    <footer class="page-foot">
+        Generated by <code>doc/wiki/scripts/build_wiki.py</code>.
+        Source: <code>doc/wiki/src/30_interfaces.md</code>.
+    </footer>
+</div>
+</body>
+</html>

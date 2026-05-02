@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Issues — emulator_mutrig wiki</title>
+<link rel="stylesheet" href="../css/wiki.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="nav">
+        <h1>Wiki</h1>
+        <span class="ip-name">emulator_mutrig</span>
+        <span class="ip-version">v26.2.x</span>
+        <ul>
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="csr_map.html">Register Layout</a></li>
+            <li><a href="interfaces.html">Interfaces</a></li>
+            <li><a href="build_axes.html">Build Axes</a></li>
+            <li><a href="dv.html">Verification</a></li>
+            <li><a href="synthesis.html">Synthesis</a></li>
+            <li><a href="open_issues.html" class="current">Open Issues</a></li>
+        </ul>
+    </aside>
+    <main class="content">
+<h1>Open Issues</h1>
+<h2>TL;DR</h2>
+<p>Three blocking-ish items: standalone Quartus timing fails by 2.573 ns at</p>
+<p>125 MHz, ALMs over budget by 14%, and the packaged <code>_hw.tcl</code> still</p>
+<p>describes the legacy single-lane shape. Five smaller follow-ups around</p>
+<p>DV closure, the formal harness invocation, the second build axis point,</p>
+<p>the <code>_hw.tcl</code> refresh, and the integration tb_int wiring.</p>
+<h2>Why this exists</h2>
+<p>Tracking known gaps in one place makes it easy to scope the next</p>
+<p>patch and lets a reviewer see at a glance what is and isn&#x27;t ready</p>
+<p>for sign-off.</p>
+<h2>How it works</h2>
+<h3>Blocking for sign-off</h3>
+<table>
+<thead><tr>
+<th>#</th>
+<th>Issue</th>
+<th>Severity</th>
+<th>Mitigation</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Timing fails by <code>-2.573 ns</code> at 125 MHz on the primary build</td>
+<td>&lt;span class=&quot;tag bad&quot;&gt;blocker&lt;/span&gt;</td>
+<td>Pipeline <code>frontend_trigger_engine</code> cluster decode over 2 cycles</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ALMs <code>4557</code> (target <code>&lt; 4000</code>)</td>
+<td>&lt;span class=&quot;tag warn&quot;&gt;over by 14%&lt;/span&gt;</td>
+<td>Shrink lane ticket FIFO 8→4 (<code>-320 ALM</code>); share per-lane 64-bit counters via MLAB (<code>-120 ALM</code>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>emulator_mutrig_hw.tcl</code> describes legacy single-lane shape</td>
+<td>&lt;span class=&quot;tag bad&quot;&gt;blocker for Qsys integration&lt;/span&gt;</td>
+<td>Rewrite via the <code>ip-packaging</code> skill (next codex2 deliverable)</td>
+</tr>
+</tbody></table>
+<h3>Follow-ups (non-blocking)</h3>
+<table>
+<thead><tr>
+<th>#</th>
+<th>Issue</th>
+<th>Severity</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>UVM testbench not yet wired (case skeletons exist)</td>
+<td>&lt;span class=&quot;tag warn&quot;&gt;required for DV evidence&lt;/span&gt;</td>
+<td>Codex2 dispatch queued; uses <code>tb/uvm/cov_profile_loader.svh</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>SVA bind harness compiles but won&#x27;t auto-fire under <code>qverify</code> static gate</td>
+<td>&lt;span class=&quot;tag info&quot;&gt;documented&lt;/span&gt;</td>
+<td>Bind container needs UVM TB top to instantiate; no fix needed for the static gate</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Compatibility build <code>(LANE_COUNT=8, BYTE_STREAM_ENABLE=1)</code> not compiled</td>
+<td>&lt;span class=&quot;tag info&quot;&gt;pending&lt;/span&gt;</td>
+<td>Add second Quartus revision and rerun</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Reduced lane-count points <code>LANE_COUNT in {1, 2, 4}</code> not compiled</td>
+<td>&lt;span class=&quot;tag info&quot;&gt;informational&lt;/span&gt;</td>
+<td>Defer until primary point closes</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>tb_int/</code> is a skeleton; no UVM wiring against <code>scifi_datapath_system_v3_pipe.qsys</code> yet</td>
+<td>&lt;span class=&quot;tag warn&quot;&gt;required for integration evidence&lt;/span&gt;</td>
+<td>Pre-requires <code>_hw.tcl</code> refresh (issue #3) and the hardware access (currently pending)</td>
+</tr>
+</tbody></table>
+<h3>Recently resolved (for context)</h3>
+<ul>
+<li><code>import pkg::*;</code> in module port-list position rejected by Quartus</li>
+</ul>
+<p>  18.1 Standard (error 10170) — fixed by moving imports into module</p>
+<p>  body and fully qualifying port types (commit <code>98aae1c</code>).</p>
+<ul>
+<li><code>tb/scripts/</code> → <code>tb/script/</code> rename per the</li>
+</ul>
+<p>  rtl-file-structure-organization linter (commit <code>f0fcc6d</code>).</p>
+<ul>
+<li>Root-level Markdown (<code>WORK_LOG.md</code>, <code>IP_PACKAGING_GAP_REVIEW.md</code>,</li>
+</ul>
+<p>  <code>SIGNOFF.md</code>) moved into <code>doc/</code>.</p>
+<h2>Interfaces and contracts</h2>
+<ul>
+<li>This page is the sign-off-readiness dashboard. Anything marked</li>
+</ul>
+<p>  <code>blocker</code> must clear before a release tag.</p>
+<ul>
+<li><code>warn</code> items can ship if explicitly waived in <code>tb/DV_REPORT.md</code> and</li>
+</ul>
+<p>  <code>syn/SYN_REPORT.md</code> non-claims sections.</p>
+<h2>Where to look in the code</h2>
+<ul>
+<li>Sign-off dashboard: <code>syn/SYN_REPORT.md</code>, <code>tb/DV_REPORT.md</code></li>
+<li>Bug ledger: <code>tb/BUG_HISTORY.md</code></li>
+<li>Plan: <code>doc/RTL_PLAN_central_trigger.md</code> §8 (open items)</li>
+</ul>
+<h2>Open questions / gotchas</h2>
+<ul>
+<li>The <code>_hw.tcl</code> refresh (issue #3) is the long pole for everything</li>
+</ul>
+<p>  downstream that wants to consume the new IP via Qsys. Without it,</p>
+<p>  integration systems must reference the RTL directly via QSF source</p>
+<p>  inclusion rather than as a packaged Qsys component.</p>
+<ul>
+<li>Per the user&#x27;s earlier note, the standalone DV is the gating scope</li>
+</ul>
+<p>  for the current checkpoint; integration <code>tb_int</code> evidence is</p>
+<p>  deferred until lab access opens up.</p>
+    </main>
+    <footer class="page-foot">
+        Generated by <code>doc/wiki/scripts/build_wiki.py</code>.
+        Source: <code>doc/wiki/src/70_open_issues.md</code>.
+    </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register Layout — emulator_mutrig wiki</title>
+<link rel="stylesheet" href="../css/wiki.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="nav">
+        <h1>Wiki</h1>
+        <span class="ip-name">emulator_mutrig</span>
+        <span class="ip-version">v26.2.x</span>
+        <ul>
+            <li><a href="overview.html">Overview</a></li>
+            <li><a href="architecture.html">Architecture</a></li>
+            <li><a href="csr_map.html" class="current">Register Layout</a></li>
+            <li><a href="interfaces.html">Interfaces</a></li>
+            <li><a href="build_axes.html">Build Axes</a></li>
+            <li><a href="dv.html">Verification</a></li>
+            <li><a href="synthesis.html">Synthesis</a></li>
+            <li><a href="open_issues.html">Open Issues</a></li>
+        </ul>
+    </aside>
+    <main class="content">
+<h1>Register Layout</h1>
+<h2>TL;DR</h2>
+<p>The IP exposes a 32-word software-facing window at a 6-bit AVMM address.</p>
+<p>Words <code>0x00..0x06</code> are the common Mu3e identity-and-debug header (UID,</p>
+<p>META mux, SCRATCH, LAST_RD/WR_*); words <code>0x07..0x15</code> are the IP-specific</p>
+<p>control / status / fire / counter-mux block; words <code>0x18..0x1F</code> carry</p>
+<p>the per-lane 64-bit <code>frame_count</code> and <code>hit_count</code> snapshots.</p>
+<h2>Why this exists</h2>
+<p>Every Mu3e IP shares the same first 7 words so a host driver can</p>
+<p>blind-scan and identify any IP at any address window without knowing the</p>
+<p>catalog ahead of time. The IP-specific words then encode the</p>
+<p>central-trigger refresh: split mode CSRs, cluster geometry knobs, fire</p>
+<p>bits, and the per-lane counter readbacks.</p>
+<h2>How it works</h2>
+<h3>Common header (words 0x00..0x06, all IPs)</h3>
+<table>
+<thead><tr>
+<th>Addr</th>
+<th>Name</th>
+<th>Access</th>
+<th>Purpose</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>0x00</code></td>
+<td><code>UID</code></td>
+<td>RO</td>
+<td>32-bit ASCII tag; default <code>0x454D5554</code> (<code>&quot;EMUT&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>0x01</code></td>
+<td><code>META</code></td>
+<td>RW/RO</td>
+<td>Page mux: write 0/1/2/3 → read VERSION/DATE/GIT/INSTANCE_ID</td>
+</tr>
+<tr>
+<td><code>0x02</code></td>
+<td><code>SCRATCH</code></td>
+<td>RW</td>
+<td>General-purpose scratch / bus liveness ping</td>
+</tr>
+<tr>
+<td><code>0x03</code></td>
+<td><code>LAST_RD_ADDR</code></td>
+<td>RO</td>
+<td>Address of the most recent CSR read (excluding LAST_RD_* itself)</td>
+</tr>
+<tr>
+<td><code>0x04</code></td>
+<td><code>LAST_RD_DATA</code></td>
+<td>RO</td>
+<td>Data returned by the most recent CSR read</td>
+</tr>
+<tr>
+<td><code>0x05</code></td>
+<td><code>LAST_WR_ADDR</code></td>
+<td>RO</td>
+<td>Address of the most recent CSR write</td>
+</tr>
+<tr>
+<td><code>0x06</code></td>
+<td><code>LAST_WR_DATA</code></td>
+<td>RO</td>
+<td>Data accepted by the most recent CSR write</td>
+</tr>
+</tbody></table>
+<h3>IP-specific block (split mode CSRs, words 0x07..0x0A)</h3>
+<p>The legacy single CTRL_MODE word is split into 4 per-purpose words:</p>
+<table>
+<thead><tr>
+<th>Addr</th>
+<th>Name</th>
+<th>Notable fields</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>0x07</code></td>
+<td><code>CENTRAL</code></td>
+<td><code>[0]</code> <code>global_enable</code></td>
+</tr>
+<tr>
+<td><code>0x08</code></td>
+<td><code>SIGNAL</code></td>
+<td><code>[0]</code> <code>hit_mode_sig</code> (INTERNAL/EXTERNAL); <code>[1]</code> <code>internal_sub_mode</code> (Poisson/Periodic); <code>[2]</code> <code>cluster_geom_mode</code> (FIX/RANDOM)</td>
+</tr>
+<tr>
+<td><code>0x09</code></td>
+<td><code>BACKGROUND</code></td>
+<td><code>[0]</code> <code>hit_mode_bkg</code> (OFF/ON)</td>
+</tr>
+<tr>
+<td><code>0x0A</code></td>
+<td><code>MUTRIG_FORMAT</code></td>
+<td><code>[0]</code> <code>short_mode</code>; <code>[1]</code> <code>gen_idle</code>; <code>[4:2]</code> <code>tx_mode</code>; <code>[5]</code> <code>enable_type0_stream</code></td>
+</tr>
+</tbody></table>
+<h3>Geometry, rates, seeds (words 0x0B..0x0F)</h3>
+<table>
+<thead><tr>
+<th>Addr</th>
+<th>Name</th>
+<th>Notable fields</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>0x0B</code></td>
+<td><code>RATES</code></td>
+<td><code>[15:0]</code> <code>hit_rate</code>; <code>[31:16]</code> <code>noise_rate</code></td>
+</tr>
+<tr>
+<td><code>0x0C</code></td>
+<td><code>CLUSTER_GEOM_FIX</code></td>
+<td><code>[7:0]</code> <code>hit_channel_low</code>; <code>[15:8]</code> <code>hit_channel_high</code></td>
+</tr>
+<tr>
+<td><code>0x0D</code></td>
+<td><code>CLUSTER_GEOM_RANDOM</code></td>
+<td><code>[7:0]</code> <code>cluster_size_random</code> (1..128); <code>[9:8]</code> <code>mirror_mode</code>; <code>[18:11]</code> signed <code>mirror_offset</code>; <code>[26:19]</code> <code>random_center_seed</code></td>
+</tr>
+<tr>
+<td><code>0x0E</code></td>
+<td><code>PRNG_SEED</code></td>
+<td>32-bit master seed for engine + bkg + per-lane fine PRNG</td>
+</tr>
+<tr>
+<td><code>0x0F</code></td>
+<td><code>TIMEBASE_SEED</code></td>
+<td><code>[14:0]</code> <code>tcc_seed</code>; <code>[30:16]</code> <code>ecc_seed</code> (independent PRBS-15 reset values for configurable ECC-after-TCC delay)</td>
+</tr>
+</tbody></table>
+<h3>Reserved / lane control / fire / status (words 0x10..0x15)</h3>
+<table>
+<thead><tr>
+<th>Addr</th>
+<th>Name</th>
+<th>Notable fields</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>0x10..0x11</code></td>
+<td>reserved</td>
+<td>(Were <code>INJECT_CHANNEL_MASK</code> and <code>INJECT_LANE_MASK</code> in earlier drafts; masked-inject path was removed.)</td>
+</tr>
+<tr>
+<td><code>0x12</code></td>
+<td><code>LANE_ENABLE</code></td>
+<td><code>[7:0]</code> <code>lane_enable_mask</code>; <code>[11:8]</code> <code>asic_id_base</code></td>
+</tr>
+<tr>
+<td><code>0x13</code></td>
+<td><code>FIRE</code></td>
+<td><code>[0]</code> <code>fire_inject_pulse</code> (W1P, OR&#x27;d with <code>coe_inject_pulse</code>)</td>
+</tr>
+<tr>
+<td><code>0x14</code></td>
+<td><code>BANK_STATUS</code></td>
+<td><code>[15:0]</code> <code>ticket_overflow_count</code>; <code>[23:16]</code> <code>engine_busy_high_water</code></td>
+</tr>
+<tr>
+<td><code>0x15</code></td>
+<td><code>ERROR_INJECT</code></td>
+<td><code>[2:0]</code> <code>type0_error_inject_mask</code>; <code>[10:3]</code> <code>lane_error_target_mask</code></td>
+</tr>
+</tbody></table>
+<h3>Per-lane block (words 0x18..0x1F, indexed by <code>0x18 + 4*lane + N</code>)</h3>
+<p>For each lane <code>i</code> in <code>0..7</code>:</p>
+<ul>
+<li><code>0x18 + 4*i + 0</code> — <code>LANE_FRAME_LO[i]</code> — 64-bit saturating frame counter, low word</li>
+<li><code>0x18 + 4*i + 1</code> — <code>LANE_FRAME_HI[i]</code> — high word + sticky bits (W1C <code>fifo_full_sticky</code>, <code>ticket_overflow_sticky</code>)</li>
+<li><code>0x18 + 4*i + 2</code> — <code>LANE_HIT_LO[i]</code> — 64-bit saturating hit counter, low word</li>
+<li><code>0x18 + 4*i + 3</code> — <code>LANE_HIT_HI[i]</code> — hit counter high word</li>
+</ul>
+<h3>Common header inheritance contract</h3>
+<p>Software can blind-scan via <code>UID</code> and <code>META</code>, then sanity-check the bus</p>
+<p>via a <code>SCRATCH</code> write/read round-trip and read <code>LAST_*</code> to debug bus</p>
+<p>issues. This pattern is shared with every other Mu3e IP and is enforced</p>
+<p>by <code>~/.codex/skills/ip-packaging/scripts/lint_csr_header.py --profile golden</code>.</p>
+<h2>Interfaces and contracts</h2>
+<ul>
+<li>AVMM slave: 6-bit address, 32-bit data, <code>waitrequest=0</code> (1-cycle reads).</li>
+<li>All RW bits readback the last value written.</li>
+<li>W1P bits read back 0.</li>
+<li>Sticky bits are W1C: write 1 to clear.</li>
+</ul>
+<h2>Where to look in the code</h2>
+<ul>
+<li>CSR module: <code>rtl/frontend/frontend_csr.sv</code></li>
+<li>CSR address constants: search <code>ADDR_*_CONST</code> in <code>frontend_csr.sv</code></li>
+<li>Source of truth for field layout: <code>doc/RTL_PLAN_central_trigger.md</code> §3</li>
+<li>Linter: <code>~/.codex/skills/ip-packaging/scripts/lint_csr_header.py --profile golden</code></li>
+</ul>
+<h2>Open questions / gotchas</h2>
+<ul>
+<li><code>ERROR_INJECT</code> is functional but level-sensitive: while non-zero, every</li>
+</ul>
+<p>  type0 beat from the targeted lanes carries the OR&#x27;d error bits. A</p>
+<p>  future variant may strobe per-N-frames instead.</p>
+<ul>
+<li><code>0x10</code> and <code>0x11</code> are intentionally reserved (not removed) so a future</li>
+</ul>
+<p>  mask-based inject scheme can land without an address-map break.</p>
+    </main>
+    <footer class="page-foot">
+        Generated by <code>doc/wiki/scripts/build_wiki.py</code>.
+        Source: <code>doc/wiki/src/20_csr_map.md</code>.
+    </footer>
+</div>
+</body>
+</html>
