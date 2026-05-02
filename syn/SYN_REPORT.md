@@ -113,16 +113,22 @@ not been compiled for this checkpoint.
 
 ## Open Issues
 
-1. **ALM over target by 7%.** Likely culprits are the per-lane 64-bit
-   saturating counters, the wider RR engine dispatch, and the now-functional
-   ERROR_INJECT path. Mitigation list per
-   [`../doc/RTL_PLAN_central_trigger.md`](../doc/RTL_PLAN_central_trigger.md)
-   §4.2: shrink lane ticket FIFO depth from 8 to 4 (`-320 ALM`), share the
-   per-lane 64-bit counters via an MLAB-backed register file (`-120 ALM`).
-2. **Compatibility build (`BYTE_STREAM_ENABLE=1`) not compiled in this
-   checkpoint.** Add a second Quartus revision and rerun.
-3. **Reduced lane-count points not compiled.** Informational only; defer
+1. **Compatibility build (`BYTE_STREAM_ENABLE=1`) not compiled in this
+   checkpoint.** Add a second Quartus revision and rerun. Expected delta
+   vs primary: `+~1200 ALM` from the 8 frame assemblers (still well
+   under the 5460 ceiling); same 16 M10K; timing likely slightly worse
+   but should still close given the 0.297 ns headroom on the primary.
+2. **Reduced lane-count points not compiled.** Informational only; defer
    to a follow-up.
+3. **TB regression evidence is limited.** The legacy `tb/Makefile`
+   `compile` and `run_all` targets still reference the pre-refresh
+   single-lane port shape and need a TB rewrite to drive the new
+   8-lane top. For this checkpoint the available regression is the
+   `central_smoke` target which elaborates the full new RTL tree under
+   Questa with `0` errors; the static gate (`lint+CDC+RDC`) passes
+   clean; the synthesis fitter completes with the numbers above. The
+   UVM testbench wiring is the next codex2 deliverable per the closure
+   plan.
 
 ## Next Steps
 

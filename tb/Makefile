@@ -32,6 +32,13 @@ central_smoke: central_compile
 	  -G LANE_COUNT=8 -G BYTE_STREAM_ENABLE=0 \
 	  emulator_mutrig
 
+central_run_short: central_compile
+	@echo "═══ Running short stim on central-trigger top (no UVM, just clock + reset) ═══"
+	$(VSIM) -c -do "force -freeze i_clk 0 0, 1 {4 ns} -repeat 8 ns; force -freeze i_rst 1 0; force -freeze i_rst 0 100 ns; force -freeze asi_ctrl_data 9'b000000001 0; force -freeze asi_ctrl_valid 1 0; force -freeze coe_inject_pulse 0 0; force -freeze avs_csr_address 0 0; force -freeze avs_csr_read 0 0; force -freeze avs_csr_write 0 0; force -freeze avs_csr_writedata 0 0; run 1 us; quit -f" \
+	  -work $(CENTRAL_WORK) -t ps \
+	  -G LANE_COUNT=8 -G BYTE_STREAM_ENABLE=0 \
+	  emulator_mutrig
+
 $(WORK)/_vmake: $(IP_SRC)/emulator_mutrig_pkg.sv \
                 $(IP_SRC)/prbs15_lfsr.sv \
                 $(IP_SRC)/crc16_8.sv \
