@@ -15,7 +15,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | ✅ | failed_cases | `0` |
 | ✅ | signoff_runs_with_failures | `0` |
 | ✅ | catalog_backlog_cases | `0` |
-| ⚠️ | unimplemented_cases | `512` |
+| ⚠️ | unimplemented_cases | `503` (B001-B009 implemented in `tb/uvm/tb_central_top.sv`) |
 | ✅ | stale_artifacts | `0` |
 
 ## Signoff Scope
@@ -26,7 +26,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | LANE_COUNT | `8` |
 | BYTE_STREAM_ENABLE | `0` |
 | VERSION | `26.2.x` |
-| implementation_status | `RTL committed; UVM pending` |
+| implementation_status | `RTL committed; first directed bucket (B001-B009) implemented and passing; UVM stack pending for the remaining 503 cases` |
 | probe_only_exclusions |  |
 
 ## Non-Claims
@@ -38,7 +38,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 
 | status | bucket | catalog_planned | promoted | evidenced | backlog | merged | promoted functional |
 |:---:|---|---:|---:|---:|---:|---|---|
-| ⚠️ | [`BASIC`](DV_BASIC.md) | 128 | 128 | 0 | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 0.0% (0/128) |
+| ⚠️ | [`BASIC`](DV_BASIC.md) | 128 | 128 | 9 (B001-B009 via `make central_basic`) | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 7.0% (9/128) |
 | ⚠️ | [`EDGE`](DV_EDGE.md) | 128 | 128 | 0 | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 0.0% (0/128) |
 | ⚠️ | [`PROF`](DV_PROF.md) | 128 | 128 | 0 | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 0.0% (0/128) |
 | ⚠️ | [`ERROR`](DV_ERROR.md) | 128 | 128 | 0 | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 0.0% (0/128) |
