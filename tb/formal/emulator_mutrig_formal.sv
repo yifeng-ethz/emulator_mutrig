@@ -14,8 +14,18 @@
 // Bind blocks attach the property modules to the live RTL without touching
 // the synthesised sources. The corresponding .do file (sibling) sets the
 // formal clock/reset and configures any non-default bound assumptions.
-
-`ifdef FORMAL_EMULATOR_MUTRIG
+// The harness is always elaborated when this file is included in the
+// filelist; synthesis filelists must NOT include this file.
+//
+// IMPORTANT: the bind statements live inside the
+// `emulator_mutrig_formal_binds` wrapper module so vlog without -mfcu
+// will compile them. For the binds to propagate under the qverify static
+// screen, that wrapper must be referenced as a root in the formal
+// elaboration step (qverify formal compile -d emulator_mutrig
+// -d emulator_mutrig_formal_binds), or the UVM TB top must instantiate
+// it. Without that, vlog elaborates the wrapper but the binds do not
+// fire and `Proven (0)` is reported. The properties remain valid as
+// documentation and as direct-TB or UVM-driven assertions.
 
 // -----------------------------------------------------------------------------
 // frontend_run_ctl property module
@@ -85,7 +95,9 @@ module frontend_run_ctl_prop (
 
 endmodule
 
-bind frontend_run_ctl frontend_run_ctl_prop u_props (.*);
+// vlog without -mfcu requires bind statements to live inside a module.
+module emulator_mutrig_formal_binds;
+    bind frontend_run_ctl frontend_run_ctl_prop u_props (.*);
 
 // -----------------------------------------------------------------------------
 // frontend_trigger_engine property module
@@ -146,9 +158,7 @@ module frontend_trigger_engine_prop #(
 
 endmodule
 
-bind frontend_trigger_engine frontend_trigger_engine_prop #(
-    .LANE_COUNT (LANE_COUNT)
-) u_props (.*);
+    bind frontend_trigger_engine frontend_trigger_engine_prop u_props (.*);
 
 // -----------------------------------------------------------------------------
 // prbs15_lfsr property module
@@ -186,10 +196,7 @@ module prbs15_lfsr_prop #(
 
 endmodule
 
-bind prbs15_lfsr prbs15_lfsr_prop #(
-    .STEP_COUNT (STEP_COUNT),
-    .INIT       (INIT)
-) u_props (.*);
+    bind prbs15_lfsr prbs15_lfsr_prop u_props (.*);
 
 // -----------------------------------------------------------------------------
 // be_mutrig_lane_type0_emit property module
@@ -251,7 +258,7 @@ module be_mutrig_lane_type0_emit_prop (
 
 endmodule
 
-bind be_mutrig_lane_type0_emit be_mutrig_lane_type0_emit_prop u_props (.*);
+    bind be_mutrig_lane_type0_emit be_mutrig_lane_type0_emit_prop u_props (.*);
 
 // -----------------------------------------------------------------------------
 // be_mutrig_lane_emitter property module
@@ -297,6 +304,5 @@ module be_mutrig_lane_emitter_prop (
 
 endmodule
 
-bind be_mutrig_lane_emitter be_mutrig_lane_emitter_prop u_props (.*);
-
-`endif // FORMAL_EMULATOR_MUTRIG
+    bind be_mutrig_lane_emitter be_mutrig_lane_emitter_prop u_props (.*);
+endmodule

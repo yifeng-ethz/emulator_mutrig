@@ -8,14 +8,11 @@
 ## Sets the formal clock and reset, defines the clock period, and turns on
 ## the FORMAL_EMULATOR_MUTRIG defines so the bind blocks elaborate.
 
-## Compile-time defines for the SVA harness.
+## Compile-time defines for the SVA harness; questa_static_screen.py
+## propagates VLOG_DEFINES into the vlog invocation.
 set ::env(VLOG_DEFINES) "+define+FORMAL_EMULATOR_MUTRIG"
 
-## Formal clock domain — single clock at 125 MHz nominal.
-formal compile -d emulator_mutrig
-
-formal define clock i_clk -period 8ns
-formal define reset i_rst -active_high
-
-## Limit run time per the medium reasoning effort budget.
-formal verify -timeout 30m
+## Clock and reset are auto-discovered by qverify formal from the design's
+## single i_clk / i_rst. No explicit clock/reset binding needed.
+## Formal proof budget is left at the script default; the SVA harness
+## binds in lightweight properties so each check completes quickly.
