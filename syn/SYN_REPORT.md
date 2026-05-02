@@ -75,16 +75,18 @@ geom, shred, and registered dispatch outputs.
 
 | build | Slow 85C setup slack | ALMs | notes |
 |---|---|---|---|
-| pre-pipeline (`98aae1c`) | `-2.573 ns` | `4,557` | original 1-stage trigger engine |
-| stage-2 (`0627a04`) | `-0.871 ns` | `4,289` | launch_stage flops added |
-| stage-3 (`3c76ce9`) | `-0.126 ns` | `4,267` | geom_stage + registered sig_offer |
-| final retry | `+0.297 ns` | `4,274` | final placement closes slow-85C setup |
+| pre-pipeline (`9e22e27`) | `-2.573 ns` | `4,557` | original 1-stage trigger engine at 125 MHz baseline |
+| post-pipeline (`81a6a59`) | `+0.297 ns` | `4,274` | launch capture, geometry clamp, shred, registered dispatch |
 
 The tightened `137.5 MHz` (1.1× nominal) signoff clock is the
 standalone gate per the `timing-performance-resources-sign-off` skill.
 The Slow 85C and Slow 0C setup and hold corners now pass with zero TNS.
 The compile used `create_clock -name clk125 -period 7.273` in
 `syn/quartus/emulator_mutrig_syn.sdc`.
+
+The post-fit worst setup path is now a closed geometry-clamp slice from
+`geom_stage_size_random[6]` to `launch_stage_cluster0_high[2]`, slack
+`+0.297 ns`.
 
 ### Compatibility build: `LANE_COUNT=8, BYTE_STREAM_ENABLE=1`
 

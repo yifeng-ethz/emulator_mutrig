@@ -295,6 +295,12 @@ for L in rr_order(lanes_touched, rr_ptr):
     push_ticket(L, ch_low_local, ch_high_local, tcc_lfsr, ecc_lfsr)
 ```
 
+The timing-closed implementation pipelines this launch path across explicit
+stages: launch capture, geometry clamp, per-lane shred, and registered
+dispatch offers. `pending_mask` is therefore populated after the geometry and
+shred stages rather than directly in the launch-fire cycle; this is the
+intended 26.2.x latency for the 137.5 MHz standalone signoff build.
+
 The engine takes one cycle per affected-lane push, so the worst-case
 RANDOM launch (size 128, spans 5 lanes per SMB plus 5 mirrored lanes =
 up to 10 ticket pushes) occupies the engine for up to 10 cycles. During
