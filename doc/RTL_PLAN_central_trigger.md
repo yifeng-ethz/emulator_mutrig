@@ -75,7 +75,7 @@ previously agreed behavioural changes:
      - `RANDOM` — pseudo-physical particle hit. Engine picks a random center,
        generates a cluster of `cluster_size_random` channels inside one SMB,
        and **automatically mirrors** the cluster to the other SMB at
-       `127 − ch` (Mu3e SciFi double-sided readout). Cluster never crosses
+       `128 − ch` (Mu3e SciFi double-sided readout). Cluster never crosses
        the SMB boundary; mirroring always happens.
    - **Background producer** (per-channel noise). Mode `hit_mode_bkg` is
      `ON` / `OFF` and sits on top of the signal producer. When `ON`, an
@@ -114,10 +114,21 @@ Ticket struct (`frontend_ticket_bus_pkg.sv`, new file):
 typedef struct packed {
     logic [4:0]  ch_low;       // local channel low (0..31)
     logic [4:0]  ch_high;      // local channel high (0..31), >= ch_low
-    logic [TS_WIDTH-1:0] ts_a; // primary timestamp anchor
-    logic [TS_WIDTH-1:0] ts_b; // secondary timestamp anchor
+    logic [TS_WIDTH-1:0] ts_a; // primary timestamp anchor (TCC for MuTRiG)
+    logic [TS_WIDTH-1:0] ts_b; // secondary timestamp anchor (ECC for MuTRiG)
 } frontend_ticket_t;
 ```
+
+**Ticket carries the timestamp.** The front-end samples `tcc_lfsr` and
+`ecc_lfsr` at the cycle the launch decision fires, and packs them into
+`ts_a` and `ts_b` of every per-lane ticket the launch produces. The
+back-end never re-samples the LFSRs when packing a hit word — every hit
+produced from one ticket therefore shares one TCC/ECC pair. This is the
+contract the front-end and back-end share to model the
+"all hits from the same physical particle have the same timestamp"
+property of a real MuTRiG cluster. The back-end pops one channel per
+cycle from a ticket and emits one hit per channel, all with the same
+ticket-carried `ts_a`/`ts_b`.
 
 Per-lane signal set on the ticket bus:
 
@@ -251,8 +262,8 @@ cross-SMB allowed). One footprint, one set of per-lane tickets.
 - Primary cluster (local): `low_local = clamp(center_local − size/2, 0,
   128 − size)`; `high_local = low_local + size − 1`.
 - Mirror cluster (only when `mirror_mode = MIRRORED`):
-  - `mirror_center_local = clamp((127 − center_local) + mirror_offset,
-    size/2, 127 − size/2)` — `mirror_offset` is signed
+  - `mirror_center_local = clamp((128 − center_local) + mirror_offset,
+    size/2, 128 − size/2)` — `mirror_offset` is signed
     `−128..+127`, default `0` (exact mirror). The clamp keeps the
     mirror cluster fully inside its SMB so it never crosses the SMB
     boundary regardless of offset value.
@@ -334,24 +345,48 @@ Each lane keeps:
 
 - Ticket FIFO (`8` entries × `40` bits): `{ch_low[4:0], ch_high[4:0], tcc[14:0], ecc[14:0]}`.
 - Active ticket registers + 5-bit `current_ch` walker.
-- Local fine-time PRNG (16 bits, seeded from `prng_seed` XOR `(lane_index * 0x9E37)`).
 - L2 FIFO (`256 × 48`, M10K-backed).
 - 1-word `pending` skid slot (kept for write/read M10K port hygiene).
+
+The lane no longer carries a fine-time PRNG. **`T_Fine` and `E_Fine`
+are tied to `5'd0`** in this simple model — see the
+"Fine timestamps and LFSR step rate" subsection below.
 
 Per-cycle behaviour:
 
 1. If active-ticket valid, build one L2 hit word for `current_ch`:
    ```
-   t_fine = clamp_fine_with_jitter(prng[2:0], prng[5:3])    // ±4 codes
-   e_fine = clamp_fine_with_jitter(prng[8:6], prng[11:9])   // ±4 codes
-   sort so t_fine <= e_fine
-   pack_hit_long(channel=current_ch, tcc=ticket.tcc, ecc=ticket.ecc, ...)
+   t_fine = 5'd0
+   e_fine = 5'd0
+   pack_hit_long(channel=current_ch, tcc=ticket.tcc, ecc=ticket.ecc,
+                 t_fine=5'd0, e_fine=5'd0, e_flag=1'b1, ...)
    ```
    Stall when L2 cannot accept; do not advance `current_ch`.
 2. When `current_ch == ch_high`, mark ticket consumed; pop next from
    ticket FIFO.
 3. Drain interface to local `frame_assembler` is unchanged from the
    compact bank8 lane.
+
+#### Fine timestamps and LFSR step rate (locked 26.2.x decisions)
+
+- **Coarse counter step rate.** The MuTRiG ASIC runs its TDC at
+  `625 MHz`; the emulator runs at `125 MHz` (a 5x ratio). Both PRBS-15
+  LFSRs (`u_tcc_lfsr`, `u_ecc_lfsr`) therefore advance by **exactly 5
+  steps per emulator cycle** — the `STEP_COUNT` parameter of
+  `prbs15_lfsr` must stay at `MUTRIG_COARSE_STEPS_PER_CYCLE = 5`. This
+  is what makes the downstream `mutrig_timestamp_processor` decode
+  consistent with the real ASIC's coarse counter.
+- **Fine timestamps fixed at zero.** For this emulator we **do not**
+  model fine-time jitter at all — `T_Fine` and `E_Fine` are tied to
+  `5'd0` for every emitted hit. Rationale: the simple model already
+  matches the per-cluster TCC anchor exactly, and per-channel fine
+  randomness adds verification noise without exercising the real
+  decoder bug surface. If a future patch needs fine modelling, it can
+  be reintroduced as a per-lane PRNG with a CSR enable.
+- **Ticket carries the timestamp.** The back-end never re-samples the
+  LFSRs when packing a hit — every hit produced from one ticket shares
+  the ticket's `ts_a`/`ts_b` (== TCC/ECC at launch cycle), per the
+  §2.0 ticket contract.
 
 The lane no longer runs Poisson/Burst/Periodic decision logic and no
 scan position counter — those move to `trigger_engine` and
@@ -398,6 +433,25 @@ Note: E_Fine is dropped, matching the deassembly contract.
 **Tap point:** the emit block sits on the L2 FIFO drain side, not after
 the frame assembler. It samples each word as it leaves the FIFO and
 repacks it into the 45-bit type0 layout.
+
+**L2-pop rate model (link bottleneck).** Even though the type0 path
+bypasses the 8b/1k frame assembler, it MUST still throttle the L2 FIFO
+pop rate so the downstream observer sees the **same per-hit cadence as
+the real MuTRiG link**. The real link cadence is set by the MuTRiG
+output bandwidth at the 125 MHz emulator boundary:
+
+| Mode | Avg cycles per hit popped from L2 | Implementation |
+|------|-----------------------------------|----------------|
+| `cfg_short_mode = 1` (short-hit, 28-bit + framing) | **3.5 cycles/hit** | alternate 3 / 4 cycles per hit (ping-pong) |
+| `cfg_short_mode = 0` (long-hit, 48-bit + framing)  | **6 cycles/hit**   | one hit every 6 cycles |
+
+The pacer lives in `be_mutrig_lane_type0_emit` and gates `l2_rd_en` so
+the emit asserts at most once per `(3,4,3,4,...)`-cycle stride in
+short mode and once per 6-cycle stride in long mode. SOP/EOP and
+`endofrun` are unaffected. This makes the type0 path a faithful link
+model regardless of whether the byte-stream side is synthesised — the
+downstream timestamp processor / packet scheduler / ring buffer CAM see
+the same offered-rate envelope as if the byte stream were running.
 
 **Packet boundaries:**
 - The same frame-interval timer that opens a frame for `frame_assembler`
@@ -514,13 +568,19 @@ canonical layout follows `ring-buffer_cam/script/ring_buffer_cam_hw.tcl:90-101`.
 | | | | [31:6] | reserved | Reads 0. (`enable_byte_stream` is no longer a CSR bit; the byte-stream output is selected at elaboration time via the `BYTE_STREAM_ENABLE` HDL parameter — see §4.) |
 | 0x0B | `RATES` | RW | [15:0] | `hit_rate` | 16-bit threshold for INTERNAL signal launch (Poisson compare or Periodic phase increment). |
 | | | | [31:16] | `noise_rate` | 16-bit per-channel rate target for BKG. Internally folded by 256 to drive a one-Bernoulli-per-cycle scan. |
-| 0x0C | `CLUSTER_GEOM_FIX` | RW | [7:0] | `hit_channel_low` | Global low channel `0..255`. Used when `cluster_geom_mode=FIX`. |
-| | | | [15:8] | `hit_channel_high` | Global high channel `0..255`, must satisfy `high >= low`. Cross-SMB allowed in FIX. |
-| | | | [31:16] | reserved | Reads 0. |
+| 0x0C | `CLUSTER_GEOM_FIX` | RW | [6:0] | `left_low` | Side A (left, lanes 0..3) low channel `0..127`. Used when `cluster_geom_mode=FIX`. |
+| | | | [13:7] | `left_high` | Side A high channel `0..127`, must satisfy `left_high >= left_low`. |
+| | | | [14] | `left_enable` | When `1`, emit the side-A range. When `0`, side A produces no FIX-mode hits. |
+| | | | [15] | reserved | Reads 0. |
+| | | | [22:16] | `right_low` | Side B (right, lanes 4..7) low channel `0..127`. Same encoding offset by 16. |
+| | | | [29:23] | `right_high` | Side B high channel `0..127`, must satisfy `right_high >= right_low`. |
+| | | | [30] | `right_enable` | When `1`, emit the side-B range. When `0`, side B produces no FIX-mode hits. |
+| | | | [31] | reserved | Reads 0. |
+| | | | -- | -- | **FIX cluster never auto-mirrors.** Both sides are independent and explicit. To emit a "manual mirror", set both halves with the desired channel ranges. To emit a one-side-only cluster, leave the other half disabled. |
 | 0x0D | `CLUSTER_GEOM_RANDOM` | RW | [7:0] | `cluster_size_random` | Cluster size `1..128`. Engine picks random center inside the side selected by `mirror_mode`. |
-| | | | [9:8] | `mirror_mode` | `00` LEFT_ONLY (cluster only on side A, lanes 0..3), `01` RIGHT_ONLY (cluster only on side B, lanes 4..7), `10` MIRRORED (cluster on the random-picked side AND its mirror on the other side, with `mirror_offset` applied to the mirror center), `11` reserved. Default `10` (MIRRORED). |
+| | | | [9:8] | `mirror_mode` | `00` LEFT_ONLY (cluster only on side A, lanes 0..3), `01` RIGHT_ONLY (cluster only on side B, lanes 4..7), `10` MIRRORED (cluster on the random-picked side AND its mirror on the other side, with `mirror_offset` applied to the mirror center), `11` MIRRORED_INV (cluster on the random-picked side AND its non-inverted copy on the other side at the same local channel — i.e. `right_local_ch = left_local_ch`, NOT `128 − left_local_ch`; `mirror_offset` still applies). Default `10` (MIRRORED). |
 | | | | [10] | reserved | Reads 0. |
-| | | | [18:11] | `mirror_offset` | Signed 8-bit, range `-128..+127`. Only takes effect when `mirror_mode=MIRRORED`. The mirror cluster's local center is `(127 − primary_local_center) + mirror_offset`, clamped to `[0, 128 − cluster_size_random]` so the mirror cluster never crosses the SMB boundary. Default `0` (exact mirror). Used to model mechanical mis-alignment between the two SiPM readout sides on the SciFi detector. |
+| | | | [18:11] | `mirror_offset` | Signed 8-bit, range `-128..+127`. Only takes effect when `mirror_mode=MIRRORED`. The mirror cluster's local center is `(128 − primary_local_center) + mirror_offset`, clamped to `[0, 128 − cluster_size_random]` so the mirror cluster never crosses the SMB boundary. Default `0` (exact mirror). Used to model mechanical mis-alignment between the two SiPM readout sides on the SciFi detector. |
 | | | | [26:19] | `random_center_seed` | 8 bits added into the engine's center-pick PRNG so multiple instances can desync. |
 | | | | [31:27] | reserved | Reads 0. |
 | 0x0E | `PRNG_SEED` | RW | [31:0] | `prng_seed` | Master PRNG seed. Engine launch PRNG, RANDOM center PRNG, BKG PRNG, and per-lane fine PRNG are all derived from it via fixed XOR offsets. |
@@ -720,7 +780,7 @@ actually needs.
    `mirror_mode = MIRRORED` (default), one physical particle fires
    `cluster_size_random` channels at a random center inside one SMB and
    the same number of channels at the mirrored locations
-   (`127 − local_ch + mirror_offset`) in the other SMB. With
+   (`128 − local_ch + mirror_offset`) in the other SMB. With
    `mirror_mode = LEFT_ONLY` or `RIGHT_ONLY`, only the named-side
    cluster is generated and no mirror is emitted. Cluster never crosses
    the SMB boundary regardless of `mirror_offset`.
@@ -820,9 +880,9 @@ frontend and backend folders.
   {-32, -1, 0, +1, +32}. Verify:
   - LEFT_ONLY emits only side-A tickets, no side-B tickets.
   - RIGHT_ONLY emits only side-B tickets, no side-A tickets.
-  - MIRRORED with offset 0 emits exact mirror at `127 − local`.
+  - MIRRORED with offset 0 emits exact mirror at `128 − local`.
   - MIRRORED with non-zero offset emits the mirror at
-    `127 − local + offset` and clamps so the mirror cluster stays
+    `128 − local + offset` and clamps so the mirror cluster stays
     inside its SMB.
   - All sub-clusters share TCC/ECC anchors; no cluster crosses the SMB
     boundary regardless of offset.
@@ -842,7 +902,7 @@ frontend and backend folders.
   125 MHz boundary.
 - Mirror mapping at offset 0: directed RANDOM at center = 0, 63, 127 with
   size = 1 and size = 16, `mirror_offset = 0`. Verify the mirror channel
-  set is exactly `127 − local`.
+  set is exactly `128 − local`.
 - Inject ORing: write `FIRE.fire_inject_pulse=1` and pulse
   `coe_inject_pulse` on the same cycle and on adjacent cycles; verify
   exactly one cluster launch per CSR-or-conduit edge, no doublets.

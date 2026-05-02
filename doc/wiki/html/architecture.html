@@ -104,15 +104,64 @@
 </tbody></table>
 <h3>Cluster geometry</h3>
 <ul>
-<li><code>CLUSTER_GEOM_FIX</code>: explicit <code>hit_channel_low/high</code> in global 0..255;</li>
+<li><code>CLUSTER_GEOM_FIX</code>: independent side-A and side-B channel ranges. Each</li>
 </ul>
-<p>  cross-SMB allowed.</p>
+<p>  half of the CSR word holds <code>{low[6:0], high[13:7], enable[14]}</code>. Side</p>
+<p>  A occupies <code>[15:0]</code>, side B occupies <code>[31:16]</code>. **FIX never</p>
+<p>  auto-mirrors**; if the user wants a manual mirror they set both</p>
+<p>  halves with the desired channel ranges explicitly.</p>
 <ul>
 <li><code>CLUSTER_GEOM_RANDOM</code>: random center inside one SMB (128 channels per</li>
 </ul>
-<p>  side); <code>mirror_mode</code> selects <code>LEFT_ONLY</code> / <code>RIGHT_ONLY</code> / <code>MIRRORED</code>;</p>
-<p>  in <code>MIRRORED</code>, <code>mirror_offset</code> (signed <code>−128..+127</code>) shifts the mirror</p>
-<p>  cluster center to model SciFi mechanical mis-alignment.</p>
+<p>  side); <code>mirror_mode</code> selects <code>LEFT_ONLY</code> / <code>RIGHT_ONLY</code> / <code>MIRRORED</code> /</p>
+<p>  <code>MIRRORED_INV</code>; in <code>MIRRORED</code> the mirror is at <code>128 − local_ch</code>, in</p>
+<p>  <code>MIRRORED_INV</code> the mirror is at the <strong>same</strong> local channel</p>
+<p>  (<code>right_local_ch = left_local_ch</code>); in both, <code>mirror_offset</code> (signed</p>
+<p>  <code>−128..+127</code>) shifts the mirror cluster center to model SciFi</p>
+<p>  mechanical mis-alignment.</p>
+<h3>Ticket carries the timestamp; back-end never re-samples LFSRs</h3>
+<p>The front-end samples <code>tcc_lfsr</code> and <code>ecc_lfsr</code> at the launch cycle</p>
+<p>and packs them into every per-lane ticket. The back-end pops one</p>
+<p>channel per cycle from a ticket and emits one hit per channel — all</p>
+<p>hits from one ticket share that ticket&#x27;s TCC and ECC. This is what</p>
+<p>guarantees &quot;all hits from one physical particle have the same</p>
+<p>timestamp&quot; without any per-lane LFSR re-sample.</p>
+<h3>Fine timestamps fixed at zero (simple model)</h3>
+<p>For this emulator we <strong>do not</strong> model fine-time jitter. <code>T_Fine</code> and</p>
+<p><code>E_Fine</code> are tied to <code>5&#x27;d0</code> for every emitted hit. Rationale: the</p>
+<p>simple model already matches the per-cluster TCC anchor exactly, and</p>
+<p>per-channel fine randomness adds verification noise without exercising</p>
+<p>the real decoder bug surface. The per-lane fine PRNG is removed from</p>
+<p><code>be_mutrig_lane_emitter</code> in the 26.2.x refresh.</p>
+<h3>Coarse counter step rate (locked at 5)</h3>
+<p>The MuTRiG ASIC runs its TDC at 625 MHz; the emulator runs at 125 MHz</p>
+<p>(5x ratio). Both PRBS-15 LFSRs (<code>u_tcc_lfsr</code>, <code>u_ecc_lfsr</code>) advance by</p>
+<p><strong>exactly 5 steps per emulator cycle</strong> (<code>STEP_COUNT = 5</code>) so the</p>
+<p>downstream <code>mutrig_timestamp_processor</code> decode matches the real ASIC&#x27;s</p>
+<p>coarse counter without a phase remap.</p>
+<h3>L2-pop link bottleneck</h3>
+<p>Even when the byte-stream output is disabled (<code>BYTE_STREAM_ENABLE=0</code>)</p>
+<p>and downstream consumers see the type0 path directly, the back-end</p>
+<p><strong>still</strong> throttles the L2 pop rate to model the real MuTRiG link</p>
+<p>bandwidth at the 125 MHz emulator boundary:</p>
+<table>
+<thead><tr>
+<th>Mode</th>
+<th>Avg cycles per hit popped from L2</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>cfg_short_mode = 1</code> (short hit)</td>
+<td><strong>3.5 cycles/hit</strong> (alternating 3/4 cycles, ping-pong)</td>
+</tr>
+<tr>
+<td><code>cfg_short_mode = 0</code> (long hit)</td>
+<td><strong>6 cycles/hit</strong></td>
+</tr>
+</tbody></table>
+<p>The pacer lives in <code>be_mutrig_lane_type0_emit</code> and gates <code>l2_rd_en</code>.</p>
+<p>Downstream IPs see the same offered-rate envelope they would see if</p>
+<p>the byte stream were running.</p>
 <h3>Round-robin lane push order</h3>
 <p>The trigger engine maintains a small rotating pointer across the</p>
 <p><code>LANE_COUNT</code> lanes. Every launch dispatches in RR order starting from</p>

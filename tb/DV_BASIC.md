@@ -25,7 +25,7 @@ This bucket covers bring-up: every CSR field, run-control decode, SIGNAL INTERNA
 | SIGNAL External Inject (CSR + Conduit) | 16 | B065-B080 | Single inject port (conduit) OR'd with FIRE.fire_inject_pulse W1P; fires regardless of hit_mode_sig; gated only by global_enable. | 16/16 |
 | CLUSTER_GEOM_FIX | 16 | B081-B096 | FIX cluster geometry: explicit low/high in global 0..255, cross-SMB allowed, all hits share one TCC anchor. | 16/16 |
 | CLUSTER_GEOM_RANDOM (mirror modes) | 16 | B097-B112 | RANDOM cluster geometry: random center within selected SMB, mirror_mode {LEFT_ONLY, RIGHT_ONLY, MIRRORED}, mirror_offset applied only when MIRRORED, never crosses SMB boundary. | 16/16 |
-| BACKGROUND IID Generator | 16 | B113-B128 | FE BACKGROUND generator: rolling per-channel scan, folded Bernoulli at configured noise_rate, lands hits on the right lane, jitters fine times, ungated by hit_mode_sig. | 16/16 |
+| BACKGROUND IID Generator | 16 | B113-B128 | FE BACKGROUND generator: rolling per-channel scan, folded Bernoulli at configured noise_rate, lands hits on the right lane, ungated by hit_mode_sig. Fine timestamps are tied to zero per the simple-model decision. | 16/16 |
 
 ---
 
@@ -123,7 +123,7 @@ Internal Periodic generator: 16-bit phase accumulator with the configured rate, 
 | B059 | D | Periodic with RANDOM mirrored | 1 | Periodic + RANDOM, mirror_mode=MIRRORED, size=4. | Each launch produces 4 hits per side, primary+mirror, same TCC. | TBD |
 | B060 | D | Periodic period stable under load | 1 | Periodic rate=0x4000, all lanes pushing. | Inter-launch interval ±1 cycle across 100 launches. | TBD |
 | B061 | D | seed independence: Periodic is not PRNG-driven | 1 | Periodic with two different PRNG_SEEDs. | Launch pattern identical (Periodic uses phase accumulator only). | TBD |
-| B062 | D | Periodic fine times still PRNG-jittered | 1 | Periodic, observe T_Fine across launches. | T_Fine values vary per cluster (lane fine PRNG). | TBD |
+| B062 | D | Periodic fine times fixed at zero | 1 | Periodic, observe T_Fine and E_Fine across launches. | T_Fine and E_Fine are 5'd0 for every emitted hit (simple-model decision in 26.2.x; per-lane fine PRNG removed). | TBD |
 | B063 | D | Periodic + BACKGROUND ON | 1 | Periodic + bkg_mode=ON. | Both streams visible; Periodic clean periodic spacing in TCC. | TBD |
 | B064 | D | Periodic gated by global_enable | 1 | Set global_enable=0 mid-Periodic. | Stream stops; resumes on re-enable. | TBD |
 
@@ -167,15 +167,15 @@ FIX cluster geometry: explicit low/high in global 0..255, cross-SMB allowed, all
 | B085 | D | FIX size 32 within one lane | 1 | FIX low=0 high=31; inject. | 32 hits on lane 0 ch 0..31; one ticket. | TBD |
 | B086 | D | FIX size 33 spans lanes 0+1 | 1 | FIX low=0 high=32; inject. | 32 hits on lane 0 + 1 hit on lane 1; two tickets; same TCC. | TBD |
 | B087 | D | FIX size 64 spans lanes 0+1 | 1 | FIX low=0 high=63; inject. | 32 hits on lane 0 + 32 hits on lane 1. | TBD |
-| B088 | D | FIX size 128 spans full SMB A | 1 | FIX low=0 high=127; inject. | 32 hits each on lanes 0..3; 4 tickets; same TCC. | TBD |
-| B089 | D | FIX size 129 spans SMBs A and B | 1 | FIX low=0 high=128; inject. | Lanes 0..3 full + lane 4 ch 0; cross-SMB allowed in FIX. | TBD |
-| B090 | D | FIX size 256 full domain | 1 | FIX low=0 high=255; inject. | All 8 lanes get full ticket; 256 hits same TCC. | TBD |
-| B091 | D | FIX low>high illegal | 1 | Set FIX low=10 high=5; inject. | Engine drops launch; ticket_overflow_count unchanged; sticky-bit flag set. | TBD |
-| B092 | D | FIX low=high mid-lane | 1 | FIX low=70 high=70; inject. | 1 hit on lane 2 ch 6. | TBD |
-| B093 | D | FIX size 31 inside one lane (no boundary) | 1 | FIX low=33 high=63; inject. | 31 hits on lane 1 ch 1..31; one ticket. | TBD |
-| B094 | D | FIX size 33 mid-domain | 1 | FIX low=63 high=95; inject. | 1 hit lane 1 ch 31 + 32 hits lane 2 ch 0..31. | TBD |
-| B095 | D | FIX with disabled lane mid-cluster | 1 | Disable LANE_ENABLE bit 1; FIX low=0 high=63. | Lane 0 emits 32 hits; lane 1 idle (no ticket consumed). | TBD |
-| B096 | D | FIX cluster timestamp anchor identical | 1 | FIX low=0 high=255; inject; capture TCC of every hit. | All 256 hits share one TCC anchor. | TBD |
+| B088 | D | FIX side-A only spans full side A | 1 | FIX left_low=0 left_high=127 left_enable=1 right_enable=0; inject. | 32 hits each on lanes 0..3; side B silent; same TCC. | TBD |
+| B089 | D | FIX side-B only spans full side B | 1 | FIX right_low=0 right_high=127 right_enable=1 left_enable=0; inject. | Side A silent; 32 hits each on lanes 4..7; same TCC. | TBD |
+| B090 | D | FIX both sides enabled spans full domain | 1 | FIX left_low=0 left_high=127 left_enable=1 right_low=0 right_high=127 right_enable=1; inject. | All 8 lanes get full ticket; 256 hits; same TCC. | TBD |
+| B091 | D | FIX left low>high illegal | 1 | Set left_low=10 left_high=5 left_enable=1; inject. | Side-A launch dropped; ticket_overflow_count unchanged; sticky-bit flag set. | TBD |
+| B092 | D | FIX left enable=0 silences side A | 1 | left_low=0 left_high=127 left_enable=0 right_enable=1 right_low=0 right_high=31; inject. | Side A silent; lane 4 ch 0..31 fires. | TBD |
+| B093 | D | FIX size 31 inside lane 1 (no boundary, side-A only) | 1 | FIX left_low=33 left_high=63 left_enable=1 right_enable=0; inject. | 31 hits on lane 1 ch 1..31; one ticket. | TBD |
+| B094 | D | FIX manual mirror via dual sides | 1 | FIX left_low=10 left_high=10 right_low=10 right_high=10 (manual same-channel mirror, mimics MIRRORED_INV without RANDOM); inject. | 1 hit at A:ch10 (lane 0 ch 10) + 1 hit at B:ch10 (lane 4 ch 10); same TCC. | TBD |
+| B095 | D | FIX with disabled lane mid-cluster | 1 | Disable LANE_ENABLE bit 1; FIX left_low=0 left_high=63 left_enable=1. | Lane 0 emits 32 hits; lane 1 idle (no ticket consumed). | TBD |
+| B096 | D | FIX cluster timestamp anchor identical | 1 | FIX both sides full; inject; capture TCC of every hit. | All 256 hits share one TCC anchor (no back-end LFSR re-sample per the §2.0 ticket contract). | TBD |
 
 ---
 
@@ -187,9 +187,9 @@ RANDOM cluster geometry: random center within selected SMB, mirror_mode {LEFT_ON
 |----|--------|----------|------|----------|---------------|---------------------|
 | B097 | D | RANDOM size=1 LEFT_ONLY | 1 | RANDOM size=1, mirror_mode=LEFT_ONLY; inject. | 1 hit on side A only; 0 hits on side B. | TBD |
 | B098 | D | RANDOM size=1 RIGHT_ONLY | 1 | RANDOM size=1, mirror_mode=RIGHT_ONLY; inject. | 0 hits side A; 1 hit side B. | TBD |
-| B099 | D | RANDOM size=1 MIRRORED offset=0 | 1 | RANDOM size=1, MIRRORED, offset=0; inject; pin PRNG to center=10. | Hit at A:ch10 + hit at B:ch117 (=127-10); same TCC. | TBD |
-| B100 | D | RANDOM size=1 MIRRORED offset=+5 | 1 | Same; offset=+5. | Hit at A:ch10 + hit at B:ch122 (=127-10+5). | TBD |
-| B101 | D | RANDOM size=1 MIRRORED offset=-5 | 1 | Same; offset=-5. | Hit at A:ch10 + hit at B:ch112. | TBD |
+| B099 | D | RANDOM size=1 MIRRORED offset=0 | 1 | RANDOM size=1, MIRRORED, offset=0; inject; pin PRNG to center=10. | Hit at A:ch10 + hit at B:ch118 (=128-10); same TCC. | TBD |
+| B100 | D | RANDOM size=1 MIRRORED offset=+5 | 1 | Same; offset=+5. | Hit at A:ch10 + hit at B:ch123 (=128-10+5). | TBD |
+| B101 | D | RANDOM size=1 MIRRORED offset=-5 | 1 | Same; offset=-5. | Hit at A:ch10 + hit at B:ch113. | TBD |
 | B102 | D | RANDOM size=8 MIRRORED offset=0 | 1 | size=8 MIRRORED; pin center=64. | Hits A:ch60..67 + B:ch60..67 (mirror of 60..67 with offset 0). | TBD |
 | B103 | D | RANDOM size=128 MIRRORED full SMB | 1 | size=128 MIRRORED; any pin. | All 128 ch on both sides. | TBD |
 | B104 | D | RANDOM size=64 LEFT_ONLY mid-side | 1 | size=64 LEFT_ONLY; pin center=64. | Hits A:ch32..95; no side B activity. | TBD |
@@ -200,13 +200,13 @@ RANDOM cluster geometry: random center within selected SMB, mirror_mode {LEFT_ON
 | B109 | D | RANDOM seed reproducibility | 1 | Same PRNG_SEED + same random_center_seed. | Identical center sequence across runs. | TBD |
 | B110 | D | RANDOM with global_enable=0 | 1 | global_enable=0; inject RANDOM. | No hits. | TBD |
 | B111 | D | RANDOM never crosses SMB boundary | 1 | size=128 LEFT_ONLY 1000 trials. | Zero hits land on side B. | TBD |
-| B112 | D | RANDOM MIRRORED side_pick uniform | 1 | MIRRORED size=1, 1000 injects. | Primary-on-A vs primary-on-B counts within ±3σ of 500/500. | TBD |
+| B112 | D | RANDOM MIRRORED_INV preserves channel | 1 | RANDOM size=1, mirror_mode=11 (MIRRORED_INV), offset=0; pin center=10. | Hit at A:ch10 + hit at B:ch10 (NOT 128-10); same TCC. Distinct from MIRRORED which would mirror to ch118. | TBD |
 
 ---
 
 ## 9. BACKGROUND IID Generator (B113-B128)
 
-FE BACKGROUND generator: rolling per-channel scan, folded Bernoulli at configured noise_rate, lands hits on the right lane, jitters fine times, ungated by hit_mode_sig.
+FE BACKGROUND generator: rolling per-channel scan, folded Bernoulli at configured noise_rate, lands hits on the right lane, ungated by hit_mode_sig. Fine timestamps are tied to zero per the simple-model decision.
 
 | ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
 |----|--------|----------|------|----------|---------------|---------------------|
@@ -216,7 +216,7 @@ FE BACKGROUND generator: rolling per-channel scan, folded Bernoulli at configure
 | B116 | R | BKG noise_rate=0x0100 | 1 | noise_rate=0x100, 65k cycles. | ≈ 256 hits per channel ± 3σ. | TBD |
 | B117 | R | BKG noise_rate=0xFFFF | 1 | noise_rate=0xFFFF, 1024 cycles. | ≈ 1024 hits per channel (folded scan saturates). | TBD |
 | B118 | D | BKG hit lands on correct lane | 1 | noise_rate=0x4000, observe lane field. | Each hit's local channel is consistent with lane index = scan_pos[7:5]. | TBD |
-| B119 | D | BKG fine-time has jitter | 1 | Capture 100 BKG hits on one channel. | T_Fine values span at least 4 codes. | TBD |
+| B119 | D | BKG fine-time tied to zero | 1 | Capture 100 BKG hits on one channel; observe T_Fine and E_Fine. | All 100 hits report T_Fine=5'd0 and E_Fine=5'd0 per the 26.2.x simple-model fine-counters-zero rule. | TBD |
 | B120 | D | BKG TCC monotonic per channel | 1 | Capture 100 BKG hits on one channel. | TCC sequence reflects PRBS-15 stepping; no repeats unless 32767-cycle cycle. | TBD |
 | B121 | D | BKG + SIGNAL Poisson coexist | 1 | bkg=ON, signal=Poisson. | Both streams visible; per-channel counts include both populations. | TBD |
 | B122 | D | BKG + SIGNAL inject coexist | 1 | bkg=ON, periodic inject every 1000 cycles. | Inject clusters distinguishable by simultaneous-ch pattern; BKG sprinkled in between. | TBD |

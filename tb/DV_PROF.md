@@ -20,7 +20,7 @@ This bucket characterizes throughput and latency under load and stress: sustaine
 |---------|-------|----------|----------------|--------------|
 | Sustained 100% Offered Load | 16 | P001-P016 | Sustained-throughput stress: engine and per-lane back-end keep up at full rate; counters track correctly; recovery from stall. | 16/16 |
 | Burst Cluster Throughput | 16 | P017-P032 | Engine handles bursty inject patterns; ticket FIFO depth bounded by 8; sticky bits set on overflow; both output paths independent under backpressure. | 16/16 |
-| BACKGROUND Soak and Uniformity | 16 | P033-P048 | BKG generator: long-run uniformity, fine-time and TCC distributions, recovery from stall, no lost hits. | 16/16 |
+| BACKGROUND Soak and Uniformity | 16 | P033-P048 | BKG generator: long-run uniformity, TCC distribution (fine-time tied to zero per simple model), recovery from stall, no lost hits. | 16/16 |
 | Mixed SIGNAL + BACKGROUND | 16 | P049-P064 | FE arbitrates SIGNAL and BACKGROUND correctly; per-lane back-end consumes from both; no source starvation; counters separate. | 16/16 |
 | Per-Lane Drain Latency | 16 | P065-P080 | End-to-end inject→output latency characterized; per-lane independent; type0 leads byte-stream; latency under load and backpressure. | 16/16 |
 | Type0 vs Deassembly Beat-For-Beat Parity | 16 | P081-P096 | Direct type0 emit path matches mutrig_frame_deassembly output for the same byte-stream input, beat-for-beat, across all modes and run lengths. | 16/16 |
@@ -81,7 +81,7 @@ Engine handles bursty inject patterns; ticket FIFO depth bounded by 8; sticky bi
 
 ## 4. BACKGROUND Soak and Uniformity (P033-P048)
 
-BKG generator: long-run uniformity, fine-time and TCC distributions, recovery from stall, no lost hits.
+BKG generator: long-run uniformity, TCC distribution (fine-time tied to zero per simple model), recovery from stall, no lost hits.
 
 | ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
 |----|--------|----------|------|----------|---------------|---------------------|
@@ -89,7 +89,7 @@ BKG generator: long-run uniformity, fine-time and TCC distributions, recovery fr
 | P034 | R | BKG soak 10M cycles mid rate | 1 | noise_rate=0x0100, 10M cycles. | ≈ 40k hits per channel. | TBD |
 | P035 | R | BKG soak 10M cycles high rate | 1 | noise_rate=0x0FFF, 10M cycles. | ≈ 640k hits per channel. | TBD |
 | P036 | R | BKG soak 100M cycles | 1 | noise_rate=0x0100, 100M cycles. | Long-run stability; counters do not wrap. | TBD |
-| P037 | R | BKG fine-time uniformity | 1 | Capture all BKG hits over 1M cycles. | T_Fine distribution flat across [0..31]. | TBD |
+| P037 | R | BKG fine-time tied to zero | 1 | Capture all BKG hits over 1M cycles. | T_Fine and E_Fine are 5'd0 for every hit per the 26.2.x simple-model fine-counters-zero rule. | TBD |
 | P038 | R | BKG TCC distribution full PRBS-15 period | 1 | Run > 32767 cycles. | All 32767 LFSR states observed at least once. | TBD |
 | P039 | R | BKG with one channel masked off | 1 | Disable lane 0 → 32 channels silent. | Other 224 channels still see uniform noise. | TBD |
 | P040 | R | BKG seed reproducibility long-run | 1 | Two 1M-cycle runs same seed. | Identical hit-cycle sequences per channel. | TBD |
@@ -137,8 +137,8 @@ End-to-end inject→output latency characterized; per-lane independent; type0 le
 |----|--------|----------|------|----------|---------------|---------------------|
 | P065 | R | Latency: inject → first L2 commit | 1 | Single inject FIX size 1; measure cycles. | Latency ≈ N+1 (engine pipeline depth). | TBD |
 | P066 | R | Latency: inject → first type0 beat | 1 | Single inject; measure inject→type0_valid. | Latency = engine + lane_emitter + L2 + type0 SOP timer. | TBD |
-| P067 | R | Latency: inject → frame_assembler first byte | 1 | Single inject; measure to first 8b/1k byte. | Latency = engine + lane_emitter + L2 + frame_assembler + bit serializer. | TBD |
-| P068 | R | Latency: type0 leads byte-stream by serializer depth | 1 | Both outputs ON. | type0 emits N cycles before byte-stream of same hit. | TBD |
+| P067 | R | Link bottleneck: short-mode 3.5 cycles per hit | 1 | short_mode=1; sustained Poisson rate=0xFFFF for 100k cycles; measure inter-hit gap on aso_hit_type0_valid. | Average gap is 3.5 cycles per hit (alternates 3/4 cycles, ping-pong) regardless of BYTE_STREAM_ENABLE. | TBD |
+| P068 | R | Link bottleneck: long-mode 6 cycles per hit | 1 | short_mode=0; sustained Poisson rate=0xFFFF for 100k cycles; measure inter-hit gap. | Average gap is 6 cycles per hit regardless of BYTE_STREAM_ENABLE. | TBD |
 | P069 | R | Latency: under sustained load | 1 | Poisson rate=0x8000, 1M cycles; histogram inject→output latency. | p50 < 100 cycles; p99 < 1000 cycles. | TBD |
 | P070 | R | Latency: with backpressure on type0 | 1 | type0 ready=0 50% time. | Latency increases; p99 reflects added delay. | TBD |
 | P071 | R | Latency: per-lane independent | 1 | Stall lane 0; lane 1-7 free. | Lane 0 latency rises; others unchanged. | TBD |

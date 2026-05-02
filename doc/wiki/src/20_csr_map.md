@@ -46,8 +46,8 @@ The legacy single CTRL_MODE word is split into 4 per-purpose words:
 | Addr | Name | Notable fields |
 |---|---|---|
 | `0x0B` | `RATES` | `[15:0]` `hit_rate`; `[31:16]` `noise_rate` |
-| `0x0C` | `CLUSTER_GEOM_FIX` | `[7:0]` `hit_channel_low`; `[15:8]` `hit_channel_high` |
-| `0x0D` | `CLUSTER_GEOM_RANDOM` | `[7:0]` `cluster_size_random` (1..128); `[9:8]` `mirror_mode`; `[18:11]` signed `mirror_offset`; `[26:19]` `random_center_seed` |
+| `0x0C` | `CLUSTER_GEOM_FIX` | side A in `[15:0]` and side B in `[31:16]`; per side `[6:0]` `low`, `[13:7]` `high`, `[14]` `enable` |
+| `0x0D` | `CLUSTER_GEOM_RANDOM` | `[7:0]` `cluster_size_random` (1..128); `[9:8]` `mirror_mode` (`00` LEFT_ONLY, `01` RIGHT_ONLY, `10` MIRRORED at `127−c`, `11` MIRRORED_INV at `c`); `[18:11]` signed `mirror_offset`; `[26:19]` `random_center_seed` |
 | `0x0E` | `PRNG_SEED` | 32-bit master seed for engine + bkg + per-lane fine PRNG |
 | `0x0F` | `TIMEBASE_SEED` | `[14:0]` `tcc_seed`; `[30:16]` `ecc_seed` (independent PRBS-15 reset values for configurable ECC-after-TCC delay) |
 

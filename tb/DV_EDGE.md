@@ -85,9 +85,9 @@ mirror_offset signed encoding, clamp behavior at SMB edges, mode-only-applies-wh
 
 | ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
 |----|--------|----------|------|----------|---------------|---------------------|
-| E033 | D | mirror_offset=0 exact mirror | 1 | MIRRORED size=4 offset=0 pin center=10. | Mirror at B:ch113..116 (=127-10..127-13). | TBD |
-| E034 | D | mirror_offset=+1 | 1 | Same offset=+1. | Mirror at B:ch114..117. | TBD |
-| E035 | D | mirror_offset=-1 | 1 | Same offset=-1. | Mirror at B:ch112..115. | TBD |
+| E033 | D | mirror_offset=0 exact mirror | 1 | MIRRORED size=4 offset=0 pin center=10. | Mirror at B:ch114..117 (=128-13..128-10). | TBD |
+| E034 | D | mirror_offset=+1 | 1 | Same offset=+1. | Mirror at B:ch115..118. | TBD |
+| E035 | D | mirror_offset=-1 | 1 | Same offset=-1. | Mirror at B:ch113..116. | TBD |
 | E036 | D | mirror_offset=+10 | 1 | Same offset=+10. | Mirror at B:ch123..126 (still inside SMB). | TBD |
 | E037 | D | mirror_offset=+50 clamped (would exceed) | 1 | Pin center=10 size=4 offset=+50 (mirror would land at 167+). | Clamp to keep cluster inside SMB; mirror at B:ch124..127. | TBD |
 | E038 | D | mirror_offset=-127 max negative | 1 | Pin center=64 size=4 offset=-127. | Clamp to ch0..3. | TBD |

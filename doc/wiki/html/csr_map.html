@@ -136,12 +136,12 @@
 <tr>
 <td><code>0x0C</code></td>
 <td><code>CLUSTER_GEOM_FIX</code></td>
-<td><code>[7:0]</code> <code>hit_channel_low</code>; <code>[15:8]</code> <code>hit_channel_high</code></td>
+<td>side A in <code>[15:0]</code> and side B in <code>[31:16]</code>; per side <code>[6:0]</code> <code>low</code>, <code>[13:7]</code> <code>high</code>, <code>[14]</code> <code>enable</code></td>
 </tr>
 <tr>
 <td><code>0x0D</code></td>
 <td><code>CLUSTER_GEOM_RANDOM</code></td>
-<td><code>[7:0]</code> <code>cluster_size_random</code> (1..128); <code>[9:8]</code> <code>mirror_mode</code>; <code>[18:11]</code> signed <code>mirror_offset</code>; <code>[26:19]</code> <code>random_center_seed</code></td>
+<td><code>[7:0]</code> <code>cluster_size_random</code> (1..128); <code>[9:8]</code> <code>mirror_mode</code> (<code>00</code> LEFT_ONLY, <code>01</code> RIGHT_ONLY, <code>10</code> MIRRORED at <code>127−c</code>, <code>11</code> MIRRORED_INV at <code>c</code>); <code>[18:11]</code> signed <code>mirror_offset</code>; <code>[26:19]</code> <code>random_center_seed</code></td>
 </tr>
 <tr>
 <td><code>0x0E</code></td>
