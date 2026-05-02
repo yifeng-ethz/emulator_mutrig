@@ -61,11 +61,11 @@ central_compile_cov: license_check
 # UCDB plus a text report. UCDBs land under tb/uvm/log/ucdb/.
 UCDB_DIR := uvm/log/ucdb
 central_basic_cov: central_compile_cov
-	@echo "═══ Running tb_central_top with coverage on (BASIC+EDGE+PROF+ERROR+EXTRA) ═══"
+	@echo "═══ Running tb_central_top with coverage on (BASIC+EDGE+PROF+ERROR+EXTRA+LONG, exclusions per FEATURE_AXES.md) ═══"
 	mkdir -p $(UCDB_DIR)
-	$(VSIM) -c -coverage -do "coverage save -onexit $(UCDB_DIR)/all_buckets.ucdb; run -all; quit -f" \
+	$(VSIM) -c -coverage -do "do uvm/cov_excludes.do; coverage save -onexit $(UCDB_DIR)/all_buckets.ucdb; run -all; quit -f" \
 	  -work $(CENTRAL_WORK) -t ps \
-	  +EXTRA=1 \
+	  +EXTRA=1 +LONG=1 \
 	  tb_central_top
 	@echo "═══ Generating coverage report ═══"
 	/data1/questaone_sim/questasim/bin/vcover report -details $(UCDB_DIR)/all_buckets.ucdb \
