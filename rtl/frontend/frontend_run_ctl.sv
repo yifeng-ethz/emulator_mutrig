@@ -46,11 +46,11 @@ module frontend_run_ctl (
 
     always_ff @(posedge i_clk) begin : inject_sync
         if (i_rst) begin
-            coe_inject_d1 <= 1'b0;
-            coe_inject_d2 <= 1'b0;
+            coe_inject_d1    <= 1'b0;
+            coe_inject_d2    <= 1'b0;
         end else begin
-            coe_inject_d1 <= coe_inject_pulse;
-            coe_inject_d2 <= coe_inject_d1;
+            coe_inject_d1    <= coe_inject_pulse;
+            coe_inject_d2    <= coe_inject_d1;
         end
     end
 
