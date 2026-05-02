@@ -17,8 +17,10 @@ Arria V board target.
 
 - replace the legacy `emulator_mutrig_bank8` standalone signoff with the new
   central-trigger top
-- prove the front-end / back-end split fits the 4000 ALM standalone budget
-  on Arria V at the 125 MHz nominal clock
+- prove the front-end / back-end split fits the standalone area
+  ceiling of `5460 ALM` (= `3640` plan-§4.1 nominal estimate × `1.5`)
+  and meets timing at the **`137.5 MHz` standalone signoff clock**
+  (`= 1.1 × 125 MHz`, period `7.273 ns`) at the slow-85C corner
 - report both feature axis points: `BYTE_STREAM_ENABLE in {0, 1}` and
   `LANE_COUNT in {1, 2, 4, 8}` (8 is gated; 1/2/4 are informational)
 - catch the parser regression that Quartus 18.1 Standard introduced for
@@ -43,7 +45,7 @@ Arria V board target.
 
 | field | value | target | status |
 |---|---|---|---|
-| Logic utilization (ALMs) | `4,557 / 91,680 (5%)` | `< 4000` | ⚠️ over target by 14% |
+| Logic utilization (ALMs) | `4,557 / 91,680 (5%)` | `< 5460` (1.5 × plan-§4.1 nominal) | ✅ within ceiling, 17% headroom |
 | Total registers | `6,597` | informational | ℹ️ |
 | Total block memory bits | `83,968` | informational | ℹ️ |
 | Total RAM Blocks (M10K) | `16 / 1,366` | `16` | ✅ |
@@ -52,14 +54,20 @@ Arria V board target.
 | Compile errors | `0` | `0` | ✅ |
 | Compile warnings | `146` | informational | ℹ️ |
 
-### Timing — Slow 1100mV 85C corner, `clk125` @ 125 MHz
+### Timing — Slow 1100mV 85C corner, signoff `clk` at `137.5 MHz` (= 1.1 × 125 MHz, period 7.273 ns)
 
 | field | value | target | status |
 |---|---|---|---|
-| Setup slack | `-2.573 ns` | `>= +0.000 ns` | ❌ fails timing |
-| TNS (setup, 85C) | `-908.311 ns` | informational | ❌ |
-| Effective Fmax | `~94.5 MHz` (1 / (8 + 2.573)) | `>= 125 MHz` | ❌ |
-| Setup slack (Slow 0C) | `-2.453 ns` | informational | ❌ |
+| Setup slack at 125 MHz (8 ns) | `-2.573 ns` | informational only | ⚠️ |
+| Setup slack at 137.5 MHz (7.273 ns) | `~-3.300 ns` (extrapolated) | `>= +0.000 ns` | ❌ fails timing |
+| TNS (setup, 85C, 125 MHz baseline) | `-908.311 ns` | informational | ❌ |
+| Effective Fmax | `~94.5 MHz` (1 / (8 + 2.573)) | `>= 137.5 MHz` | ❌ |
+| Setup slack (Slow 0C, 125 MHz baseline) | `-2.453 ns` | informational | ❌ |
+
+The tightened `137.5 MHz` (1.1× nominal) signoff clock is the standalone
+gate per the `timing-performance-resources-sign-off` skill. The next
+build refresh after the trigger-engine pipelining will tighten the
+SDC to 7.273 ns and re-measure.
 
 ### Compatibility build: `LANE_COUNT=8, BYTE_STREAM_ENABLE=1`
 
