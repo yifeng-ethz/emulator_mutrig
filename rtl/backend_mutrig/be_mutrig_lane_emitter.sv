@@ -31,6 +31,8 @@ module be_mutrig_lane_emitter
 
     output logic [63:0]       frame_count,
     output logic [63:0]       hit_count,
+    input  logic              clear_fifo_full_sticky,
+    input  logic              clear_ticket_overflow_sticky,
     output logic              fifo_full_sticky,
     output logic              ticket_overflow_sticky
 );
@@ -145,11 +147,15 @@ module be_mutrig_lane_emitter
             ticket_push = ticket_valid && ticket_ready;
             ticket_count_next = ticket_count;
 
-            if (ticket_valid && !ticket_ready) begin
+            if (clear_ticket_overflow_sticky) begin
+                ticket_overflow_sticky <= 1'b0;
+            end else if (ticket_valid && !ticket_ready) begin
                 ticket_overflow_sticky <= 1'b1;
             end
 
-            if (l2_full) begin
+            if (clear_fifo_full_sticky) begin
+                fifo_full_sticky <= 1'b0;
+            end else if (l2_full) begin
                 fifo_full_sticky <= 1'b1;
             end
 

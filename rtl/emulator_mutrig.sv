@@ -38,8 +38,8 @@ module emulator_mutrig
 
     output logic [LANE_COUNT-1:0][44:0] aso_hit_type0_data,
     output logic [LANE_COUNT-1:0]       aso_hit_type0_valid,
-    output logic [LANE_COUNT-1:0]       aso_hit_type0_sop,
-    output logic [LANE_COUNT-1:0]       aso_hit_type0_eop,
+    output logic [LANE_COUNT-1:0]       aso_hit_type0_startofpacket,
+    output logic [LANE_COUNT-1:0]       aso_hit_type0_endofpacket,
     output logic [LANE_COUNT-1:0]       aso_hit_type0_endofrun,
     output logic [LANE_COUNT-1:0][2:0]  aso_hit_type0_error,
     output logic [LANE_COUNT-1:0][3:0]  aso_hit_type0_channel,
@@ -368,8 +368,8 @@ module emulator_mutrig
                 .l2_rd_data                  (lane_l2_rd_data[lane_idx]),
                 .l2_rd_valid                 (lane_l2_rd_valid[lane_idx]),
                 .aso_hit_type0_channel       (aso_hit_type0_channel[lane_idx]),
-                .aso_hit_type0_startofpacket (aso_hit_type0_sop[lane_idx]),
-                .aso_hit_type0_endofpacket   (aso_hit_type0_eop[lane_idx]),
+                .aso_hit_type0_startofpacket (aso_hit_type0_startofpacket[lane_idx]),
+                .aso_hit_type0_endofpacket   (aso_hit_type0_endofpacket[lane_idx]),
                 .aso_hit_type0_endofrun      (aso_hit_type0_endofrun[lane_idx]),
                 .aso_hit_type0_error         (aso_hit_type0_error[lane_idx]),
                 .aso_hit_type0_data          (aso_hit_type0_data[lane_idx]),
@@ -408,6 +408,13 @@ module emulator_mutrig
 
             assign aso_tx8b1k_channel[lane_idx] = lane_asic_id(lane_idx);
             assign aso_tx8b1k_error[lane_idx] = 3'b000;
+        end
+
+        for (lane_idx = LANE_COUNT; lane_idx < 8; lane_idx++) begin : inactive_csr_lane_gen
+            assign lane_frame_count[lane_idx] = 64'h0000_0000_0000_0000;
+            assign lane_hit_count[lane_idx] = 64'h0000_0000_0000_0000;
+            assign lane_fifo_full_sticky[lane_idx] = 1'b0;
+            assign lane_ticket_overflow_sticky[lane_idx] = 1'b0;
         end
     endgenerate
 
