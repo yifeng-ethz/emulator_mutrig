@@ -28,14 +28,14 @@ Date: 2026-05-02
 Final integrated gate:
 
 - PASS: `python3 ~/.codex/skills/rtl-linter-and-checker/scripts/questa_static_screen.py --top emulator_mutrig --filelist rtl/emulator_mutrig_26_2.f --modes lint,cdc,rdc,formal ...`
-- Transcript: `.questa_static_screen/emulator_mutrig_final_after_abi/questa_static_screen.log`
+- Transcript: `.questa_static_screen/emulator_mutrig_final_counter64/questa_static_screen.log`
 
 Per-file/module evidence:
 
 - PASS: `frontend_ticket_bus_pkg`, transcript `.questa_static_screen/frontend_ticket_bus_pkg/questa_static_screen.log`
 - PASS: `prbs15_lfsr`, transcript `.questa_static_screen/prbs15_lfsr/questa_static_screen.log`
 - PASS: `crc16_8`, transcript `.questa_static_screen/crc16_8/questa_static_screen.log`
-- PASS: `frontend_csr`, transcript `.questa_static_screen/frontend_csr/questa_static_screen.log`
+- PASS: `frontend_csr`, transcript `.questa_static_screen/frontend_csr_final_counter64/questa_static_screen.log`
 - PASS: `frontend_run_ctl`, transcript `.questa_static_screen/per_file_frontend_run_ctl/questa_static_screen.log`
 - PASS: `frontend_trigger_engine`, transcript `.questa_static_screen/frontend_trigger_engine/questa_static_screen.log`
 - PASS: `frontend_bkg_generator`, transcript `.questa_static_screen/per_file_frontend_bkg_generator/questa_static_screen.log`
@@ -45,7 +45,7 @@ Per-file/module evidence:
 - PASS: `be_mutrig_lane_emitter`, transcript `.questa_static_screen/be_mutrig_lane_emitter_current_clean/questa_static_screen.log`
 - PASS: `be_mutrig_lane_type0_emit`, transcript `.questa_static_screen/be_mutrig_lane_type0_emit_current/questa_static_screen.log`
 - PASS: `be_mutrig_frame_assembler`, transcript `.questa_static_screen/be_mutrig_frame_assembler_current/questa_static_screen.log`
-- PASS: `emulator_mutrig`, transcript `.questa_static_screen/emulator_mutrig_final_after_abi/questa_static_screen.log`
+- PASS: `emulator_mutrig`, transcript `.questa_static_screen/emulator_mutrig_final_counter64/questa_static_screen.log`
 
 Resolved failed attempts:
 

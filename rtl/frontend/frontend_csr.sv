@@ -182,14 +182,7 @@ module frontend_csr #(
                 if ((lane_addr >= 0) && (lane_index < 8)) begin
                     unique case (lane_word)
                         0: csr_readdata = status_frame_count[lane_index][31:0];
-                        1: begin
-                            csr_readdata = {
-                                2'b0,
-                                status_ticket_overflow_sticky[lane_index],
-                                status_fifo_full_sticky[lane_index],
-                                status_frame_count[lane_index][59:32]
-                            };
-                        end
+                        1:       csr_readdata = status_frame_count[lane_index][63:32];
                         2:       csr_readdata = status_hit_count[lane_index][31:0];
                         3:       csr_readdata = status_hit_count[lane_index][63:32];
                         default: csr_readdata = 32'h0000_0000;
