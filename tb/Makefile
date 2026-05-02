@@ -3,12 +3,13 @@ include ../../scripts/questa_one.mk
 IP_SRC     = $(realpath ../rtl)
 PARSER_SRC = $(realpath ../../mutrig_frame_deassembly)
 WORK       = work_emu_mutrig
+CENTRAL_WORK = work_emu_mutrig_central
 TB_TOP     = tb_emulator_mutrig
 
 TEST ?= B01_lfsr
 SEED ?= 42
 
-.PHONY: license_check compile run run_all clean
+.PHONY: license_check compile central_compile central_smoke run run_all clean
 
 license_check:
 	@echo "═══ Checking Mentor floating license at $(QUESTA_LICENSE_SERVER) ═══"
@@ -16,6 +17,20 @@ license_check:
 	  { echo "ERROR: mtiverification feature not visible via $(QUESTA_LICENSE_SERVER)"; exit 1; }
 
 compile: license_check $(WORK)/_vmake
+
+central_compile: license_check
+	@echo "═══ Compiling emulator_mutrig central-trigger RTL ═══"
+	rm -rf $(CENTRAL_WORK)
+	$(VLIB) $(CENTRAL_WORK)
+	$(VMAP) $(CENTRAL_WORK) $(CENTRAL_WORK)
+	cd ../rtl && $(VLOG) -work ../tb/$(CENTRAL_WORK) -sv -f emulator_mutrig_central_trigger.f
+
+central_smoke: central_compile
+	@echo "═══ Elaborating emulator_mutrig central-trigger RTL smoke ═══"
+	$(VSIM) -c -do "run 0; quit -f" \
+	  -work $(CENTRAL_WORK) -t ps \
+	  -G LANE_COUNT=8 -G BYTE_STREAM_ENABLE=0 \
+	  emulator_mutrig
 
 $(WORK)/_vmake: $(IP_SRC)/emulator_mutrig_pkg.sv \
                 $(IP_SRC)/prbs15_lfsr.sv \
@@ -58,4 +73,4 @@ run_all: compile
 	  $(TB_TOP)
 
 clean:
-	rm -rf $(WORK) transcript vsim.wlf
+	rm -rf $(WORK) $(CENTRAL_WORK) transcript vsim.wlf
