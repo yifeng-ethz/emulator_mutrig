@@ -1,136 +1,230 @@
-# DV Edge Cases — emulator_mutrig
+# emulator_mutrig DV — Edge and Corner Cases
 
-**Purpose:** corner and boundary conditions for Phase 0 signoff  
-**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; cases include the current single-lane baseline first, with future shared 8-lane merged-datapath references kept as follow-on only.
+**Companion docs:** [DV_PLAN.md](DV_PLAN.md), [DV_BASIC.md](DV_BASIC.md), [DV_EDGE.md](DV_EDGE.md), [DV_PROF.md](DV_PROF.md), [DV_ERROR.md](DV_ERROR.md), `BUG_HISTORY.md`
 
-| ID | Scenario | Checks | Why it exists |
-|---|---|---|---|
-| E001 | Minimum legal injection delay | Hit timestamp lands at exact floor | Verifies lower timing bound |
-| E002 | Maximum legal injection delay | Hit timestamp lands at exact ceiling | Verifies upper timing bound |
-| E003 | Delay step from min to min+1 | Observed latency increments by one unit | Catches off-by-one timing bug |
-| E004 | Delay step from max-1 to max | Observed latency increments by one unit | Catches top-end saturation bug |
-| E005 | Trigger one tick before frame launch | Hit assigned to correct frame | Boundary between scheduler epochs |
-| E006 | Trigger exactly on frame launch | Deterministic frame assignment | Removes ambiguity at zero skew |
-| E007 | Trigger one tick after frame launch | Hit assigned to next legal slot | Checks post-boundary behavior |
-| E008 | Trigger during trailer emission | Hit scheduling remains deterministic | Catches trailer overlap bug |
-| E009 | Trigger during header emission | Hit scheduling remains deterministic | Catches header overlap bug |
-| E010 | Trigger at reset deassertion edge | No metastable/stale hit emitted | Reset/timing corner |
-| E011 | Trigger immediately before reset | Pending hit handled deterministically | Reset/timing corner |
-| E012 | Trigger immediately after reset | First post-reset hit modeled correctly | Bring-up boundary |
-| E013 | Minimum pulse width trigger | Exactly one event captured | Edge detector corner |
-| E014 | Multi-cycle wide trigger | One or documented number of events only | Prevents double-capture bug |
-| E015 | Two triggers separated by one clock | Both events preserved | Throughput timing floor |
-| E016 | Two triggers separated by zero idle clocks in model | DUT behavior matches defined policy | Removes undefined trigger ambiguity |
-| E017 | Long mode zero-hit frame | Minimal legal long frame generated | Smallest long payload edge |
-| E018 | Long mode one-hit frame | Smallest non-empty long frame correct | Packing boundary |
-| E019 | Long mode max legal hits/frame | Frame length and CRC remain valid | Capacity boundary |
-| E020 | Long mode max-1 hits/frame | Boundary below capacity behaves correctly | Off-by-one capacity check |
-| E021 | Short mode zero-hit frame | Minimal legal short frame generated | Smallest short payload edge |
-| E022 | Short mode one-hit frame | Smallest non-empty short frame correct | Packing boundary |
-| E023 | Short mode odd max hit count | Final half-byte packing correct | Hardest short packing corner |
-| E024 | Short mode even max hit count | Alignment remains correct | Short packing corner |
-| E025 | Long-to-short switch on active frame boundary | First short frame clean | Mode-switch edge |
-| E026 | Short-to-long switch on active frame boundary | First long frame clean | Mode-switch edge |
-| E027 | `gen_idle` toggled between consecutive frames | Idle policy changes cleanly | Config/update boundary |
-| E028 | `tx_mode` toggled between consecutive frames | New mode takes effect at correct frame | Mode-update boundary |
-| E029 | `asic_id` changed while idle | Next frame uses new ID only | Config boundary |
-| E030 | `asic_id` changed while active | Documented take-effect point honored | Config boundary |
-| E031 | PRNG seed changed between frames | Stream changes exactly at next frame | Determinism boundary |
-| E032 | PRNG seed changed mid-frame | Behavior matches documented staging rule | Config boundary |
-| E033 | RUN_PREPARE repeated twice | No false activation | Run-state edge case |
-| E034 | SYNC repeated twice | No false activation | Run-state edge case |
-| E035 | RUNNING repeated twice | No duplicate reset/arming effect | Run-state edge case |
-| E036 | TERMINATING without prior RUNNING | Output remains idle | Illegal/degenerate path |
-| E037 | IDLE asserted mid-frame | Datapath shuts down per spec | Stop-path corner |
-| E038 | RUNNING entered with `enable=0` | Output remains idle | Crosses gating controls |
-| E039 | `enable` cleared mid-frame | Current frame completion follows defined policy | Stop-path corner |
-| E040 | `enable` set mid-idle | First active frame starts cleanly | Start-path corner |
-| E041 | CTRL valid pulse one cycle | State capture correct | Minimum handshake case |
-| E042 | CTRL valid pulse many cycles | No duplicate state captures | Handshake edge |
-| E043 | CTRL data changes while valid high | Assertion/checker catches illegal source behavior | Protocol guard |
-| E044 | Ready permanently high with sparse control | No phantom transitions | Protocol stability |
-| E045 | RUNNING to SYNC backstep | DUT behavior matches defined legal/illegal policy | Transition corner |
-| E046 | RUNNING to RUN_PREPARE backstep | DUT behavior matches defined policy | Transition corner |
-| E047 | Rapid RUNNING/IDLE chatter | No counter corruption | Run-state robustness |
-| E048 | Stop immediately after first active frame | Frame count and idle recovery correct | Early-stop corner |
-| E049 | CSR read lowest address | CONTROL read valid | Address-space floor |
-| E050 | CSR read highest legal address | STATUS read valid | Address-space ceiling |
-| E051 | CSR read first illegal address | Returns defined safe value | Address-space fencepost |
-| E052 | CSR write first illegal address | No side effects | Address-space fencepost |
-| E053 | CONTROL write all ones | Only defined bits take effect | Masking corner |
-| E054 | HIT_RATE write all zeros | Produces no stochastic hits | Numeric floor |
-| E055 | HIT_RATE write all ones | Behavior remains bounded and deterministic | Numeric ceiling |
-| E056 | BURST size minimum | Single-channel burst legal | Numeric floor |
-| E057 | BURST size maximum | Burst width saturates per spec | Numeric ceiling |
-| E058 | BURST center minimum channel | Cluster clips/behaves per policy | Channel floor |
-| E059 | BURST center maximum channel | Cluster clips/behaves per policy | Channel ceiling |
-| E060 | TX_MODE reserved pattern 3'b011 | Behavior matches documented safe fallback | Enum hole |
-| E061 | TX_MODE reserved pattern 3'b101 | Behavior matches documented safe fallback | Enum hole |
-| E062 | TX_MODE reserved pattern 3'b110 | Behavior matches documented safe fallback | Enum hole |
-| E063 | TX_MODE reserved pattern 3'b111 | Behavior matches documented safe fallback | Enum hole |
-| E064 | STATUS read while frame starts | Read coherency matches defined timing | Software race corner |
-| E065 | Inject pulse exactly every long frame period | One event window per frame | Period alignment edge |
-| E066 | Inject pulse exactly every short frame period | One event window per frame | Period alignment edge |
-| E067 | Inject pulse just below sustainable rate | No loss at near-limit rate | Throughput corner |
-| E068 | Inject pulse just above sustainable rate | Behavior matches documented overflow/drop policy | Throughput corner |
-| E069 | Burst-mode trigger near channel 0 | Left-edge burst handling correct | Channel edge |
-| E070 | Burst-mode trigger near channel 31 | Right-edge burst handling correct | Channel edge |
-| E071 | Noise mode at minimum non-zero rate | Occasional hits still legal | Probabilistic floor |
-| E072 | Noise mode at very high rate | Frameing remains valid | Probabilistic ceiling |
-| E073 | Mixed mode with zero burst contribution | Degenerates cleanly to Poisson-like behavior | Mode edge |
-| E074 | Mixed mode with zero Poisson contribution | Degenerates cleanly to burst-like behavior | Mode edge |
-| E075 | Long frame with exactly CRC-boundary payload size | CRC window remains correct | Checksum edge |
-| E076 | Short frame with alternating 3/4-byte boundary at trailer | Trailer alignment remains correct | Packing edge |
-| E077 | Frame counter wrap from 0xFFFF to 0 | Wrap behavior defined and correct | Counter edge |
-| E078 | Event count reaches 10-bit max visible range | STATUS/readback remains correct | Counter edge |
-| E079 | STATUS event_count sampled at wrap boundary | No transient invalid value | Counter edge |
-| E080 | Continuous idle commas for extended time | No hidden frame starts | Long-idle stability |
-| E081 | 8-lane two-lane equal timestamp tie | Lower-index lane wins | Smallest merge tie case |
-| E082 | 8-lane three-lane equal timestamp tie | Order follows deterministic policy | Multi-way tie corner |
-| E083 | 8-lane all-eight equal timestamp tie | Total order matches policy | Worst tie corner |
-| E084 | 8-lane oldest hit on highest lane index | Arbiter still picks by timestamp, not lane | Merge correctness |
-| E085 | 8-lane youngest hit on lowest lane index | Arbiter ignores lane bias when timestamp later | Merge correctness |
-| E086 | 8-lane one permanently idle lane | No false starvation flags | Activity-mask corner |
-| E087 | 8-lane one permanently active hot lane | Other lanes still drain when eligible | Fairness corner |
-| E088 | 8-lane alternating active-lane mask | Shared resources reconfigure cleanly | Dynamic activity edge |
-| E089 | 8-lane per-lane minimum delay mix | All lanes honor independent minimum settings | Config isolation edge |
-| E090 | 8-lane per-lane maximum delay mix | All lanes honor independent maximum settings | Config isolation edge |
-| E091 | 8-lane min/max mixed simultaneously | Merge order still correct | Timing-dispersion corner |
-| E092 | 8-lane identical payloads different lanes | Lane provenance preserved | Aliasing corner |
-| E093 | 8-lane identical seeds all lanes | Shared implementation avoids unintended coupling | Shared-state corner |
-| E094 | 8-lane distinct seeds all lanes | Shared implementation keeps streams independent | Shared-state corner |
-| E095 | 8-lane one lane reset/glitched in TB model | Isolation policy defined and enforced | Fault-containment edge |
-| E096 | 8-lane lane stop during tie condition | Merge recovers without duplicate/drop | Dynamic merge corner |
-| E097 | Shared datapath single active lane at max rate | Shared fabric equals standalone latency | Optimization edge |
-| E098 | Shared datapath two active lanes at max rate | No scheduler starvation | Optimization edge |
-| E099 | Shared datapath lane switch every cycle | Context switch correct | Time-multiplexing edge |
-| E100 | Shared datapath lane switch every frame | Context switch correct | Time-multiplexing edge |
-| E101 | Shared datapath common timestamp counter wrap | All lane comparisons remain correct | Shared-timebase edge |
-| E102 | Shared datapath lane-local offset under wrap | Addition/compare remains correct | Shared-timebase edge |
-| E103 | Shared packetizer idle after merged burst | Clean return to idle | Shared-packetizer edge |
-| E104 | Shared packetizer mode mix across lanes | Mode metadata preserved through merge | Shared-packetizer edge |
-| E105 | Shared packetizer long then short from different lanes | No stale packing state | Shared-packetizer edge |
-| E106 | Shared packetizer short then long from different lanes | No stale packing state | Shared-packetizer edge |
-| E107 | Shared datapath with disabled middle lane | Lane indexing remains contiguous/correct | Sparse-lane edge |
-| E108 | Shared datapath with only highest lane active | Lane-ID decode remains correct | Sparse-lane edge |
-| E109 | Shared datapath with only lowest lane active | Baseline passthrough remains correct | Sparse-lane edge |
-| E110 | Shared datapath repeated same timestamp from one lane | Stable self-ordering preserved | Queue corner |
-| E111 | Shared datapath repeated same timestamp across lanes | Tie policy repeated deterministically | Queue corner |
-| E112 | Shared datapath maximum configured lookahead | Merge still chooses oldest legal head | Queue corner |
-| E113 | Area-signoff top with one lane enabled | Functional wrapper works at smallest population | Wrapper edge |
-| E114 | Area-signoff top with eight lanes enabled | Functional wrapper works at full population | Wrapper edge |
-| E115 | Area-signoff top with 4 active, 4 idle | Shared gating preserves correctness | Wrapper edge |
-| E116 | Area-signoff top with mixed long/short lanes | Wrapper handles heterogeneous modes | Wrapper edge |
-| E117 | Area-signoff top reset all lanes simultaneously | Global reset clean | Wrapper edge |
-| E118 | Area-signoff top lane-enable bitmap changes | Config fanout edge | Wrapper edge |
-| E119 | Standalone vs shared one-hit equivalence | Both implementations match on minimal vector | Equivalence floor |
-| E120 | Standalone vs shared max-hit equivalence | Both implementations match at payload ceiling | Equivalence ceiling |
-| E121 | Standalone vs shared min-delay equivalence | Both match at timing floor | Equivalence edge |
-| E122 | Standalone vs shared max-delay equivalence | Both match at timing ceiling | Equivalence edge |
-| E123 | Standalone vs shared tie-case equivalence | Shared merge matches golden composition | Equivalence edge |
-| E124 | Standalone vs shared idle behavior equivalence | Same idle/comma policy | Equivalence edge |
-| E125 | Standalone vs shared frame-count evolution | Counters evolve consistently | Equivalence edge |
-| E126 | Standalone vs shared CRC equivalence | Packet integrity preserved by optimization | Equivalence edge |
-| E127 | Signoff seed set with all boundary knobs | All documented boundary knobs replay cleanly | Regression freeze case |
-| E128 | Boundary-case bundle on area-signoff top | Edge regressions exercised on exact synthesis target | Final pre-implementation gate |
-| E129 | `TERMINATING` edge at pending frame start | No fresh frame starts after the stop edge and the terminal boundary is handled once | Catches the exact post-stop parsing hole described in the run-sequence plan |
+**Parent:** [DV_PLAN.md](DV_PLAN.md)
+**ID Range:** E001-E999
+**Total:** 128 cases (128 implemented / 0 waived)
+
+This bucket exercises boundaries that production code can drift through silently: channel-range off-by-one, cluster-size 1/0/128/256 boundaries, mirror_offset clamp at SMB edges, SMB boundary discipline, lane-enable interactions with cluster decode, ECC seed phase sweep, frame-boundary races, per-lane counter saturation at 32-bit and 60-bit, and CSR aliasing / reserved-bit discipline.
+
+**Methodology key:**
+- **D** = Directed (hand-crafted stimulus, deterministic)
+- **R** = Constrained-random (LCG-based PRNG; no SystemVerilog `rand`)
+
+---
+
+## 1. Summary
+
+| Section | Cases | ID Range | What it Proves | Current Case |
+|---------|-------|----------|----------------|--------------|
+| Channel-Range Boundaries | 16 | E001-E016 | Off-by-one safety in channel-range decode: lane boundary, SMB boundary, full-domain boundary, disabled-lane interaction. | 16/16 |
+| Cluster Size and Geometry Boundaries | 16 | E017-E032 | Cluster-size boundary: 1, 2, 3, 128, 0, >128; center boundary in RANDOM with clamp; inject queue depth boundary. | 16/16 |
+| Mirror Offset and Mode Boundaries | 16 | E033-E048 | mirror_offset signed encoding, clamp behavior at SMB edges, mode-only-applies-when-MIRRORED, mode-change-mid-run. | 16/16 |
+| SMB Boundary and Lane-Enable Interactions | 16 | E049-E064 | SMB boundary discipline (RANDOM never crosses; FIX may cross), lane-enable interaction with cluster decode and asic_id_base. | 16/16 |
+| ECC Seed Phase / Delay Sweep | 16 | E065-E080 | Two-LFSR independent seeds realize configurable ECC-after-TCC delay; user computes seed offset offline; emulator stores no LFSR-step↔time mapping. | 16/16 |
+| Frame Boundary Race Conditions | 16 | E081-E096 | Frame-interval timer correctly delineates SOP/EOP for type0; short/long mode period correct; frame_count and hit_count saturate cleanly. | 16/16 |
+| Per-Lane Counter Saturation and Sticky Bits | 16 | E097-E112 | Per-lane 64-bit frame_count/hit_count saturate cleanly; sticky bits W1C; bank counters saturate; lo/hi atomic read. | 16/16 |
+| CSR Aliasing, Reserved Bits, and Stub Fields | 16 | E113-E128 | All reserved bits read 0; reserved addresses read 0; CSR independent of run-control state; ERROR_INJECT stub stores but does not act. | 16/16 |
+
+---
+
+## 2. Channel-Range Boundaries (E001-E016)
+
+Off-by-one safety in channel-range decode: lane boundary, SMB boundary, full-domain boundary, disabled-lane interaction.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| E001 | D | FIX boundary low=0 | 1 | FIX low=0 high=0 | 1 hit on lane 0 ch 0; no off-by-one underflow. | TBD |
+| E002 | D | FIX boundary high=255 | 1 | FIX low=255 high=255 | 1 hit on lane 7 ch 31; no off-by-one overflow. | TBD |
+| E003 | D | FIX boundary low=high=128 (SMB B first) | 1 | FIX low=128 high=128 | 1 hit on lane 4 ch 0; no SMB-A spillover. | TBD |
+| E004 | D | FIX boundary low=127 high=128 (cross-SMB) | 1 | FIX low=127 high=128 | 1 hit lane 3 ch 31 + 1 hit lane 4 ch 0; same TCC. | TBD |
+| E005 | D | FIX boundary low=31 high=32 (cross-lane within SMB A) | 1 | FIX low=31 high=32 | 1 hit lane 0 ch 31 + 1 hit lane 1 ch 0. | TBD |
+| E006 | D | FIX boundary low=159 high=160 (cross-lane within SMB B) | 1 | FIX low=159 high=160 | 1 hit lane 4 ch 31 + 1 hit lane 5 ch 0. | TBD |
+| E007 | D | FIX cluster at lane7 last channel | 1 | FIX low=255 high=255 | Lane 7 ch 31; no out-of-range. | TBD |
+| E008 | D | FIX size = full domain (256) | 1 | FIX low=0 high=255 | All 8 lanes get full 32-ch ticket. | TBD |
+| E009 | D | FIX size 256 with one lane disabled | 1 | FIX low=0 high=255, LANE_ENABLE bit 4 = 0 | 7 lanes get hits; lane 4 silent. | TBD |
+| E010 | D | FIX size 33 spanning lane 3-4 | 1 | FIX low=127 high=159 | Lane 3 ch 31 + lane 4 ch 0..31. | TBD |
+| E011 | D | FIX size 96 spanning lanes 1-3 | 1 | FIX low=32 high=127 | Lanes 1,2,3 full. | TBD |
+| E012 | D | FIX size 96 spanning lanes 4-6 | 1 | FIX low=128 high=223 | Lanes 4,5,6 full. | TBD |
+| E013 | D | FIX size 8 at lane7 boundary | 1 | FIX low=248 high=255 | Lane 7 ch 24..31. | TBD |
+| E014 | D | FIX size 8 spanning lane6-7 boundary | 1 | FIX low=220 high=227 | Lane 6 ch 28..31 + lane 7 ch 0..3. | TBD |
+| E015 | D | FIX boundary at SMB middle (low=64 high=64) | 1 | FIX low=64 high=64 | Lane 2 ch 0; mid-SMB-A boundary. | TBD |
+| E016 | D | FIX boundary at SMB middle (low=192 high=192) | 1 | FIX low=192 high=192 | Lane 6 ch 0; mid-SMB-B boundary. | TBD |
+
+---
+
+## 3. Cluster Size and Geometry Boundaries (E017-E032)
+
+Cluster-size boundary: 1, 2, 3, 128, 0, >128; center boundary in RANDOM with clamp; inject queue depth boundary.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| E017 | D | RANDOM size=1 minimum | 1 | RANDOM size=1, MIRRORED, offset=0, pin center=63. | Primary A:ch63 + mirror B:ch64. | TBD |
+| E018 | D | RANDOM size=2 even-size | 1 | RANDOM size=2, MIRRORED, offset=0, pin center=63. | Primary A:ch62-63 + mirror B:ch64-65. | TBD |
+| E019 | D | RANDOM size=3 odd-size | 1 | RANDOM size=3, MIRRORED, offset=0, pin center=63. | Primary A:ch62-64 + mirror B:ch63-65. | TBD |
+| E020 | D | RANDOM size=128 max within SMB | 1 | RANDOM size=128, MIRRORED. | Full SMB A + full SMB B (any center clamps). | TBD |
+| E021 | D | RANDOM size>128 saturates to 128 | 1 | RANDOM size=200; check actual cluster. | Cluster bounded to 128 channels per side. | TBD |
+| E022 | D | RANDOM size=0 normalized to 1 | 1 | RANDOM size=0. | 1 hit per side (MIRRORED) or per side selection. | TBD |
+| E023 | D | RANDOM center=0 LEFT_ONLY size=1 | 1 | Pin center=0, LEFT_ONLY size=1. | Hit at A:ch0; no other hits. | TBD |
+| E024 | D | RANDOM center=127 LEFT_ONLY size=1 | 1 | Pin center=127. | Hit at A:ch127 (lane 3 ch 31). | TBD |
+| E025 | D | RANDOM center=0 size=8 LEFT_ONLY | 1 | Pin center=0 size=8. | Cluster A:ch0..7 (clamped low boundary). | TBD |
+| E026 | D | RANDOM center=127 size=8 LEFT_ONLY | 1 | Pin center=127 size=8. | Cluster A:ch120..127 (clamped high boundary). | TBD |
+| E027 | D | RANDOM center=64 size=128 | 1 | Pin center=64 size=128. | Cluster spans full A (center clamps). | TBD |
+| E028 | D | FIX low=high boundary inside cluster | 1 | FIX low=64 high=64. | 1 hit; verify single-channel ticket FSM works. | TBD |
+| E029 | D | Inject during partial drain | 1 | FIX size 32; inject; immediately inject again before drain. | Two clusters queued; both eventually visible; no merge. | TBD |
+| E030 | D | Cluster size 1 across all 8 lanes | 1 | FIX low=0 high=0; FIX low=32 high=32; ...; one inject each. | 8 separate clusters; each on a different lane; same TCC if same cycle. | TBD |
+| E031 | D | Burst-of-clusters at engine limit | 1 | Inject 16 clusters back-to-back at engine_busy boundary. | All 16 land; engine stalls if ticket FIFO fills. | TBD |
+| E032 | D | Cluster size = 9 (boundary 8→9 ticket FIFO depth) | 1 | Inject 9 clusters at FIX size 32 with stalled lane. | Ticket FIFO depth 8 limit hits; 9th inject is the overflow boundary. | TBD |
+
+---
+
+## 4. Mirror Offset and Mode Boundaries (E033-E048)
+
+mirror_offset signed encoding, clamp behavior at SMB edges, mode-only-applies-when-MIRRORED, mode-change-mid-run.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| E033 | D | mirror_offset=0 exact mirror | 1 | MIRRORED size=4 offset=0 pin center=10. | Mirror at B:ch113..116 (=127-10..127-13). | TBD |
+| E034 | D | mirror_offset=+1 | 1 | Same offset=+1. | Mirror at B:ch114..117. | TBD |
+| E035 | D | mirror_offset=-1 | 1 | Same offset=-1. | Mirror at B:ch112..115. | TBD |
+| E036 | D | mirror_offset=+10 | 1 | Same offset=+10. | Mirror at B:ch123..126 (still inside SMB). | TBD |
+| E037 | D | mirror_offset=+50 clamped (would exceed) | 1 | Pin center=10 size=4 offset=+50 (mirror would land at 167+). | Clamp to keep cluster inside SMB; mirror at B:ch124..127. | TBD |
+| E038 | D | mirror_offset=-127 max negative | 1 | Pin center=64 size=4 offset=-127. | Clamp to ch0..3. | TBD |
+| E039 | D | mirror_offset=+127 max positive | 1 | Pin center=64 size=4 offset=+127. | Clamp to ch124..127. | TBD |
+| E040 | D | mirror_offset boundary at edge sizes | 1 | size=128 offset=+1. | Mirror clamped to full SMB B (no spillover). | TBD |
+| E041 | D | mirror_offset=0 size=1 verify exact | 1 | Pin center=63 offset=0 size=1. | Mirror at B:ch64 exactly. | TBD |
+| E042 | D | mirror_offset=0 size=128 verify exact | 1 | Pin center=64 offset=0 size=128. | Mirror covers B:ch0..127. | TBD |
+| E043 | D | mirror_offset effect on TCC anchor | 1 | Sweep offset; capture TCC. | TCC identical for primary and mirror regardless of offset. | TBD |
+| E044 | D | mirror_offset CSR readback | 1 | Write +5; readback CSR 0x0D[18:11]. | Returns +5 (signed). | TBD |
+| E045 | D | mirror_offset signed encoding | 1 | Write -5 (0xFB); readback. | Returns -5 with sign-extend. | TBD |
+| E046 | D | mirror_mode RIGHT_ONLY ignores offset | 1 | RIGHT_ONLY size=4 offset=+10. | Single-side cluster on B; offset has no effect (only MIRRORED uses it). | TBD |
+| E047 | D | mirror_mode LEFT_ONLY ignores offset | 1 | LEFT_ONLY offset=-10. | Single-side cluster on A; offset has no effect. | TBD |
+| E048 | D | mirror_mode change mid-run | 1 | MIRRORED → LEFT_ONLY mid-run. | Subsequent injects use LEFT_ONLY; queued injects honor mode-at-launch. | TBD |
+
+---
+
+## 5. SMB Boundary and Lane-Enable Interactions (E049-E064)
+
+SMB boundary discipline (RANDOM never crosses; FIX may cross), lane-enable interaction with cluster decode and asic_id_base.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| E049 | D | FIX cluster wholly inside SMB A | 1 | FIX low=0 high=127. | All hits side A; lanes 4..7 silent. | TBD |
+| E050 | D | FIX cluster wholly inside SMB B | 1 | FIX low=128 high=255. | All hits side B; lanes 0..3 silent. | TBD |
+| E051 | D | FIX cluster straddles SMB boundary | 1 | FIX low=120 high=135. | Hits on lanes 3 and 4. | TBD |
+| E052 | D | FIX cluster of size 128 mid-SMB | 1 | FIX low=64 high=191. | Hits on lanes 2..5. | TBD |
+| E053 | D | RANDOM never crosses SMB boundary (1000 trials) | 1 | RANDOM size=128 LEFT_ONLY 1000 injects. | Zero side-B hits ever. | TBD |
+| E054 | D | RANDOM MIRRORED preserves side identity | 1 | MIRRORED 1000 trials. | Each launch produces hits on both sides; never one side only (unlike LEFT/RIGHT_ONLY). | TBD |
+| E055 | D | FIX size 256 saturates engine | 1 | FIX low=0 high=255 + 8 back-to-back injects. | Engine cycles through all 8 lane pushes per inject; ticket_overflow_count increments if lanes are stalled. | TBD |
+| E056 | D | FIX size 257 illegal (high=256) | 1 | FIX low=0 high=256. | Field truncates to 8 bits; treated as high=0 (low>high); launch dropped. | TBD |
+| E057 | D | FIX cluster fully in disabled lane | 1 | FIX low=64 high=95; disable LANE_ENABLE bit 2. | No hits emitted; engine pushes ticket but lane consumer holds K28.5. | TBD |
+| E058 | D | FIX cluster spanning 2 lanes one disabled | 1 | FIX low=63 high=64; disable lane 2. | Lane 1 ch 31 fires; lane 2 silent. | TBD |
+| E059 | D | MIRRORED with side B disabled lanes | 1 | MIRRORED size=1 + LANE_ENABLE bits[7:4]=0. | Primary side A fires; mirror side B suppressed by lane enable. | TBD |
+| E060 | D | MIRRORED with side A disabled lanes | 1 | MIRRORED size=1 + LANE_ENABLE bits[3:0]=0. | Mirror fires on side B; primary side A suppressed by lane enable. | TBD |
+| E061 | D | MIRRORED with all lanes disabled | 1 | MIRRORED + LANE_ENABLE=0x00. | No hits anywhere; ticket pushes silently no-op. | TBD |
+| E062 | D | LANE_ENABLE asic_id_base wrap | 1 | Set asic_id_base=0xC; lane 4 → asic_id 0; check clamp. | asic_id of lane i = (asic_id_base + i) clamped to 0..7. | TBD |
+| E063 | D | LANE_ENABLE bit toggle mid-cluster | 1 | FIX size 128 spans lanes 0..3; toggle LANE_ENABLE bit 1 mid-drain. | Lane 1 silences mid-drain (queued frames complete). | TBD |
+| E064 | D | LANE_ENABLE bit re-enable mid-frame | 1 | Disable lane 0, then re-enable mid-frame. | Lane 0 resumes at next frame boundary. | TBD |
+
+---
+
+## 6. ECC Seed Phase / Delay Sweep (E065-E080)
+
+Two-LFSR independent seeds realize configurable ECC-after-TCC delay; user computes seed offset offline; emulator stores no LFSR-step↔time mapping.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| E065 | D | ecc_seed=0x0001 (default, ECC≡TCC) | 1 | tcc_seed=0x0001, ecc_seed=0x0001. | ECC value at every cycle equals TCC value. | TBD |
+| E066 | D | ecc_seed=prbs15_step_n(1, 5) (1 cycle delay) | 1 | Pre-compute seed, write CSR. | ECC lags TCC by exactly 1 cycle (=8ns at 125MHz). | TBD |
+| E067 | D | ecc_seed=prbs15_step_n(1, 25) (5 cycle delay) | 1 | Pre-compute seed for N=5. | ECC lags TCC by 5 cycles (=40ns). | TBD |
+| E068 | D | ecc_seed=prbs15_step_n(1, 100) (20 cycle delay) | 1 | N=20. | ECC lags TCC by 20 cycles (=160ns). | TBD |
+| E069 | D | ecc_seed mid-period | 1 | Pre-compute seed for N=1000. | ECC lags TCC by 1000 cycles (=8μs). | TBD |
+| E070 | D | ecc_seed wraps around PRBS-15 (32767 cycle period) | 1 | N=32767 (full period). | ECC == TCC again (full LFSR period elapsed). | TBD |
+| E071 | D | ecc_seed=prbs15_step_n(1, 32766) → 1-cycle lead | 1 | N = period-1. | ECC effectively leads TCC by 1 (mod period). | TBD |
+| E072 | D | ecc_seed change mid-run reseeds at next emu_rst | 1 | Write new seed during RUNNING. | Current run unaffected; next SYNC re-loads with new seed. | TBD |
+| E073 | D | tcc_seed=0xFEED ecc_seed=0xBEEF | 1 | Custom non-1 seeds. | Both LFSRs run from custom states; no ECC≡TCC relation. | TBD |
+| E074 | D | ecc_seed CSR readback | 1 | Write 0x7FF0 to ecc_seed. | Read returns 0x7FF0. | TBD |
+| E075 | D | tcc_seed=0 illegal (LFSR stuck) | 1 | Write tcc_seed=0. | RTL clamps to 0x0001 or detects invalid; check error reporting. | TBD |
+| E076 | D | ecc_seed=0 illegal (LFSR stuck) | 1 | Write ecc_seed=0. | Clamps to 0x0001 or flagged. | TBD |
+| E077 | D | tcc_seed default value at reset | 1 | Read TIMEBASE_SEED after cold reset. | tcc_seed=0x0001, ecc_seed=0x0001. | TBD |
+| E078 | D | Two emulators with different seeds desync | 1 | Two instances, same PRNG_SEED, different ecc_seeds. | ECC streams differ; TCC identical. | TBD |
+| E079 | D | ECC delay verified via downstream MTS decode | 1 | Drive type0 stream into mutrig_timestamp_processor. | Decoded MTS shows constant ECC-after-TCC delay matching configured seed offset. | TBD |
+| E080 | D | ecc_seed compatible with raw MuTRiG ROM | 1 | Set seeds matching raw MuTRiG dual_port_rom_init.txt. | MTS decode succeeds with no phase remap. | TBD |
+
+---
+
+## 7. Frame Boundary Race Conditions (E081-E096)
+
+Frame-interval timer correctly delineates SOP/EOP for type0; short/long mode period correct; frame_count and hit_count saturate cleanly.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| E081 | D | Inject at frame boundary cycle | 1 | Inject on the cycle frame_start_req asserts. | Cluster lands in next frame; SOP marks first hit. | TBD |
+| E082 | D | Inject 1 cycle before frame boundary | 1 | Inject just before next frame. | Cluster lands in current frame if FIFO room. | TBD |
+| E083 | D | Inject 1 cycle after frame boundary | 1 | Inject just after frame opens. | Cluster lands in current new frame. | TBD |
+| E084 | D | Frame boundary during cluster dispense | 1 | Cluster size 32 mid-dispense; frame boundary fires. | All 32 hits emit; SOP/EOP for the multi-frame span correct. | TBD |
+| E085 | D | Empty frame produces no type0 beats | 1 | RUNNING with no SIGNAL or BKG. | frame_start fires; no SOP/EOP/data; type0 valid stays low. | TBD |
+| E086 | D | Frame with 1 hit | 1 | 1 inject per frame interval. | 1 SOP+EOP+data beat per frame. | TBD |
+| E087 | D | Frame with N=event_count_max hits | 1 | Inject FIX size 32 multiple times. | All hits drain into one frame if FIFO room; SOP/EOP correct. | TBD |
+| E088 | D | Back-to-back full frames | 1 | Inject continuously. | Frames open at every interval boundary; no missed frames. | TBD |
+| E089 | D | Frame interval short_mode (910 cycles) | 1 | MUTRIG_FORMAT.short_mode=1. | frame_start_req period = 910 cycles. | TBD |
+| E090 | D | Frame interval long_mode (1550 cycles) | 1 | short_mode=0. | frame_start_req period = 1550 cycles. | TBD |
+| E091 | D | short_mode toggle mid-run | 1 | Toggle short_mode while RUNNING. | Behavior at boundary defined by spec; flag any race. | TBD |
+| E092 | D | frame_assembler stall on FIFO empty | 1 | Drain L2 to empty mid-frame. | frame_assembler emits gen_idle bytes; no spurious data. | TBD |
+| E093 | D | frame_assembler with gen_idle=0 | 1 | MUTRIG_FORMAT.gen_idle=0. | No idle bytes between hits; frame compact. | TBD |
+| E094 | D | frame_count increments on every frame_start | 1 | Run 100 frames. | Per-lane LANE_FRAME_LO increments to 100. | TBD |
+| E095 | D | frame_count saturating at 64-bit max | 1 | Pre-load counter near 2^60-1. | Counter saturates instead of wrapping. | TBD |
+| E096 | D | hit_count increments on every L2 commit | 1 | Inject 100 size-1 clusters. | Per-lane LANE_HIT_LO increments to 100. | TBD |
+
+---
+
+## 8. Per-Lane Counter Saturation and Sticky Bits (E097-E112)
+
+Per-lane 64-bit frame_count/hit_count saturate cleanly; sticky bits W1C; bank counters saturate; lo/hi atomic read.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| E097 | D | frame_count_lo readback | 1 | 100 frames; read 0x20. | Returns 0x64. | TBD |
+| E098 | D | frame_count_hi readback above 2^32 | 1 | Force counter past 2^32. | Hi word increments correctly. | TBD |
+| E099 | D | frame_count saturates at 2^60-1 | 1 | Force counter to 2^60-1, run more frames. | Counter holds at saturation value. | TBD |
+| E100 | D | hit_count_lo readback | 1 | 100 hits; read 0x22. | Returns 0x64. | TBD |
+| E101 | D | hit_count_hi readback above 2^32 | 1 | 4G+ hits. | Hi word increments. | TBD |
+| E102 | D | hit_count saturates at 2^64-1 | 1 | Force counter to max. | Counter saturates. | TBD |
+| E103 | D | Per-lane counter independence | 1 | Inject hits on lane 3 only. | Lane 3 counter increments; lanes 0-2,4-7 stay 0. | TBD |
+| E104 | D | Counter clears on emu_rst | 1 | 100 hits; pulse SYNC. | All lane counters reset to 0. | TBD |
+| E105 | D | Counter persists across IDLE→RUNNING | 1 | Pause via IDLE then resume RUNNING (no SYNC). | Counters retain pre-pause value. | TBD |
+| E106 | D | fifo_full_sticky sets on first overrun | 1 | Stress until L2 full. | Bit 28 of FRAME_HI sets and stays. | TBD |
+| E107 | D | fifo_full_sticky W1C clears | 1 | Set sticky; write 1 to FRAME_HI[28]. | Bit clears; further overruns set again. | TBD |
+| E108 | D | ticket_overflow_sticky sets on engine stall | 1 | Stress until ticket FIFO full. | Bit 29 of FRAME_HI sets. | TBD |
+| E109 | D | ticket_overflow_sticky W1C clears | 1 | Write 1 to FRAME_HI[29]. | Bit clears. | TBD |
+| E110 | D | BANK_STATUS.ticket_overflow_count saturates | 1 | Force 65k+ overflows. | Field saturates at 0xFFFF. | TBD |
+| E111 | D | BANK_STATUS.engine_busy_high_water tracks max | 1 | Run RANDOM size=128 MIRRORED. | High-water reflects max consecutive engine_busy cycles. | TBD |
+| E112 | D | Read counters atomically (lo before hi) | 1 | Read 0x20 then 0x21. | Lo capture freezes hi; hi reflects same snapshot. | TBD |
+
+---
+
+## 9. CSR Aliasing, Reserved Bits, and Stub Fields (E113-E128)
+
+All reserved bits read 0; reserved addresses read 0; CSR independent of run-control state; ERROR_INJECT stub stores but does not act.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| E113 | D | Reserved bit in CTRL_MODE/CENTRAL reads 0 | 1 | Write 0xFFFFFFFE to CENTRAL; read. | Bits[31:1] read 0. | TBD |
+| E114 | D | Reserved bit in SIGNAL reads 0 | 1 | Write 0xFFFFFFF8 to SIGNAL; read. | Bits[31:3] read 0. | TBD |
+| E115 | D | Reserved bit in BACKGROUND reads 0 | 1 | Write 0xFFFFFFFE to BACKGROUND; read. | Bits[31:1] read 0. | TBD |
+| E116 | D | Reserved bit in MUTRIG_FORMAT reads 0 | 1 | Write 0xFFFFFF80 to MUTRIG_FORMAT; read. | Bits[31:7] read 0. | TBD |
+| E117 | D | Write to CSR 0x10 (reserved INJECT_CHANNEL_MASK) reads 0 | 1 | Write 0xDEAD; read. | Read returns 0. | TBD |
+| E118 | D | Write to CSR 0x11 (reserved INJECT_LANE_MASK) reads 0 | 1 | Same. | Read returns 0. | TBD |
+| E119 | D | Reserved 0x16/0x17/0x18/0x19/0x1A/0x1B/0x1C/0x1D/0x1E/0x1F all read 0 | 1 | Read each. | All return 0. | TBD |
+| E120 | D | Reserved 0x40+ behavior (out of 6-bit window) | 1 | Read 0x40, 0x7F. | Address wraps or returns 0; documented behavior consistent. | TBD |
+| E121 | D | Read CSR while ctrl=RESET | 1 | Hold RESET; read CSR. | CSR responds normally; csr_block independent of run-control. | TBD |
+| E122 | D | Read CSR while emu_rst asserted | 1 | Pulse emu_rst; read during pulse. | CSR responds; UID/META still readable. | TBD |
+| E123 | D | Write CSR while emu_rst asserted | 1 | Write CENTRAL during emu_rst. | Write accepted; will apply after rst deasserts. | TBD |
+| E124 | D | Back-to-back CSR write/read | 1 | Write CENTRAL then read same cycle next. | Read returns just-written value. | TBD |
+| E125 | D | CSR address aliasing (mod 64) | 1 | Write to 0x07; read from 0x47 (out of range). | 0x47 returns reserved=0; 0x07 holds the write. | TBD |
+| E126 | D | FIRE.fire_inject_pulse W1P read returns 0 | 1 | Write 1; read. | Read returns 0 (W1P semantics). | TBD |
+| E127 | D | ERROR_INJECT stub: write/readback | 1 | Write 0x7 to ERROR_INJECT[2:0]. | Readback returns 0x7; type0_error[2:0] still ties to 0. | TBD |
+| E128 | D | ERROR_INJECT stub does NOT inject | 1 | Set ERROR_INJECT=0x7; inject hits. | All type0_error[2:0] outputs are 3'b000 regardless. | TBD |
+
+---

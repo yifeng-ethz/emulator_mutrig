@@ -1,144 +1,98 @@
-# DV Plan: emulator_mutrig
+# emulator_mutrig DV — Verification Plan
 
-**DUT family:** `emulator_mutrig`
-**Active release:** `26.1.9.0418`
-**Primary evidence target:** compact single-lane behavior plus standalone bank8 synthesis proof
-**Companion reports:** [DV_REPORT.md](DV_REPORT.md), [DV_COV.md](DV_COV.md), [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md)
+**Companion docs:** [DV_BASIC.md](DV_BASIC.md), [DV_EDGE.md](DV_EDGE.md), [DV_PROF.md](DV_PROF.md), [DV_ERROR.md](DV_ERROR.md), [DV_HARNESS.md](DV_HARNESS.md), [DV_COV.md](DV_COV.md), [BUG_HISTORY.md](BUG_HISTORY.md), `REPORT/`
 
-## 1. Scope
+**Patch under verification:** Central trigger engine refresh — front-end / back-end split, single inject port, golden 7-word CSR header, RANDOM mirror modes, direct hit_type0 emit. See `../doc/RTL_PLAN_central_trigger.md` for the architecture.
 
-The active DV gate for this refresh is narrower than the earlier exploratory
-plan set. The goal is to prove that the compact lane RTL is functionally
-equivalent enough for Mu3e datapath use while the standalone bank8 build proves
-the requested area target.
+## 1. Verification Targets
 
-In scope:
+The patch restructures the IP around an explicit FE/BE layering. DV must prove:
 
-- single-lane frame formatting and run-control behavior
-- CSR-visible defaults and enable semantics
-- short and long frame cadence
-- burst, noise, mixed, inject, and cross-ASIC slice behavior
-- raw-MuTRiG versus emulator collective latency-distribution parity in short and long mode
-- raw-MuTRiG versus emulator saturation-curve parity in short and long mode
-- supplemental short-mode Poisson true-timestamp latency characterization from `0%` to
-  `100%` of the raw `1 hit / 3.5 cycles` offered-load target
-- standalone `emulator_mutrig_bank8` synthesis/resource evidence
+1. **Front-end correctness.** The SIGNAL (Poisson, Periodic, FIX, RANDOM with mirror modes), BACKGROUND (per-channel IID), and EXTERNAL inject (CSR fire OR'd with conduit pulse) producers all compute the right per-lane tickets and dispatch them on the shared ticket bus per the §2.0 contract.
+2. **Back-end correctness (MuTRiG).** Each per-lane back-end consumes tickets, packs hits in MuTRiG long/short word format with correct TCC/ECC/T_Fine/E_Fine semantics, and drives both the direct `hit_type0` AvST source and the optional 8b/1k byte stream.
+3. **Common CSR golden header (0x00..0x06).** UID, META, SCRATCH, LAST_RD/WR_ADDR/DATA exposed exactly per the v2 template; passes `~/.codex/skills/ip-packaging/scripts/lint_csr_header.py --profile golden`.
+4. **Run-control discipline.** RUNNING gates new generation, TERMINATING drains, SYNC/RESET clears state. Engine survives illegal ctrl words.
+5. **Backpressure and overflow.** Per-lane ticket FIFO, per-lane L2 FIFO, type0 and byte-stream sinks all honor ready/valid; overflow paths counted and recoverable.
+6. **Type0 vs deassembly parity.** Direct type0 path matches `mutrig_frame_deassembly` output beat-for-beat across all modes.
+7. **ECC seed delay.** TCC and ECC LFSRs run from independent CSR-loadable seeds; user-computed offset realizes configurable ECC-after-TCC delay.
 
-Not refreshed in this turn:
+## 2. Bucket Layout (per dv-workflow §15b)
 
-- gate-level replay
-- bucket-frame / all-buckets continuous-frame regressions
-- dedicated bank8 functional UVM bench
+| Bucket | File | Cases | What it Proves |
+|--------|------|-------|----------------|
+| BASIC  | [DV_BASIC.md](DV_BASIC.md) | 128 (B001-B128) | Bring-up: golden CSR header, run-control decode, SIGNAL Poisson/Periodic, EXTERNAL inject, FIX/RANDOM cluster, BACKGROUND IID. Required to pass before other buckets are meaningful. |
+| EDGE   | [DV_EDGE.md](DV_EDGE.md) | 128 (E001-E128) | Boundaries: channel range, cluster size, mirror offset clamp, SMB boundaries, lane-enable interactions, ECC seed phase sweep, frame boundary races, counter saturation, CSR aliasing/reserved bits. |
+| PROF   | [DV_PROF.md](DV_PROF.md) | 128 (P001-P128) | Performance and stress: sustained 100% load, burst cluster throughput, BACKGROUND soak, mixed SIGNAL+BKG, per-lane drain latency, type0 vs deassembly parity, inject ORing stress, continuous-frame long-run soak. |
+| ERROR  | [DV_ERROR.md](DV_ERROR.md) | 128 (X001-X128) | Reset/illegal/recovery: reset during activity, illegal run-control transitions, CSR access during reset, ticket FIFO overflow, L2 backpressure recovery, frame-boundary reset, CSR atomicity, run-control replay. |
+| **Total** | | **512 cases** | |
 
-## 2. Closure Commands
+Note: per the user request, the perf/stress bucket is named `DV_PROF.md` to satisfy `dv_bucket_format_check.py` (the canonical letter is `P`, not `PERF`).
 
-The active release is accepted only if these commands stay green:
+## 3. Coverage Intent
 
-1. `make -C tb run_all`
-2. `make -C tb/uvm clean closure SEEDS=1`
-3. `python3 tb/mutrig_true_ab/sweep_true_ab.py`
-4. `quartus_sh --flow compile emulator_mutrig_bank8_syn -c emulator_mutrig_bank8_syn`
+Per dv-workflow §6: every case has its own isolated UCDB; merged isolated baseline is reported per delta; final closure includes statement, branch, condition, expression, FSM, and toggle merged totals. Continuous-frame `bucket_frame` and `all_buckets_frame` modes (§8-9) are mandatory baselines — see [DV_COV.md](DV_COV.md) for the running tables.
 
-## 3. Required Evidence
+Key coverpoints (full list in [DV_HARNESS.md](DV_HARNESS.md)):
 
-### 3.1 Directed smoke
+- **CSR address space:** every word in 0x00..0x3F written (where RW) and read.
+- **Mode matrix:** every combination of `hit_mode_sig × internal_sub_mode × cluster_geom_mode × hit_mode_bkg × mirror_mode`.
+- **Cluster size:** {1, 2, 32, 33, 64, 127, 128, 256} crossed with mirror_mode.
+- **Mirror offset:** {-128, -32, -1, 0, +1, +32, +127} crossed with cluster size.
+- **Per-lane:** every lane (0..7) sees at least one ticket of every type.
+- **Run-control:** every legal one-hot state; every legal transition pair.
+- **Backpressure:** per-lane ticket FIFO depth bins {0, 1, 4, 7, 8 (full)}, L2 FIFO {0, 64, 128, 192, 255, 256 (full)}.
+- **Counters:** per-lane frame_count and hit_count cross 32-bit and 60-bit boundaries at least once.
 
-The directed bench is the first functional gate. It must continue to prove:
+## 4. Reference RTL
 
-- `910`-cycle short-frame spacing
-- `1550`-cycle long-frame spacing
-- run-control stop/drain behavior
-- CSR readback
-- cross-ASIC cluster slicing
-- parser-visible framing and CRC behavior
+- `rtl/frontend/frontend_csr.sv`
+- `rtl/frontend/frontend_run_ctl.sv`
+- `rtl/frontend/frontend_trigger_engine.sv`
+- `rtl/frontend/frontend_bkg_generator.sv`
+- `rtl/frontend/frontend_ticket_distributor.sv`
+- `rtl/common/frontend_ticket_bus_pkg.sv`  (FE/BE contract)
+- `rtl/common/prbs15_lfsr.sv`
+- `rtl/backend_mutrig/be_mutrig_pkg.sv`
+- `rtl/backend_mutrig/be_mutrig_lane_emitter.sv`
+- `rtl/backend_mutrig/be_mutrig_l2_fifo.sv`
+- `rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv`
+- `rtl/backend_mutrig/be_mutrig_frame_assembler.sv`
+- `rtl/emulator_mutrig.sv`  (top, FE + 8 × BE-MuTRiG)
 
-### 3.2 UVM isolated regression
+## 5. Build Feature Axes (synthesis + DV matrix)
 
-The isolated UVM suite is the main release-quality functional evidence for the
-compact lane.
+This IP has exactly **two** elaboration-time feature axes (per `../doc/RTL_PLAN_central_trigger.md` §1.1):
 
-Priority cases for this refresh:
+| Axis | Parameter | Legal values | Default |
+|------|-----------|--------------|---------|
+| Lane count | `LANE_COUNT` | 1, 2, 4, 8 | 8 |
+| Output path | `BYTE_STREAM_ENABLE` | 0 (type0 only) / 1 (type0 + 8b/1k) | 0 |
 
-- `emut_test_reset_defaults`
-- `emut_test_short_burst_mode`
-- `emut_test_disable_and_status`
-- the remaining `regress SEEDS=1` matrix
+DV gated points (must pass for signoff):
 
-### 3.3 Coverage refresh
+- `LANE_COUNT=8, BYTE_STREAM_ENABLE=0` — primary build, type0-only path. All 512 cases run here except those that explicitly require the byte-stream output.
+- `LANE_COUNT=8, BYTE_STREAM_ENABLE=1` — compatibility build, exercises both type0 and 8b/1k for the deassembly-parity tests (P081-P096).
 
-The merged UCDB produced by `clean closure SEEDS=1` is the active coverage
-artifact for this release. Coverage is reported in [DV_COV.md](DV_COV.md).
+DV-reported but not gated for 26.2.x: `LANE_COUNT in {1,2,4}` × both byte-stream values.
 
-### 3.4 Standalone bank8 synthesis
+Cases that explicitly require `BYTE_STREAM_ENABLE=1` are flagged in their `Stimulus` cell (search "byte-stream"). All other cases pass on either build.
 
-The merged architecture is accepted only if the standalone build keeps:
+## 6. Long-Run Soak Coverage Promotion (per dv-workflow §8-9)
 
-- `8` lanes in one bank
-- one `256 x 48` L2 FIFO per lane in RAM
-- total ALMs below `4000`
+For `bucket_frame` and `all_buckets_frame` modes, every case promotes its directed stimulus into a constrained-random profile centred on the directed value (PRNG seed varied per soak run). This is mandatory: a directed-only soak produces no coverage delta beyond a single isolated case.
 
-### 3.5 True raw A/B parity sweep
+A separate Claude subagent dispatch derives the per-case coverage points (covergroup bins, cross-coverage with mode-axis, lane-axis, and frame-axis state) and a `random_profile_t` struct per case. The `random_profile` is consumed by the UVM sequence layer in `bucket_frame` mode to scatter each case across its neighbourhood while the `isolated` mode keeps the directed pin.
 
-This is an active signoff gate. The goal is to drive raw MuTRiG RTL and the
-emulator with the same hit stream and prove that the collective latency plots,
-the accepted/output rate curve, and the decoded channels all match exactly.
+## 7. Sign-off Gate
 
-Artifacts:
+Per dv-workflow §17-18:
 
-- bench: [mutrig_true_ab/tb_mutrig_true_ab.sv](mutrig_true_ab/tb_mutrig_true_ab.sv)
-- driver: [mutrig_true_ab/sweep_true_ab.py](mutrig_true_ab/sweep_true_ab.py)
-- report: [mutrig_true_ab/results/TRUE_AB_REPORT.md](mutrig_true_ab/results/TRUE_AB_REPORT.md)
-
-Required outputs:
-
-- exact collective latency histogram parity for short and long mode
-- exact parsed payload parity
-- exact recovered hit-channel parity
-- exact parser output-cycle parity
-- matched accepted/output saturation curve from `0%` to `100%` load
-
-### 3.6 Supplemental Poisson delay sweep
-
-This is characterization evidence, not a hard release gate. The goal is to
-measure where the compact short-mode lane starts to saturate when driven with a
-Poisson source from idle up to the raw `1 hit / 3.5 cycles` reference.
-
-Artifacts:
-
-- bench: [poisson_delay/tb_poisson_delay.sv](poisson_delay/tb_poisson_delay.sv)
-- driver: [poisson_delay/sweep_poisson_delay.py](poisson_delay/sweep_poisson_delay.py)
-- report: [poisson_delay/results/POISSON_DELAY_REPORT.md](poisson_delay/results/POISSON_DELAY_REPORT.md)
-
-Expected outputs:
-
-- true `E-ts -> frame_start` latency distribution
-- true `E-ts -> output` latency distribution
-- true `E-ts -> pop` secondary cross-check distribution
-- average and peak L2 FIFO occupancy
-- `full_cycles` as the saturation indicator
-- accepted throughput versus the raw `1 hit / 3.5 cycles` reference
-
-## 4. Current Truth After 2026-04-18 Reruns
-
-- directed smoke passes cleanly at `61 passed, 0 failed`
-- isolated UVM regression passes cleanly
-- coverage refresh is present and reviewable (`70.74%` filtered merged total)
-- raw MuTRiG A/B sweep proves exact short/long collective latency-distribution
-  parity with zero payload, channel, cycle, or histogram deltas
-- Poisson delay sweep is present and reports the corrected raw-style
-  `true E-ts -> frame_start` and `true E-ts -> output` distributions across the
-  full requested `0% .. 100%` raw-load range
-- bank8 standalone compile meets the area target at `3856 ALMs`
-- tightened `137.5 MHz` timing closes with slow `85C` setup slack `+1.224 ns`
-
-## 5. Signoff Interpretation
-
-For this release:
-
-- functional status is `PASS` for the promoted directed and isolated UVM runs
-- coverage status is `PARTIAL`, because only isolated UCDB evidence was refreshed
-- standalone synthesis status is `PASS` for both area and timing
-- continuous-frame and gate-level collateral remain out of the active compact
-  refresh scope and are therefore still reported separately as not refreshed
-
-The master verdict is kept in [../doc/SIGNOFF.md](../doc/SIGNOFF.md).
+1. All 512 cases pass in isolated mode on the primary build; isolated merged coverage tables green in [DV_COV.md](DV_COV.md).
+2. `bucket_frame` and `all_buckets_frame` continuous-frame modes pass on the primary build, with random-promoted profiles.
+3. The compatibility build (`BYTE_STREAM_ENABLE=1`) passes the parity bucket (P081-P096) and the type0/byte-stream-coupled subset of BASIC and EDGE.
+4. RTL lint passes via `rtl-linter-and-checker` skill, including formal mode (`--modes lint,cdc,rdc,formal`) with the harness-provided assertions/assumes/covers (Claude is responsible for inserting these during code review per the user's 2026-05-02 directive).
+5. Synthesis at 137.5 MHz signoff clock passes on both gated build points.
+6. CSR header lint passes (`lint_csr_header.py --profile golden`).
+7. [BUG_HISTORY.md](BUG_HISTORY.md) and [DV_REPORT.md](DV_REPORT.md) are current and lint-clean.
+8. Independent cross-check of dashboard rows passes.
+9. Then and only then: signoff git tag.

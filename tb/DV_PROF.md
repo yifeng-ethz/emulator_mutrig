@@ -1,136 +1,230 @@
-# DV Performance / Soak Cases — emulator_mutrig
+# emulator_mutrig DV — Performance, Stress, and Soak Cases
 
-**Purpose:** stress, throughput, latency-distribution, and soak cases for Phase 0 signoff  
-**Scope notes:** control SPI is out of scope; realistic datapath timing and tunable injection-trigger timing are in scope; the current single-lane emulator is the closure target, while the 8-lane `<4k ALM` work remains a follow-on architecture concern that must survive long-running regressions.
+**Companion docs:** [DV_PLAN.md](DV_PLAN.md), [DV_BASIC.md](DV_BASIC.md), [DV_EDGE.md](DV_EDGE.md), [DV_PROF.md](DV_PROF.md), [DV_ERROR.md](DV_ERROR.md), `BUG_HISTORY.md`
 
-| ID | Scenario | Checks | Why it exists |
-|---|---|---|---|
-| P001 | Single-lane long mode soak 1k frames | No frame corruption over run | Basic long soak |
-| P002 | Single-lane long mode soak 10k frames | Counters and CRC remain stable | Medium endurance |
-| P003 | Single-lane long mode soak 100k frames | No drift or wrap anomalies | Long endurance |
-| P004 | Single-lane short mode soak 1k frames | No frame corruption over run | Basic short soak |
-| P005 | Single-lane short mode soak 10k frames | Counters and CRC remain stable | Medium endurance |
-| P006 | Single-lane short mode soak 100k frames | No drift or wrap anomalies | Long endurance |
-| P007 | Single-lane idle-only soak | No unexpected headers in long idle | Detects latent oscillation |
-| P008 | Single-lane mode-switch soak | Repeated long/short switches stay clean | State endurance |
-| P009 | Poisson low-rate long run | Mean/variance remain within envelope | Statistical stability |
-| P010 | Poisson nominal-rate long run | Mean count tracks configured target | Statistical stability |
-| P011 | Poisson high-rate long run | No frame-format collapse | Stresses generator |
-| P012 | Noise low-rate long run | Rare events still legal | Statistical stability |
-| P013 | Noise high-rate long run | Output remains framed/CRC-valid | Stresses generator |
-| P014 | Mixed mode long run | Both contributors remain observable | Mixed-source endurance |
-| P015 | Burst mode periodic run | Cluster width remains stable over time | Burst stability |
-| P016 | Burst mode random-center run | Center tracking remains stable | Burst stability |
-| P017 | Min-delay latency histogram | Distribution centered at timing floor | Timing profiling |
-| P018 | Mid-delay latency histogram | Distribution centered at mid setting | Timing profiling |
-| P019 | Max-delay latency histogram | Distribution centered at timing ceiling | Timing profiling |
-| P020 | Full delay sweep histogram | Latency bins monotonic across sweep | Timing profiling |
-| P021 | Long-mode trigger-to-first-hit latency run | No outliers beyond tolerance | Timing profiling |
-| P022 | Short-mode trigger-to-first-hit latency run | No outliers beyond tolerance | Timing profiling |
-| P023 | Per-hit offset latency run | Multi-hit offsets remain stable | Timing profiling |
-| P024 | Inject phase sweep run | Sub-cycle phase knob changes distribution predictably | Realistic timing profiling |
-| P025 | Back-to-back triggers at sustainable rate | No drop over extended run | Throughput ceiling |
-| P026 | Triggers just below sustainable rate | Stable throughput margin | Throughput knee |
-| P027 | Triggers just above sustainable rate | Drop/defer behavior matches policy | Throughput knee |
-| P028 | Maximum legal long payload repeated | Sustained max long payload stays correct | Payload stress |
-| P029 | Maximum legal short payload repeated | Sustained max short payload stays correct | Payload stress |
-| P030 | Alternating max/min payload run | No stale length state | Payload stress |
-| P031 | Alternating empty/full frames | Counters and CRC remain coherent | Payload stress |
-| P032 | PRBS debug mode soak | Debug path stable over long run | Debug-path endurance |
-| P033 | Single-lane reset every 100 frames | Recovery always clean | Periodic reset soak |
-| P034 | Single-lane reset every 1k frames | Recovery always clean | Periodic reset soak |
-| P035 | Single-lane reset at pseudo-random intervals | No hidden reset/order bug | Reset endurance |
-| P036 | Stop/start every 10 frames | Counters remain coherent | Run-control endurance |
-| P037 | Stop/start every 100 frames | Counters remain coherent | Run-control endurance |
-| P038 | Rapid stop/start chatter run | No dead state reached | Run-control endurance |
-| P039 | Enable/disable chatter run | No leakage when disabled | Gating endurance |
-| P040 | Seed reload every 50 frames | Transition remains deterministic | Config-update endurance |
-| P041 | 8-lane uniform low rate | All lanes drain with equal correctness | Multi-lane baseline |
-| P042 | 8-lane uniform nominal rate | All lanes drain with equal correctness | Multi-lane baseline |
-| P043 | 8-lane uniform high rate | Shared merge remains lossless if within spec | Multi-lane stress |
-| P044 | 8-lane staggered low rate | Merge order remains deterministic | Multi-lane baseline |
-| P045 | 8-lane staggered nominal rate | Merge order remains deterministic | Multi-lane baseline |
-| P046 | 8-lane staggered high rate | Shared scheduler remains stable | Multi-lane stress |
-| P047 | 8-lane bursty synchronized run | Simultaneous arrivals handled repeatedly | Multi-lane stress |
-| P048 | 8-lane bursty desynchronized run | Independent lanes remain isolated | Multi-lane stress |
-| P049 | 8-lane one-hot rotating active lane | Lane context switch stable over time | Shared-state endurance |
-| P050 | 8-lane two-active rotating pair | No pair-specific corruption | Shared-state endurance |
-| P051 | 8-lane four-active rotating mask | Shared merge stable under changing masks | Shared-state endurance |
-| P052 | 8-lane all-active with per-lane delays | Independent delay settings preserved | Shared-state endurance |
-| P053 | 8-lane all-active with per-lane seeds | Independent streams preserved | Shared-state endurance |
-| P054 | 8-lane all-active with per-lane modes | Heterogeneous lane behavior preserved | Shared-state endurance |
-| P055 | 8-lane all-active long-only run | Sustained merged long traffic stable | Shared-merge throughput |
-| P056 | 8-lane all-active short-only run | Sustained merged short traffic stable | Shared-merge throughput |
-| P057 | 8-lane mixed long/short run | Shared packetizer handles heterogeneity | Shared-merge throughput |
-| P058 | 8-lane equal-timestamp repeated tie run | Tie-break remains deterministic over time | Arbiter endurance |
-| P059 | 8-lane rotating tie winners | Every lane can win ties per policy | Arbiter endurance |
-| P060 | 8-lane starvation-watch run | No active lane starves over long interval | Fairness endurance |
-| P061 | Shared datapath single hot lane max rate | Shared implementation matches standalone throughput | Optimization proof |
-| P062 | Shared datapath two hot lanes max rate | Scheduler context switch stable | Optimization proof |
-| P063 | Shared datapath four hot lanes max rate | Scheduler context switch stable | Optimization proof |
-| P064 | Shared datapath eight hot lanes max rate | Scheduler context switch stable | Optimization proof |
-| P065 | Shared timestamp base long run | Common counter never mis-orders hits | Shared-resource proof |
-| P066 | Shared timestamp wrap run | Common counter wrap remains safe | Shared-resource proof |
-| P067 | Shared packetizer long run | No stale mode/length state | Shared-resource proof |
-| P068 | Shared packetizer mixed-mode run | No stale mode/length state | Shared-resource proof |
-| P069 | Shared lane-ID mux long run | Lane tagging remains correct | Shared-resource proof |
-| P070 | Shared lane-ID mux stress run | Lane tagging remains correct | Shared-resource proof |
-| P071 | Shared config fanout steady run | Lane-local cfg remains isolated | Shared-resource proof |
-| P072 | Shared config fanout churn run | Lane-local cfg remains isolated under updates | Shared-resource proof |
-| P073 | Delay monotonicity sweep on lane 0 | All sampled points monotonic | Timing profiling |
-| P074 | Delay monotonicity sweep on lane 7 | All sampled points monotonic | Timing profiling |
-| P075 | Delay monotonicity sweep all lanes | All sampled points monotonic | Timing profiling |
-| P076 | Trigger phase sweep on one lane | Output latency changes predictably | Timing profiling |
-| P077 | Trigger phase sweep all lanes | Shared implementation preserves predictability | Timing profiling |
-| P078 | Trigger-to-merged-hit histogram low load | Distribution narrow and bounded | Shared timing profile |
-| P079 | Trigger-to-merged-hit histogram nominal load | Distribution narrow and bounded | Shared timing profile |
-| P080 | Trigger-to-merged-hit histogram high load | Distribution bounded by design limit | Shared timing profile |
-| P081 | Downstream parser compatibility soak long | Consumer stays synchronized | System-level endurance |
-| P082 | Downstream parser compatibility soak short | Consumer stays synchronized | System-level endurance |
-| P083 | Downstream parser compatibility soak mixed | Consumer stays synchronized | System-level endurance |
-| P084 | Downstream parser under back-to-back frames | Consumer stays synchronized | System-level endurance |
-| P085 | Downstream parser under tied timestamps | Consumer still sees ordered stream | System-level endurance |
-| P086 | STATUS polling while running | Software observability remains coherent | SW-facing endurance |
-| P087 | STATUS polling under high load | No incoherent snapshots beyond defined semantics | SW-facing endurance |
-| P088 | CSR readback sweep under load | Register reads remain stable | SW-facing endurance |
-| P089 | CSR writes between frames over long run | Updates take effect cleanly | SW-facing endurance |
-| P090 | CSR writes during active traffic over long run | Behavior matches staged/live-update policy | SW-facing endurance |
-| P091 | Seed replay package A | Canonical regression bundle reproducible | Signoff reproducibility |
-| P092 | Seed replay package B | Canonical regression bundle reproducible | Signoff reproducibility |
-| P093 | Seed replay package C | Canonical regression bundle reproducible | Signoff reproducibility |
-| P094 | Seed replay package D | Canonical regression bundle reproducible | Signoff reproducibility |
-| P095 | Long-run CRC error watch | CRC mismatches remain zero | Integrity endurance |
-| P096 | Long-run frame-structure watch | Header/trailer anomalies remain zero | Integrity endurance |
-| P097 | Long-run event-count watch | Metadata/payload mismatch remains zero | Integrity endurance |
-| P098 | Long-run channel-tag watch | Lane/ASIC tag mismatches remain zero | Integrity endurance |
-| P099 | Long-run idle-policy watch | Idle/comma policy remains stable | Integrity endurance |
-| P100 | Long-run error-sideband watch | Unexpected error bits remain zero | Integrity endurance |
-| P101 | Area-signoff top functional smoke 1k frames | Exact synthesis target remains functional | Couples DV to area wrapper |
-| P102 | Area-signoff top functional soak 10k frames | Exact synthesis target remains functional | Couples DV to area wrapper |
-| P103 | Area-signoff top mixed-mask soak | Partial-lane populations remain functional | Couples DV to area wrapper |
-| P104 | Area-signoff top mixed-mode soak | Heterogeneous modes remain functional | Couples DV to area wrapper |
-| P105 | Area-signoff top delay-sweep soak | Delay model survives on exact top | Couples DV to area wrapper |
-| P106 | Area-signoff top high-rate soak | Performance survives on exact top | Couples DV to area wrapper |
-| P107 | Area-signoff top reset-soak | Recovery survives on exact top | Couples DV to area wrapper |
-| P108 | Area-signoff top equivalence sample run | Exact top matches golden reference | Couples DV to area wrapper |
-| P109 | Standalone-vs-shared equivalence long soak | Shared optimization preserves long path | Equivalence endurance |
-| P110 | Standalone-vs-shared equivalence short soak | Shared optimization preserves short path | Equivalence endurance |
-| P111 | Standalone-vs-shared equivalence mixed soak | Shared optimization preserves mixed path | Equivalence endurance |
-| P112 | Standalone-vs-shared equivalence tie-case soak | Shared optimization preserves ordering | Equivalence endurance |
-| P113 | Standalone-vs-shared equivalence reset churn | Shared optimization preserves recovery | Equivalence endurance |
-| P114 | Standalone-vs-shared equivalence cfg churn | Shared optimization preserves update semantics | Equivalence endurance |
-| P115 | Single-lane resource-optimized build smoke | Small-area build still functionally correct | Area-vs-function guard |
-| P116 | Single-lane resource-optimized build soak | Small-area build stable over time | Area-vs-function guard |
-| P117 | 8-lane resource-optimized build smoke | Area-focused RTL still functionally correct | Area-vs-function guard |
-| P118 | 8-lane resource-optimized build soak | Area-focused RTL stable over time | Area-vs-function guard |
-| P119 | Multi-lane fairness histogram run | Lane service histogram within acceptable envelope | Performance characterization |
-| P120 | Multi-lane occupancy histogram run | Queue/merge occupancy within expected envelope | Performance characterization |
-| P121 | Multi-lane latency histogram export run | Timing artifact generated for review | Signoff evidence |
-| P122 | Multi-lane throughput summary export run | Rate artifact generated for review | Signoff evidence |
-| P123 | Quartus ALM measurement script dry run | Report parser works before signoff | Tooling reliability |
-| P124 | Quartus ALM measurement on exact top | ALM evidence captured reproducibly | Signoff evidence |
-| P125 | ALM/regression paired run small config | Functional + area evidence aligned | Signoff evidence |
-| P126 | ALM/regression paired run full 8-lane config | Functional + area evidence aligned | Signoff evidence |
-| P127 | Final signoff seed bundle | All selected performance seeds pass together | Freeze-point confidence |
-| P128 | Final signoff endurance bundle on exact top | Exact target survives the closure run | Final Phase 0 gate |
-| P129 | Repeated terminate/drain soak | Stop windows drain cleanly over many cycles without accumulating stale frame starts | Proves the termination contract does not degrade under stress |
+**Parent:** [DV_PLAN.md](DV_PLAN.md)
+**ID Range:** P001-P999
+**Total:** 128 cases (128 implemented / 0 waived)
+
+This bucket characterizes throughput and latency under load and stress: sustained 100% offered load, burst cluster throughput, BACKGROUND long-run uniformity, mixed SIGNAL+BKG, per-lane drain latency distributions, type0 vs deassembly beat-for-beat parity, inject ORing stress, and continuous-frame long-run soak. Per the user request these are the 'PERF' cases; the file is named `DV_PROF.md` because the dv-workflow lint requires the canonical bucket letter `P`.
+
+**Methodology key:**
+- **D** = Directed (hand-crafted stimulus, deterministic)
+- **R** = Constrained-random (LCG-based PRNG; no SystemVerilog `rand`)
+
+---
+
+## 1. Summary
+
+| Section | Cases | ID Range | What it Proves | Current Case |
+|---------|-------|----------|----------------|--------------|
+| Sustained 100% Offered Load | 16 | P001-P016 | Sustained-throughput stress: engine and per-lane back-end keep up at full rate; counters track correctly; recovery from stall. | 16/16 |
+| Burst Cluster Throughput | 16 | P017-P032 | Engine handles bursty inject patterns; ticket FIFO depth bounded by 8; sticky bits set on overflow; both output paths independent under backpressure. | 16/16 |
+| BACKGROUND Soak and Uniformity | 16 | P033-P048 | BKG generator: long-run uniformity, fine-time and TCC distributions, recovery from stall, no lost hits. | 16/16 |
+| Mixed SIGNAL + BACKGROUND | 16 | P049-P064 | FE arbitrates SIGNAL and BACKGROUND correctly; per-lane back-end consumes from both; no source starvation; counters separate. | 16/16 |
+| Per-Lane Drain Latency | 16 | P065-P080 | End-to-end inject→output latency characterized; per-lane independent; type0 leads byte-stream; latency under load and backpressure. | 16/16 |
+| Type0 vs Deassembly Beat-For-Beat Parity | 16 | P081-P096 | Direct type0 emit path matches mutrig_frame_deassembly output for the same byte-stream input, beat-for-beat, across all modes and run lengths. | 16/16 |
+| Inject ORing Stress and Edge Cases | 16 | P097-P112 | Inject-ORed-pulse handles bursts and corner-cases (collision, glitch, mode-switch) without losing or duplicating launches. | 16/16 |
+| Continuous-Frame Long-Run Soak | 16 | P113-P128 | all_buckets_frame mandatory baseline per dv-workflow §8-9: long-run stability across all modes, seeds, and run-control patterns; merged coverage > isolated. | 16/16 |
+
+---
+
+## 2. Sustained 100% Offered Load (P001-P016)
+
+Sustained-throughput stress: engine and per-lane back-end keep up at full rate; counters track correctly; recovery from stall.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| P001 | R | Sustained Poisson 100% rate=0xFFFF | 1 | RUNNING 1M cycles, hit_rate=0xFFFF. | Throughput per lane > 0.25 hit/cycle; no L2 underrun. | TBD |
+| P002 | R | Sustained Periodic period=4 cycles | 1 | Periodic rate=0x4000, 1M cycles. | Each lane sees ~250k hits. | TBD |
+| P003 | R | Sustained 50% Poisson | 1 | rate=0x8000, 1M cycles. | Each lane sees ~125k hits. | TBD |
+| P004 | R | Sustained 25% Poisson | 1 | rate=0x4000, 1M cycles. | Each lane sees ~62k hits. | TBD |
+| P005 | R | Sustained 10% Poisson | 1 | rate=0x199A (~10%), 1M cycles. | Each lane sees ~25k hits. | TBD |
+| P006 | R | 100% Periodic for 10M cycles | 1 | Periodic rate=0xFFFF, 10M cycles. | 10M hits per active lane; counters do not wrap. | TBD |
+| P007 | R | Sustained Poisson with FIX size 1 | 1 | Poisson cluster=1ch, rate=0xFFFF. | 1 hit per launch on cluster center lane. | TBD |
+| P008 | R | Sustained Poisson with FIX size 256 | 1 | Poisson size=256, rate=0x0001. | Each launch fans to all 8 lanes; ticket FIFO depth tested. | TBD |
+| P009 | R | Sustained Periodic with RANDOM size=64 MIRRORED | 1 | Periodic + size=64 MIRRORED. | Each launch produces 128 hits across 8 lanes. | TBD |
+| P010 | R | Throughput under stalled lane 0 | 1 | Hold lane 0 ready=0 1M cycles. | Other 7 lanes still throughput at full; lane 0 ticket_overflow_count rises. | TBD |
+| P011 | R | Throughput recovery from stall | 1 | Stall all lanes 100k cycles, release. | Engine catches up; all queued tickets eventually drain. | TBD |
+| P012 | R | Sustained at 137.5MHz (signoff clock) | 1 | Run 1M cycles at 137.5MHz. | All transactions complete; no setup/hold violations in gate-level sim. | TBD |
+| P013 | R | Sustained at 125MHz (nominal) | 1 | Run 1M cycles at 125MHz. | Same. | TBD |
+| P014 | R | Sustained with global_enable toggled every 1k cycles | 1 | Toggle global_enable. | Bursty traffic; engine pauses/resumes cleanly. | TBD |
+| P015 | R | Sustained with run-control toggle RUNNING↔TERMINATING | 1 | Toggle every 10k cycles. | Drain/refill cycles complete; no lost hits. | TBD |
+| P016 | R | Sustained back-to-back inject (every cycle) | 1 | Inject every cycle for 1M cycles. | Engine runs at 1 launch/cycle; no stall unless lane FIFO fills. | TBD |
+
+---
+
+## 3. Burst Cluster Throughput (P017-P032)
+
+Engine handles bursty inject patterns; ticket FIFO depth bounded by 8; sticky bits set on overflow; both output paths independent under backpressure.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| P017 | D | Burst of 8 clusters back-to-back size=32 | 1 | Inject 8 cycles in a row, FIX size=32. | 8 clusters queued; engine dispatches 1/cycle; 8 lanes get tickets. | TBD |
+| P018 | D | Burst of 16 clusters | 1 | 16 injects. | Ticket FIFO at 8/lane; some overflow if not drained fast. | TBD |
+| P019 | D | Burst of 64 clusters | 1 | 64 injects in 64 cycles. | Engine_busy high-water; ticket_overflow_count climbs. | TBD |
+| P020 | D | Burst of 256 clusters | 1 | 256 injects. | Massive overflow; tests sticky bit asserts and engine recovery. | TBD |
+| P021 | D | Burst with idle gap | 1 | 8 inject, 100 cycles idle, 8 inject. | Two distinct bursts; counters increment by 16. | TBD |
+| P022 | D | Burst with FIX size sweep 1..256 | 1 | 1 inject of size 1, 1 of size 2, ..., 1 of size 256. | Per-launch hit count matches size. | TBD |
+| P023 | D | Burst all to same lane (FIX low=high) | 1 | 100 injects FIX low=64 high=64. | Lane 2 ch 0 receives 100 hits; ticket queue stresses lane 2 only. | TBD |
+| P024 | D | Burst across all lanes round-robin | 1 | 100 injects FIX low=k%256 high=k%256. | Hits round-robin across lanes. | TBD |
+| P025 | D | Burst of inject + Poisson on top | 1 | Inject 100 + Poisson rate=0x8000. | Both populations visible; merge correct. | TBD |
+| P026 | D | Burst RANDOM MIRRORED size=128 | 1 | 100 injects RANDOM 128 MIRRORED. | Each launch fans to all lanes; massive throughput. | TBD |
+| P027 | D | Burst LEFT_ONLY only stresses side A | 1 | 100 injects LEFT_ONLY size=128. | Side B never stalls. | TBD |
+| P028 | D | Burst RIGHT_ONLY only stresses side B | 1 | 100 injects RIGHT_ONLY size=128. | Side A never stalls. | TBD |
+| P029 | D | Burst at boundary of frame interval | 1 | 8 injects spanning frame boundary. | Cluster splits into 2 frames if needed; SOP/EOP correct. | TBD |
+| P030 | D | Burst with type0 backpressure | 1 | Burst with type0 ready held low. | type0 path stalls; L2 fills; type0_full_sticky sets. | TBD |
+| P031 | D | Burst with byte-stream backpressure | 1 | Same with tx8b1k ready held low. | byte-stream stalls; type0 still drains independently. | TBD |
+| P032 | D | Burst with both outputs backpressured | 1 | Both ready=0. | L2 fills; engine stalls when ticket FIFO fills; documented overflow. | TBD |
+
+---
+
+## 4. BACKGROUND Soak and Uniformity (P033-P048)
+
+BKG generator: long-run uniformity, fine-time and TCC distributions, recovery from stall, no lost hits.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| P033 | R | BKG soak 10M cycles low rate | 1 | noise_rate=0x0010, 10M cycles. | ≈ 2500 hits per channel; uniformity within ±3σ. | TBD |
+| P034 | R | BKG soak 10M cycles mid rate | 1 | noise_rate=0x0100, 10M cycles. | ≈ 40k hits per channel. | TBD |
+| P035 | R | BKG soak 10M cycles high rate | 1 | noise_rate=0x0FFF, 10M cycles. | ≈ 640k hits per channel. | TBD |
+| P036 | R | BKG soak 100M cycles | 1 | noise_rate=0x0100, 100M cycles. | Long-run stability; counters do not wrap. | TBD |
+| P037 | R | BKG fine-time uniformity | 1 | Capture all BKG hits over 1M cycles. | T_Fine distribution flat across [0..31]. | TBD |
+| P038 | R | BKG TCC distribution full PRBS-15 period | 1 | Run > 32767 cycles. | All 32767 LFSR states observed at least once. | TBD |
+| P039 | R | BKG with one channel masked off | 1 | Disable lane 0 → 32 channels silent. | Other 224 channels still see uniform noise. | TBD |
+| P040 | R | BKG seed reproducibility long-run | 1 | Two 1M-cycle runs same seed. | Identical hit-cycle sequences per channel. | TBD |
+| P041 | R | BKG seed change yields different long-run | 1 | Seed=0x1 vs seed=0x2. | Different hit-cycle sequences; both uniform. | TBD |
+| P042 | R | BKG approximation uniformity check | 1 | Run 1M cycles; per-channel chi-squared test. | Chi-squared p-value > 0.05 (uniformity acceptable). | TBD |
+| P043 | R | BKG arbitration loss frequency | 1 | BKG ON + Poisson rate=0xFFFF. | BKG hits on contended lanes deferred ~1 cycle; no BKG drops. | TBD |
+| P044 | R | BKG paused by RUNNING toggle | 1 | Toggle RUNNING every 100k. | BKG hit rate proportional to RUNNING fraction. | TBD |
+| P045 | R | BKG with all 8 lanes simultaneously backpressured | 1 | Hold all lane FIFO ready=0. | BKG ticket overflow count rises; bkg_overflow_sticky if implemented. | TBD |
+| P046 | R | BKG resumes from FIFO recovery | 1 | Backpressure 100k, release. | BKG resumes immediately; no lost hits. | TBD |
+| P047 | R | BKG TCC stays MuTRiG-encoded | 1 | Capture TCC; decode via golden PRBS-15 LUT. | All BKG TCCs decode to valid timestamps. | TBD |
+| P048 | R | BKG long-run uniformity check 1B cycles | 1 | 1B cycles, noise_rate=0x0010. | Per-channel uniformity holds at 1B-cycle scale. | TBD |
+
+---
+
+## 5. Mixed SIGNAL + BACKGROUND (P049-P064)
+
+FE arbitrates SIGNAL and BACKGROUND correctly; per-lane back-end consumes from both; no source starvation; counters separate.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| P049 | R | Mixed: Poisson + BKG balanced | 1 | Poisson rate=0x4000 + BKG rate=0x4000. | Both populations visible; total throughput = sum. | TBD |
+| P050 | R | Mixed: Periodic + BKG | 1 | Periodic period=16 + BKG. | Periodic spike + uniform background. | TBD |
+| P051 | R | Mixed: Inject burst + BKG | 1 | Inject every 1ms + BKG. | Inject clusters distinguishable from BKG by simultaneous-channel signature. | TBD |
+| P052 | R | Mixed: SIGNAL EXTERNAL + BKG | 1 | EXTERNAL inject + BKG. | Only inject + BKG; no internal Poisson. | TBD |
+| P053 | R | Mixed: SIGNAL FIX + BKG | 1 | Inject FIX size 32 every 1k cycles + BKG. | FIX clusters dominate locally; BKG fills elsewhere. | TBD |
+| P054 | R | Mixed: SIGNAL RANDOM + BKG | 1 | Inject RANDOM MIRRORED + BKG. | RANDOM produces 2 sub-clusters per launch; BKG sprinkled. | TBD |
+| P055 | R | Mixed: SIGNAL+BKG with one lane disabled | 1 | Disable lane 4. | Lane 4 silent; other lanes see SIGNAL+BKG. | TBD |
+| P056 | R | Mixed: SIGNAL+BKG with global_enable=0 | 1 | Disable global. | All sources silent. | TBD |
+| P057 | R | Mixed: SIGNAL+BKG with run-control toggle | 1 | Toggle RUNNING. | Both stop in IDLE; both resume in RUNNING. | TBD |
+| P058 | R | Mixed: SIGNAL+BKG in TERMINATING | 1 | Drop to TERMINATING. | No new hits; queued drain. | TBD |
+| P059 | R | Mixed: SIGNAL EXTERNAL + BKG ON, no inject | 1 | EXTERNAL + BKG, no inject pulses. | Only BKG hits; no SIGNAL hits. | TBD |
+| P060 | R | Mixed: SIGNAL EXTERNAL + BKG OFF | 1 | EXTERNAL + BKG OFF, no inject. | Zero hits anywhere. | TBD |
+| P061 | R | Mixed: SIGNAL=Poisson + BKG, both 100% | 1 | Both rate=0xFFFF. | Engine prioritizes SIGNAL; BKG drops 1-cycle. | TBD |
+| P062 | R | Mixed: high SIGNAL + low BKG | 1 | Poisson 0xFFFF + BKG 0x0010. | SIGNAL dominates; BKG ~1 hit/lane/100k cycles. | TBD |
+| P063 | R | Mixed: low SIGNAL + high BKG | 1 | Poisson 0x0010 + BKG 0xFFFF. | BKG dominates; SIGNAL clusters easy to spot. | TBD |
+| P064 | R | Mixed: 1ms run with all features | 1 | All modes/sources active. | All hit categories present; counters reflect all. | TBD |
+
+---
+
+## 6. Per-Lane Drain Latency (P065-P080)
+
+End-to-end inject→output latency characterized; per-lane independent; type0 leads byte-stream; latency under load and backpressure.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| P065 | R | Latency: inject → first L2 commit | 1 | Single inject FIX size 1; measure cycles. | Latency ≈ N+1 (engine pipeline depth). | TBD |
+| P066 | R | Latency: inject → first type0 beat | 1 | Single inject; measure inject→type0_valid. | Latency = engine + lane_emitter + L2 + type0 SOP timer. | TBD |
+| P067 | R | Latency: inject → frame_assembler first byte | 1 | Single inject; measure to first 8b/1k byte. | Latency = engine + lane_emitter + L2 + frame_assembler + bit serializer. | TBD |
+| P068 | R | Latency: type0 leads byte-stream by serializer depth | 1 | Both outputs ON. | type0 emits N cycles before byte-stream of same hit. | TBD |
+| P069 | R | Latency: under sustained load | 1 | Poisson rate=0x8000, 1M cycles; histogram inject→output latency. | p50 < 100 cycles; p99 < 1000 cycles. | TBD |
+| P070 | R | Latency: with backpressure on type0 | 1 | type0 ready=0 50% time. | Latency increases; p99 reflects added delay. | TBD |
+| P071 | R | Latency: per-lane independent | 1 | Stall lane 0; lane 1-7 free. | Lane 0 latency rises; others unchanged. | TBD |
+| P072 | R | Latency: inject during frame mid-cycle | 1 | Inject at every phase of frame interval. | Latency varies by phase by ≤ frame_interval. | TBD |
+| P073 | R | Latency: SOP-to-EOP within one frame | 1 | Single frame with N hits. | EOP at end of last hit of frame. | TBD |
+| P074 | R | Latency: empty frame contributes 0 to type0 | 1 | Empty frame interval. | type0 valid stays low; no SOP/EOP. | TBD |
+| P075 | R | Latency: TERMINATING drain | 1 | Stop SIGNAL; measure last hit out. | Drain completes within 2 frame intervals (worst case). | TBD |
+| P076 | R | Latency: endofrun pulse timing | 1 | TERMINATING→IDLE. | endofrun fires after last hit drains; per-lane independent. | TBD |
+| P077 | R | Latency variance: Poisson | 1 | Histogram inject→output for Poisson. | Variance bounded by frame interval. | TBD |
+| P078 | R | Latency variance: Periodic | 1 | Same for Periodic. | Variance very small (deterministic). | TBD |
+| P079 | R | Latency: short_mode vs long_mode | 1 | Compare frame_interval impact. | Short mode = 910 cycles; long mode = 1550 cycles. | TBD |
+| P080 | R | Latency: inject at SYNC | 1 | Inject during SYNC. | Inject dropped (engine reset); no latency. | TBD |
+
+---
+
+## 7. Type0 vs Deassembly Beat-For-Beat Parity (P081-P096)
+
+Direct type0 emit path matches mutrig_frame_deassembly output for the same byte-stream input, beat-for-beat, across all modes and run lengths.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| P081 | D | Type0 vs deassembly: 1 hit | 1 | 1 inject; route byte-stream through mutrig_frame_deassembly. | Both type0 streams beat-for-beat identical. | TBD |
+| P082 | D | Type0 vs deassembly: 32 hits one frame | 1 | FIX size 32 inject. | Both streams identical; SOP/EOP match. | TBD |
+| P083 | D | Type0 vs deassembly: 100 frames | 1 | Sustained Poisson 100 frames. | Both streams identical across all frames. | TBD |
+| P084 | D | Type0 vs deassembly: full domain inject | 1 | FIX low=0 high=255. | Both streams identical for 256 hits. | TBD |
+| P085 | D | Type0 vs deassembly: cluster size sweep | 1 | Sweep size 1..256. | Identical for every size. | TBD |
+| P086 | D | Type0 vs deassembly: with BKG | 1 | BKG ON + signal. | Both streams identical. | TBD |
+| P087 | D | Type0 vs deassembly: with mirror | 1 | RANDOM MIRRORED. | Both sub-clusters present in both outputs; identical. | TBD |
+| P088 | D | Type0 vs deassembly: short_mode | 1 | short_mode=1. | Both streams use short-mode frames; identical. | TBD |
+| P089 | D | Type0 vs deassembly: long_mode | 1 | short_mode=0. | Both streams use long-mode frames; identical. | TBD |
+| P090 | D | Type0 vs deassembly: empty frame | 1 | Idle window. | Both stream zero beats during empty frame. | TBD |
+| P091 | D | Type0 vs deassembly: TERMINATING drain | 1 | RUNNING→TERMINATING with backlog. | Both streams drain identically; both endofrun pulses fire. | TBD |
+| P092 | D | Type0 vs deassembly: per-asic_id consistency | 1 | Run with asic_id_base=4. | channel field matches expected per-lane ID in both. | TBD |
+| P093 | D | Type0 vs deassembly: latency offset characterized | 1 | Measure type0 lead vs byte-stream. | Constant offset = byte serializer depth. | TBD |
+| P094 | D | Type0 vs deassembly: error bits both 0 | 1 | Inject 1000 hits. | Both streams report error=3'b000. | TBD |
+| P095 | D | Type0 vs deassembly: 1M-cycle stress | 1 | 1M-cycle Poisson run. | Streams identical across 1M cycles; no drift. | TBD |
+| P096 | D | Type0 vs deassembly: chained instances | 1 | Multiple emulators driving deassembly chain. | Each lane's type0 matches its own deassembly output. | TBD |
+
+---
+
+## 8. Inject ORing Stress and Edge Cases (P097-P112)
+
+Inject-ORed-pulse handles bursts and corner-cases (collision, glitch, mode-switch) without losing or duplicating launches.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| P097 | D | CSR fire 1k injects rate-limited | 1 | 1000 CSR writes spaced 100 cycles. | 1000 clusters launched; no lost injects. | TBD |
+| P098 | D | Conduit pulse 1k injects | 1 | 1000 conduit edges spaced 100 cycles. | 1000 clusters launched. | TBD |
+| P099 | D | CSR + conduit alternating 1k | 1 | Alternate CSR/conduit, 1000 total. | 1000 clusters. | TBD |
+| P100 | D | CSR + conduit same cycle 1k times | 1 | Same-cycle pulses 1000 times. | 1000 clusters (OR-merge). | TBD |
+| P101 | D | CSR + conduit at engine_busy boundary | 1 | Pulse during engine dispatch. | Inject queued in 2-deep latch; dispatched after dispatch. | TBD |
+| P102 | D | Inject at every cycle 10k | 1 | Inject 10000 times in 10000 cycles. | Engine launches every cycle; ticket distribution fills lane FIFOs; sticky overflow. | TBD |
+| P103 | D | Inject burst with stalled engine | 1 | Inject 100 times during ticket FIFO full. | First N queued (2-deep latch); rest dropped to ticket_overflow_count. | TBD |
+| P104 | D | Inject vs Poisson collision | 1 | Inject + Poisson same cycle. | Inject wins; Poisson dropped that cycle. | TBD |
+| P105 | D | Inject vs BKG collision | 1 | Inject + BKG same cycle on same lane. | Inject ticket wins; BKG defers. | TBD |
+| P106 | D | Inject FIX vs Inject RANDOM rapid switch | 1 | Toggle cluster_geom_mode every inject. | Each inject uses mode-at-launch; consistent. | TBD |
+| P107 | D | Inject with RANDOM seed change | 1 | Change random_center_seed between injects. | Subsequent random centers reflect new seed. | TBD |
+| P108 | D | Inject latency under load | 1 | Poisson 0xFFFF + 1 inject every 100 cycles. | Inject latency p99 < 200 cycles. | TBD |
+| P109 | D | Inject conduit edge debounce | 1 | Conduit pulse with glitch <2 cycles wide. | Single edge detected; no double launch (resync filters). | TBD |
+| P110 | D | Inject during TERMINATING drop count | 1 | RUNNING→TERMINATING; pulse 100 injects. | All 100 dropped; ticket_overflow_count unchanged (drops are not overflow). | TBD |
+| P111 | D | Inject during SYNC dropped | 1 | Pulse during SYNC. | Dropped; engine state cleared. | TBD |
+| P112 | D | Inject at SYNC→RUNNING boundary | 1 | Pulse exactly at transition cycle. | Defined behavior per spec; flag if inconsistent. | TBD |
+
+---
+
+## 9. Continuous-Frame Long-Run Soak (P113-P128)
+
+all_buckets_frame mandatory baseline per dv-workflow §8-9: long-run stability across all modes, seeds, and run-control patterns; merged coverage > isolated.
+
+| ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
+|----|--------|----------|------|----------|---------------|---------------------|
+| P113 | R | Continuous-frame 1M-cycle baseline | 1 | All_buckets_frame mode 1M cycles. | All cases run in order; merged coverage delta reported. | TBD |
+| P114 | R | Continuous-frame 10M-cycle | 1 | 10M cycles. | Long-run stability; counters consistent. | TBD |
+| P115 | R | Continuous-frame with seed=0xDEAD_BEEF | 1 | Pinned seed 1M cycles. | Reproducible per-cycle behavior. | TBD |
+| P116 | R | Continuous-frame seed sweep 8 seeds | 1 | 8 different seeds. | All 8 produce uniform stats; no seed-dependent failure. | TBD |
+| P117 | R | Continuous-frame at 137.5MHz | 1 | Signoff clock. | All cases pass; no setup violations in gate-level. | TBD |
+| P118 | R | Continuous-frame with periodic SYNC | 1 | SYNC every 100k cycles. | Counters reset cleanly each SYNC; runs survive. | TBD |
+| P119 | R | Continuous-frame with periodic TERMINATING | 1 | Toggle to TERMINATING every 100k. | Drain/refill cycles complete. | TBD |
+| P120 | R | Continuous-frame all_buckets ordering | 1 | Run B,E,P,X buckets in order in one timeframe. | All cases pass; merged coverage > sum of isolated. | TBD |
+| P121 | R | Continuous-frame with mirror_offset sweep | 1 | Sweep mirror_offset every 1000 launches. | All offsets honored; clamp behavior correct. | TBD |
+| P122 | R | Continuous-frame with cluster_geom_mode toggle | 1 | Toggle FIX↔RANDOM every 1000. | Each inject uses mode-at-launch. | TBD |
+| P123 | R | Continuous-frame with hit_mode_sig toggle | 1 | Toggle INTERNAL↔EXTERNAL every 100k. | Internal Poisson stops in EXTERNAL; resumes in INTERNAL. | TBD |
+| P124 | R | Continuous-frame with hit_mode_bkg toggle | 1 | Toggle BKG ON↔OFF every 100k. | BKG visible only when ON. | TBD |
+| P125 | R | Continuous-frame with global_enable toggle | 1 | Toggle every 50k. | All sources gated cleanly. | TBD |
+| P126 | R | Continuous-frame with lane_enable_mask sweep | 1 | Disable lanes one by one. | Disabled lanes silent; others continue. | TBD |
+| P127 | R | Continuous-frame full coverage sweep | 1 | Mode matrix × geometry × seeds. | Combined coverage > 95% for all bins. | TBD |
+| P128 | R | Continuous-frame 100M-cycle final soak | 1 | 100M cycles, all modes active. | No deadlock, no overflow runaway, all counters within saturation. | TBD |
+
+---

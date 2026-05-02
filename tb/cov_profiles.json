@@ -1,0 +1,6282 @@
+{
+  "B001": {
+    "coverage_bins": [
+      "csr_addr_0x00",
+      "csr_access_RO",
+      "uid_readback"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B002": {
+    "coverage_bins": [
+      "csr_addr_0x00",
+      "csr_access_RO",
+      "uid_readback"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        },
+        "write_value": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B003": {
+    "coverage_bins": [
+      "csr_addr_0x01",
+      "csr_access_RW_RO",
+      "meta_VERSION"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B004": {
+    "coverage_bins": [
+      "csr_addr_0x01",
+      "csr_access_RW_RO",
+      "meta_DATE"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B005": {
+    "coverage_bins": [
+      "csr_addr_0x01",
+      "csr_access_RW_RO",
+      "meta_GIT"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B006": {
+    "coverage_bins": [
+      "csr_addr_0x01",
+      "csr_access_RW_RO",
+      "meta_INSTANCE_ID"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B007": {
+    "coverage_bins": [
+      "csr_addr_0x02",
+      "csr_access_RW",
+      "scratch_liveness"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "scratch_value": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B008": {
+    "coverage_bins": [
+      "csr_addr_0x02",
+      "csr_access_RW",
+      "scratch_liveness"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "scratch_value": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B009": {
+    "coverage_bins": [
+      "csr_addr_0x02",
+      "csr_access_RW",
+      "scratch_liveness",
+      "last_clear_on_irst"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B010": {
+    "coverage_bins": [
+      "csr_addr_0x03",
+      "csr_access_RO",
+      "last_rd_capture"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B011": {
+    "coverage_bins": [
+      "csr_addr_0x04",
+      "csr_access_RO",
+      "last_rd_capture"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B012": {
+    "coverage_bins": [
+      "csr_addr_0x03",
+      "csr_addr_0x04",
+      "csr_access_RO",
+      "last_rd_self_stable"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B013": {
+    "coverage_bins": [
+      "csr_addr_0x05",
+      "csr_access_RO",
+      "last_wr_capture"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B014": {
+    "coverage_bins": [
+      "csr_addr_0x06",
+      "csr_access_RO",
+      "last_wr_capture"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B015": {
+    "coverage_bins": [
+      "csr_addr_0x03",
+      "csr_addr_0x04",
+      "csr_addr_0x05",
+      "csr_addr_0x06",
+      "last_clear_on_irst"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B016": {
+    "coverage_bins": [
+      "csr_addr_0x3F",
+      "csr_access_OOR"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B017": {
+    "coverage_bins": [
+      "runctl_state_RUN_PREPARE",
+      "runctl_trans_IDLE_to_RUN_PREPARE"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B018": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "runctl_trans_RUN_PREPARE_to_SYNC"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B019": {
+    "coverage_bins": [
+      "runctl_state_RUNNING",
+      "runctl_trans_SYNC_to_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B020": {
+    "coverage_bins": [
+      "runctl_state_TERMINATING",
+      "runctl_trans_RUNNING_to_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B021": {
+    "coverage_bins": [
+      "runctl_state_IDLE",
+      "runctl_trans_TERMINATING_to_IDLE",
+      "type0_endofrun",
+      "byte_stream_idle_K28_5"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B022": {
+    "coverage_bins": [
+      "runctl_state_RESET",
+      "runctl_trans_IDLE_to_RESET"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B023": {
+    "coverage_bins": [
+      "runctl_state_OUT_OF_DAQ",
+      "runctl_trans_IDLE_to_OUT_OF_DAQ",
+      "byte_stream_idle_K28_5"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B024": {
+    "coverage_bins": [
+      "runctl_state_LINK_TEST",
+      "runctl_trans_IDLE_to_LINK_TEST"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B025": {
+    "coverage_bins": [
+      "runctl_state_SYNC_TEST",
+      "runctl_trans_IDLE_to_SYNC_TEST"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B026": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B027": {
+    "coverage_bins": [
+      "runctl_illegal_multibit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B028": {
+    "coverage_bins": [
+      "runctl_trans_IDLE_to_RUN_PREPARE",
+      "runctl_trans_RUN_PREPARE_to_SYNC",
+      "runctl_trans_SYNC_to_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B029": {
+    "coverage_bins": [
+      "runctl_state_RUN_PREPARE"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B030": {
+    "coverage_bins": [
+      "inject_during_idle_drop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B031": {
+    "coverage_bins": [
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B032": {
+    "coverage_bins": [
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B033": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_zero",
+      "lane_count_0_hits"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": 15
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B034": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_low"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 1,
+          "max": 16
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B035": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 128,
+          "max": 511
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B036": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 2048,
+          "max": 8191
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B037": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 24576,
+          "max": 40959
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B038": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_max"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 61440,
+          "max": 65535
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B039": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "prng_seed_reproducibility"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B040": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "prng_seed_diverge"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B041": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "prng_seed_reproducibility"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 16,
+          "max": 65520
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B042": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "cluster_size_1",
+      "lane0_clus1"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 64,
+          "max": 1024
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B043": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "cluster_size_32",
+      "lane0_clus32"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 64,
+          "max": 1024
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B044": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 4096,
+          "max": 16384
+        },
+        "lane_disable_idx": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": 7
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B045": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "ticket_overflow_count_inc",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 49152,
+          "max": 65535
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B046": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "ticket_fifo_depth_0"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 16384,
+          "max": 49152
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B047": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 256,
+          "max": 16384
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B048": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 256,
+          "max": 65535
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B049": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_max"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B050": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B051": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B052": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B053": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B054": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_zero",
+      "lane_count_0_hits"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B055": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high",
+      "ticket_fifo_depth_4"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B056": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high",
+      "runctl_state_SYNC"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B057": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B058": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high",
+      "cluster_size_32",
+      "lane2_clus32",
+      "lane3_clus1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B059": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_2"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B060": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B061": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high",
+      "prng_seed_reproducibility"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B062": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high",
+      "fine_time_jitter_t",
+      "fine_time_jitter_e"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B063": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B064": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B065": {
+    "coverage_bins": [
+      "fire_w1p_singleshot",
+      "fire_csr_conduit_or",
+      "csr_addr_0x13",
+      "csr_access_W1P"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B066": {
+    "coverage_bins": [
+      "fire_edge_detect",
+      "fire_csr_conduit_or"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B067": {
+    "coverage_bins": [
+      "fire_edge_detect",
+      "fire_csr_conduit_or"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B068": {
+    "coverage_bins": [
+      "fire_edge_detect",
+      "fire_csr_conduit_or"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B069": {
+    "coverage_bins": [
+      "inject_in_internal",
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B070": {
+    "coverage_bins": [
+      "inject_in_external",
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B071": {
+    "coverage_bins": [
+      "inject_in_external",
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B072": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B073": {
+    "coverage_bins": [
+      "inject_during_idle_drop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B074": {
+    "coverage_bins": [
+      "inject_during_term_drop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B075": {
+    "coverage_bins": [
+      "inject_during_sync_drop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B076": {
+    "coverage_bins": [
+      "fire_edge_detect"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B077": {
+    "coverage_bins": [
+      "fire_w1p_singleshot"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B078": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "internal_dropped_on_stall"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B079": {
+    "coverage_bins": [
+      "smb_cross",
+      "cluster_size_1",
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B080": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B081": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "cluster_size_1",
+      "lane0_clus1",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B082": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B083": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B084": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B085": {
+    "coverage_bins": [
+      "cluster_size_32",
+      "lane0_clus32",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B086": {
+    "coverage_bins": [
+      "cluster_size_33",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B087": {
+    "coverage_bins": [
+      "cluster_size_64",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B088": {
+    "coverage_bins": [
+      "cluster_size_128",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B089": {
+    "coverage_bins": [
+      "cluster_size_128",
+      "smb_cross"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B090": {
+    "coverage_bins": [
+      "cluster_size_256",
+      "smb_cross"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B091": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B092": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_A_only",
+      "lane2_clus1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B093": {
+    "coverage_bins": [
+      "cluster_size_32",
+      "smb_A_only",
+      "lane1_clus32"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B094": {
+    "coverage_bins": [
+      "cluster_size_33",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B095": {
+    "coverage_bins": [
+      "lane_disabled_silent",
+      "cluster_size_64"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B096": {
+    "coverage_bins": [
+      "cluster_size_256",
+      "smb_cross"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B097": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "cluster_size_1",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B098": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRRIGHT_ONLY",
+      "cluster_size_1",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B099": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_1",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B100": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_1",
+      "mirror_offset_pos1"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "mirror_offset": {
+          "distribution": "uniform_int_signed",
+          "min": 1,
+          "max": 8
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B101": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_1",
+      "mirror_offset_neg1"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "mirror_offset": {
+          "distribution": "uniform_int_signed",
+          "min": -8,
+          "max": -1
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B102": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B103": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_128",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B104": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "cluster_size_64",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B105": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "cluster_size_128",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B106": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_clamp_high"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B107": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B108": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "rand_center_uniform"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B109": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "prng_seed_reproducibility"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B110": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B111": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B112": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "rand_side_pick_uniform"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B113": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "noise_rate_zero"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B114": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_zero",
+      "lane_count_0_hits"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B115": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_low"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 1,
+          "max": 16
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B116": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 128,
+          "max": 511
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B117": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_max"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 61440,
+          "max": 65535
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B118": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "bkg_full_lane_coverage"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B119": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "fine_time_jitter_t"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B120": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "tcc_full_period_observed"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B121": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B122": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B123": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "runctl_trans_RUNNING_to_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B124": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B125": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "prng_seed_reproducibility"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B126": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "bkg_uniform_per_channel"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 4096,
+          "max": 32768
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "B127": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "engine_round_robin"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "B128": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "bkg_full_lane_coverage"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E001": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_A_only",
+      "lane0_clus1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E002": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E003": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E004": {
+    "coverage_bins": [
+      "cluster_size_2",
+      "smb_cross"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E005": {
+    "coverage_bins": [
+      "cluster_size_2",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E006": {
+    "coverage_bins": [
+      "cluster_size_2",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E007": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E008": {
+    "coverage_bins": [
+      "cluster_size_256",
+      "smb_cross"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E009": {
+    "coverage_bins": [
+      "cluster_size_256",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E010": {
+    "coverage_bins": [
+      "cluster_size_33",
+      "smb_cross"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E011": {
+    "coverage_bins": [
+      "cluster_size_128",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E012": {
+    "coverage_bins": [
+      "cluster_size_128",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E013": {
+    "coverage_bins": [
+      "lane7_clus16"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E014": {
+    "coverage_bins": [
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E015": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_A_only",
+      "lane2_clus1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E016": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "smb_B_only",
+      "lane6_clus1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E017": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_1",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E018": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_2",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E019": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E020": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E021": {
+    "coverage_bins": [
+      "cluster_size_128",
+      "mirror_clamp_high"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E022": {
+    "coverage_bins": [
+      "cluster_size_1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E023": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "cluster_size_1",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E024": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "cluster_size_1",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E025": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "smb_A_only",
+      "mirror_clamp_low"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E026": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "smb_A_only",
+      "mirror_clamp_high"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E027": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "cluster_size_128",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E028": {
+    "coverage_bins": [
+      "cluster_size_1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E029": {
+    "coverage_bins": [
+      "cluster_size_32",
+      "ticket_fifo_depth_1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E030": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "lane0_clus1",
+      "lane1_clus1",
+      "lane2_clus1",
+      "lane3_clus1",
+      "lane4_clus1",
+      "lane5_clus1",
+      "lane6_clus1",
+      "lane7_clus1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E031": {
+    "coverage_bins": [
+      "ticket_fifo_depth_8",
+      "engine_back_to_back"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E032": {
+    "coverage_bins": [
+      "ticket_fifo_depth_8",
+      "ticket_overflow_count_inc"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E033": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E034": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_pos1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E035": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_neg1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E036": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_pos32"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "mirror_offset": {
+          "distribution": "uniform_int_signed",
+          "min": 8,
+          "max": 32
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "E037": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_clamp_high"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E038": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_neg128",
+      "mirror_clamp_low"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E039": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_pos127",
+      "mirror_clamp_high"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E040": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_128",
+      "mirror_offset_pos1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E041": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_1",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E042": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_128",
+      "mirror_offset_zero0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E043": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "tcc_full_period_observed"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "mirror_offset": {
+          "distribution": "uniform_int_signed",
+          "min": -127,
+          "max": 127
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "E044": {
+    "coverage_bins": [
+      "csr_addr_0x0D",
+      "csr_access_RW"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E045": {
+    "coverage_bins": [
+      "csr_addr_0x0D",
+      "csr_access_RW"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E046": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRRIGHT_ONLY",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E047": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E048": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E049": {
+    "coverage_bins": [
+      "smb_A_only",
+      "cluster_size_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E050": {
+    "coverage_bins": [
+      "smb_B_only",
+      "cluster_size_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E051": {
+    "coverage_bins": [
+      "smb_cross"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E052": {
+    "coverage_bins": [
+      "smb_cross",
+      "cluster_size_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E053": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "cluster_size_128",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E054": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E055": {
+    "coverage_bins": [
+      "cluster_size_256",
+      "engine_busy_high_water"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E056": {
+    "coverage_bins": [
+      "cluster_size_256"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E057": {
+    "coverage_bins": [
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E058": {
+    "coverage_bins": [
+      "smb_A_only",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E059": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E060": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E061": {
+    "coverage_bins": [
+      "lane_disabled_silent",
+      "lane_count_0_hits"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E062": {
+    "coverage_bins": [
+      "asic_id_base_nonzero"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E063": {
+    "coverage_bins": [
+      "lane_disabled_silent",
+      "cluster_size_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E064": {
+    "coverage_bins": [
+      "lane_reenabled_resume"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E065": {
+    "coverage_bins": [
+      "tcc_seed_default",
+      "ecc_seed_default",
+      "ecc_phase_n0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E066": {
+    "coverage_bins": [
+      "ecc_phase_n1",
+      "ecc_seed_custom"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E067": {
+    "coverage_bins": [
+      "ecc_phase_n5",
+      "ecc_seed_custom"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E068": {
+    "coverage_bins": [
+      "ecc_phase_n20",
+      "ecc_seed_custom"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E069": {
+    "coverage_bins": [
+      "ecc_phase_n1000",
+      "ecc_seed_custom"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E070": {
+    "coverage_bins": [
+      "ecc_phase_n_full_period",
+      "ecc_seed_custom"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E071": {
+    "coverage_bins": [
+      "ecc_phase_n_full_period",
+      "ecc_seed_custom"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E072": {
+    "coverage_bins": [
+      "ecc_seed_custom",
+      "csr_addr_0x0F",
+      "csr_access_RW"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E073": {
+    "coverage_bins": [
+      "tcc_seed_custom",
+      "ecc_seed_custom"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E074": {
+    "coverage_bins": [
+      "csr_addr_0x0F",
+      "csr_access_RW"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E075": {
+    "coverage_bins": [
+      "tcc_seed_zero_invalid"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E076": {
+    "coverage_bins": [
+      "ecc_seed_zero_invalid"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E077": {
+    "coverage_bins": [
+      "tcc_seed_default",
+      "ecc_seed_default"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E078": {
+    "coverage_bins": [
+      "ecc_seed_custom",
+      "prng_seed_reproducibility"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E079": {
+    "coverage_bins": [
+      "ecc_seed_custom",
+      "type0_vs_deassembly_parity"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E080": {
+    "coverage_bins": [
+      "ecc_seed_custom",
+      "type0_vs_deassembly_parity"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E081": {
+    "coverage_bins": [
+      "frame_boundary_at_inject",
+      "type0_sop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E082": {
+    "coverage_bins": [
+      "frame_boundary_at_inject"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E083": {
+    "coverage_bins": [
+      "frame_boundary_at_inject"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E084": {
+    "coverage_bins": [
+      "frame_boundary_during_dispense",
+      "cluster_size_32"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E085": {
+    "coverage_bins": [
+      "frame_empty"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E086": {
+    "coverage_bins": [
+      "frame_with_one_hit",
+      "type0_sop",
+      "type0_eop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E087": {
+    "coverage_bins": [
+      "frame_at_event_max"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E088": {
+    "coverage_bins": [
+      "frame_with_one_hit",
+      "type0_sop",
+      "type0_eop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E089": {
+    "coverage_bins": [
+      "frame_short_mode"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E090": {
+    "coverage_bins": [
+      "frame_long_mode"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E091": {
+    "coverage_bins": [
+      "frame_short_mode",
+      "frame_long_mode"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E092": {
+    "coverage_bins": [
+      "byte_stream_active"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E093": {
+    "coverage_bins": [
+      "byte_stream_active"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E094": {
+    "coverage_bins": [
+      "frame_count_lane0_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E095": {
+    "coverage_bins": [
+      "frame_count_lane0_60bit",
+      "frame_count_lane1_60bit",
+      "frame_count_lane2_60bit",
+      "frame_count_lane3_60bit",
+      "frame_count_lane4_60bit",
+      "frame_count_lane5_60bit",
+      "frame_count_lane6_60bit",
+      "frame_count_lane7_60bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E096": {
+    "coverage_bins": [
+      "hit_count_lane0_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E097": {
+    "coverage_bins": [
+      "csr_addr_0x20",
+      "csr_access_LANE_BLOCK",
+      "frame_count_lane0_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E098": {
+    "coverage_bins": [
+      "frame_count_lane0_32bit",
+      "frame_count_lane1_32bit",
+      "frame_count_lane2_32bit",
+      "frame_count_lane3_32bit",
+      "frame_count_lane4_32bit",
+      "frame_count_lane5_32bit",
+      "frame_count_lane6_32bit",
+      "frame_count_lane7_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E099": {
+    "coverage_bins": [
+      "frame_count_lane0_60bit",
+      "frame_count_lane1_60bit",
+      "frame_count_lane2_60bit",
+      "frame_count_lane3_60bit",
+      "frame_count_lane4_60bit",
+      "frame_count_lane5_60bit",
+      "frame_count_lane6_60bit",
+      "frame_count_lane7_60bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E100": {
+    "coverage_bins": [
+      "csr_addr_0x22",
+      "csr_access_LANE_BLOCK",
+      "hit_count_lane0_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E101": {
+    "coverage_bins": [
+      "hit_count_lane0_32bit",
+      "hit_count_lane1_32bit",
+      "hit_count_lane2_32bit",
+      "hit_count_lane3_32bit",
+      "hit_count_lane4_32bit",
+      "hit_count_lane5_32bit",
+      "hit_count_lane6_32bit",
+      "hit_count_lane7_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E102": {
+    "coverage_bins": [
+      "hit_count_lane0_60bit",
+      "hit_count_lane1_60bit",
+      "hit_count_lane2_60bit",
+      "hit_count_lane3_60bit",
+      "hit_count_lane4_60bit",
+      "hit_count_lane5_60bit",
+      "hit_count_lane6_60bit",
+      "hit_count_lane7_60bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E103": {
+    "coverage_bins": [
+      "hit_count_lane3_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E104": {
+    "coverage_bins": [
+      "frame_count_lane0_32bit",
+      "runctl_state_SYNC"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E105": {
+    "coverage_bins": [
+      "frame_count_lane0_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E106": {
+    "coverage_bins": [
+      "fifo_full_sticky_set",
+      "l2_fifo_depth_256"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E107": {
+    "coverage_bins": [
+      "fifo_full_sticky_w1c"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E108": {
+    "coverage_bins": [
+      "ticket_overflow_sticky_set",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E109": {
+    "coverage_bins": [
+      "ticket_overflow_sticky_w1c"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E110": {
+    "coverage_bins": [
+      "ticket_overflow_saturate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E111": {
+    "coverage_bins": [
+      "engine_busy_high_water"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E112": {
+    "coverage_bins": [
+      "csr_lo_hi_atomic_snapshot"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E113": {
+    "coverage_bins": [
+      "csr_addr_0x07",
+      "csr_access_RW"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E114": {
+    "coverage_bins": [
+      "csr_addr_0x08",
+      "csr_access_RW"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E115": {
+    "coverage_bins": [
+      "csr_addr_0x09",
+      "csr_access_RW"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E116": {
+    "coverage_bins": [
+      "csr_addr_0x0A",
+      "csr_access_RW"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E117": {
+    "coverage_bins": [
+      "csr_addr_0x10",
+      "csr_access_RSVD_RO"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E118": {
+    "coverage_bins": [
+      "csr_addr_0x11",
+      "csr_access_RSVD_RO"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E119": {
+    "coverage_bins": [
+      "csr_addr_0x16",
+      "csr_addr_0x17",
+      "csr_addr_0x18",
+      "csr_addr_0x19",
+      "csr_addr_0x1A",
+      "csr_addr_0x1B",
+      "csr_addr_0x1C",
+      "csr_addr_0x1D",
+      "csr_addr_0x1E",
+      "csr_addr_0x1F",
+      "csr_access_RSVD_RO"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E120": {
+    "coverage_bins": [
+      "csr_access_OOR"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E121": {
+    "coverage_bins": [
+      "csr_during_running",
+      "runctl_state_RESET"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E122": {
+    "coverage_bins": [
+      "csr_during_irst"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E123": {
+    "coverage_bins": [
+      "csr_during_irst",
+      "csr_atomic_write"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E124": {
+    "coverage_bins": [
+      "csr_atomic_write",
+      "csr_atomic_read"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E125": {
+    "coverage_bins": [
+      "csr_access_OOR"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E126": {
+    "coverage_bins": [
+      "csr_addr_0x13",
+      "csr_access_W1P",
+      "fire_w1p_singleshot"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E127": {
+    "coverage_bins": [
+      "csr_addr_0x15",
+      "csr_access_RW",
+      "type0_error_inject_stub"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "E128": {
+    "coverage_bins": [
+      "csr_addr_0x15",
+      "type0_error_inject_stub"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P001": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_max",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 61440,
+          "max": 65535
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 500000,
+          "max": "0x1E8480"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P002": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 8192,
+          "max": 32768
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 500000,
+          "max": "0x1E8480"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P003": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 24576,
+          "max": 40959
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 500000,
+          "max": "0x1E8480"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P004": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 12288,
+          "max": 20480
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 500000,
+          "max": "0x1E8480"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P005": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 4096,
+          "max": 8192
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 500000,
+          "max": "0x1E8480"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P006": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_max",
+      "soak_10M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 5000000,
+          "max": "0x1312D00"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P007": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_max",
+      "cluster_size_1",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 49152,
+          "max": 65535
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P008": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_low",
+      "cluster_size_256",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 1,
+          "max": 16
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P009": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_64",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 8192,
+          "max": 32768
+        },
+        "mirror_offset": {
+          "distribution": "uniform_int_signed",
+          "min": -32,
+          "max": 32
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P010": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_max",
+      "lane_disabled_silent",
+      "ticket_overflow_count_inc",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P011": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_max",
+      "ticket_fifo_depth_0",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P012": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P013": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P014": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P015": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid",
+      "runctl_trans_RUNNING_to_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P016": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "engine_back_to_back",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P017": {
+    "coverage_bins": [
+      "cluster_size_32",
+      "ticket_fifo_depth_8",
+      "engine_back_to_back"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P018": {
+    "coverage_bins": [
+      "cluster_size_32",
+      "ticket_fifo_depth_8",
+      "ticket_overflow_count_inc"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P019": {
+    "coverage_bins": [
+      "ticket_overflow_count_inc",
+      "engine_busy_high_water"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P020": {
+    "coverage_bins": [
+      "ticket_overflow_saturate",
+      "fifo_full_sticky_set"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P021": {
+    "coverage_bins": [
+      "engine_back_to_back"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P022": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "cluster_size_2",
+      "cluster_size_32",
+      "cluster_size_33",
+      "cluster_size_64",
+      "cluster_size_127",
+      "cluster_size_128",
+      "cluster_size_256"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P023": {
+    "coverage_bins": [
+      "lane2_clus1",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P024": {
+    "coverage_bins": [
+      "lane0_clus1",
+      "lane1_clus1",
+      "lane2_clus1",
+      "lane3_clus1",
+      "lane4_clus1",
+      "lane5_clus1",
+      "lane6_clus1",
+      "lane7_clus1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P025": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "fire_csr_conduit_or"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P026": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "cluster_size_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P027": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "cluster_size_128",
+      "smb_A_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P028": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRRIGHT_ONLY",
+      "cluster_size_128",
+      "smb_B_only"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P029": {
+    "coverage_bins": [
+      "frame_boundary_during_dispense"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P030": {
+    "coverage_bins": [
+      "l2_fifo_depth_256",
+      "fifo_full_sticky_set"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P031": {
+    "coverage_bins": [
+      "byte_stream_active",
+      "l2_fifo_depth_192"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P032": {
+    "coverage_bins": [
+      "l2_fifo_depth_256",
+      "ticket_fifo_depth_8",
+      "fifo_full_sticky_set"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P033": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_low",
+      "soak_10M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 8,
+          "max": 32
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 5000000,
+          "max": "0x1312D00"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P034": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "soak_10M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 128,
+          "max": 512
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 5000000,
+          "max": "0x1312D00"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P035": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "soak_10M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 2048,
+          "max": 8191
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 5000000,
+          "max": "0x1312D00"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P036": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "soak_100M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 128,
+          "max": 512
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 50000000,
+          "max": "0xBEBC200"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P037": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "fine_time_jitter_t",
+      "fine_time_jitter_e"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P038": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "tcc_full_period_observed"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P039": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P040": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "prng_seed_reproducibility"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P041": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "prng_seed_diverge"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P042": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "bkg_uniform_per_channel"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 4096,
+          "max": 32768
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P043": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "engine_round_robin"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P044": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "runctl_trans_RUNNING_to_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P045": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "ticket_overflow_count_inc",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P046": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "ticket_fifo_depth_0"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P047": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_mid",
+      "tcc_full_period_observed"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P048": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "noise_rate_low",
+      "soak_1B",
+      "bkg_uniform_per_channel"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 8,
+          "max": 32
+        },
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 500000000,
+          "max": "0x77359400"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P049": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "rate_mid",
+      "noise_rate_mid"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 8192,
+          "max": 32768
+        },
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 8192,
+          "max": 32768
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P050": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGON_MIRMIRRORED",
+      "rate_mid",
+      "noise_rate_mid"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 4096,
+          "max": 16384
+        },
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 2048,
+          "max": 8192
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P051": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "fire_csr_conduit_or"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 4096,
+          "max": 16384
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P052": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "fire_csr_conduit_or",
+      "inject_in_external"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P053": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "cluster_size_32"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P054": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P055": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P056": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P057": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "runctl_trans_RUNNING_to_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P058": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "runctl_state_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P059": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P060": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "lane_count_0_hits"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P061": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "rate_max",
+      "noise_rate_max",
+      "engine_round_robin"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P062": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "rate_max",
+      "noise_rate_low"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P063": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "rate_low",
+      "noise_rate_max"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P064": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "hit_rate": {
+          "distribution": "uniform_int",
+          "min": 4096,
+          "max": 61440
+        },
+        "noise_rate": {
+          "distribution": "uniform_int",
+          "min": 16,
+          "max": 16384
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P065": {
+    "coverage_bins": [
+      "cluster_size_1",
+      "type0_sop"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P066": {
+    "coverage_bins": [
+      "type0_sop",
+      "type0_eop"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P067": {
+    "coverage_bins": [
+      "byte_stream_active"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P068": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P069": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P070": {
+    "coverage_bins": [
+      "l2_fifo_depth_128"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P071": {
+    "coverage_bins": [
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P072": {
+    "coverage_bins": [
+      "frame_boundary_at_inject"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P073": {
+    "coverage_bins": [
+      "type0_sop",
+      "type0_eop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P074": {
+    "coverage_bins": [
+      "frame_empty"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P075": {
+    "coverage_bins": [
+      "runctl_state_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P076": {
+    "coverage_bins": [
+      "type0_endofrun"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P077": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "rate_mid"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P078": {
+    "coverage_bins": [
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "rate_high"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P079": {
+    "coverage_bins": [
+      "frame_short_mode",
+      "frame_long_mode"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P080": {
+    "coverage_bins": [
+      "inject_during_sync_drop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P081": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "cluster_size_1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P082": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "cluster_size_32"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P083": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P084": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "cluster_size_256"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P085": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "cluster_size_1",
+      "cluster_size_2",
+      "cluster_size_32",
+      "cluster_size_33",
+      "cluster_size_64",
+      "cluster_size_127",
+      "cluster_size_128",
+      "cluster_size_256"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P086": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P087": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P088": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "frame_short_mode"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P089": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "frame_long_mode"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P090": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "frame_empty"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P091": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "runctl_state_TERMINATING",
+      "type0_endofrun"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P092": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "asic_id_base_nonzero"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P093": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "type0_sop",
+      "type0_eop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P094": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "type0_error_inject_stub"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P095": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P096": {
+    "coverage_bins": [
+      "type0_vs_deassembly_parity",
+      "byte_stream_active",
+      "build_LC8_BS1",
+      "build_LC4_BS1"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P097": {
+    "coverage_bins": [
+      "fire_w1p_singleshot",
+      "fire_csr_conduit_or",
+      "engine_back_to_back"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P098": {
+    "coverage_bins": [
+      "fire_edge_detect",
+      "engine_back_to_back"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P099": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "engine_back_to_back"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P100": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "fire_edge_detect"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P101": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "engine_busy_high_water"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P102": {
+    "coverage_bins": [
+      "engine_back_to_back",
+      "ticket_overflow_count_inc",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P103": {
+    "coverage_bins": [
+      "engine_busy_drops",
+      "ticket_overflow_count_inc"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P104": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "internal_dropped_on_stall"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P105": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P106": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P107": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "prng_seed_diverge"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P108": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "rate_max"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P109": {
+    "coverage_bins": [
+      "fire_edge_detect"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P110": {
+    "coverage_bins": [
+      "inject_during_term_drop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P111": {
+    "coverage_bins": [
+      "inject_during_sync_drop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P112": {
+    "coverage_bins": [
+      "runctl_trans_SYNC_to_RUNNING",
+      "fire_csr_conduit_or"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P113": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P114": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "soak_10M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P115": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "prng_seed_reproducibility"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "P116": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "prng_seed_diverge"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P117": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "soak_1M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P118": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "runctl_state_SYNC"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P119": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "runctl_trans_RUNNING_to_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P120": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P121": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mirror_offset_neg128",
+      "mirror_offset_neg32",
+      "mirror_offset_neg1",
+      "mirror_offset_zero0",
+      "mirror_offset_pos1",
+      "mirror_offset_pos32",
+      "mirror_offset_pos127"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "mirror_offset": {
+          "distribution": "uniform_int_signed",
+          "min": -127,
+          "max": 127
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P122": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "mode_INTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P123": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P124": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P125": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P126": {
+    "coverage_bins": [
+      "lane_enable_mask_sweep",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        },
+        "lane_enable_mask": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": 255
+        }
+      }
+    }
+  },
+  "P127": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRLEFT_ONLY",
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRRIGHT_ONLY",
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRLEFT_ONLY",
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRRIGHT_ONLY",
+      "mode_INTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "mode_INTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "mode_INTERNAL_POISSON_RANDOM_BKGOFF_MIRRIGHT_ONLY",
+      "mode_INTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mode_INTERNAL_POISSON_RANDOM_BKGON_MIRLEFT_ONLY",
+      "mode_INTERNAL_POISSON_RANDOM_BKGON_MIRRIGHT_ONLY",
+      "mode_INTERNAL_POISSON_RANDOM_BKGON_MIRMIRRORED",
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRLEFT_ONLY",
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRRIGHT_ONLY",
+      "mode_INTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "mode_INTERNAL_PERIODIC_FIX_BKGON_MIRLEFT_ONLY",
+      "mode_INTERNAL_PERIODIC_FIX_BKGON_MIRRIGHT_ONLY",
+      "mode_INTERNAL_PERIODIC_FIX_BKGON_MIRMIRRORED",
+      "mode_INTERNAL_PERIODIC_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "mode_INTERNAL_PERIODIC_RANDOM_BKGOFF_MIRRIGHT_ONLY",
+      "mode_INTERNAL_PERIODIC_RANDOM_BKGOFF_MIRMIRRORED",
+      "mode_INTERNAL_PERIODIC_RANDOM_BKGON_MIRLEFT_ONLY",
+      "mode_INTERNAL_PERIODIC_RANDOM_BKGON_MIRRIGHT_ONLY",
+      "mode_INTERNAL_PERIODIC_RANDOM_BKGON_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRLEFT_ONLY",
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRRIGHT_ONLY",
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRLEFT_ONLY",
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRRIGHT_ONLY",
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRRIGHT_ONLY",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGON_MIRLEFT_ONLY",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGON_MIRRIGHT_ONLY",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGON_MIRMIRRORED",
+      "mode_EXTERNAL_PERIODIC_FIX_BKGOFF_MIRLEFT_ONLY",
+      "mode_EXTERNAL_PERIODIC_FIX_BKGOFF_MIRRIGHT_ONLY",
+      "mode_EXTERNAL_PERIODIC_FIX_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_PERIODIC_FIX_BKGON_MIRLEFT_ONLY",
+      "mode_EXTERNAL_PERIODIC_FIX_BKGON_MIRRIGHT_ONLY",
+      "mode_EXTERNAL_PERIODIC_FIX_BKGON_MIRMIRRORED",
+      "mode_EXTERNAL_PERIODIC_RANDOM_BKGOFF_MIRLEFT_ONLY",
+      "mode_EXTERNAL_PERIODIC_RANDOM_BKGOFF_MIRRIGHT_ONLY",
+      "mode_EXTERNAL_PERIODIC_RANDOM_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_PERIODIC_RANDOM_BKGON_MIRLEFT_ONLY",
+      "mode_EXTERNAL_PERIODIC_RANDOM_BKGON_MIRRIGHT_ONLY",
+      "mode_EXTERNAL_PERIODIC_RANDOM_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "P128": {
+    "coverage_bins": [
+      "all_buckets_frame_baseline",
+      "soak_100M"
+    ],
+    "random_profile": {
+      "type": "promoted",
+      "knobs": {
+        "duration_cycles": {
+          "distribution": "uniform_int",
+          "min": 50000000,
+          "max": "0xBEBC200"
+        },
+        "PRNG_SEED": {
+          "distribution": "uniform_int",
+          "min": 0,
+          "max": "0xFFFFFFFF"
+        }
+      }
+    }
+  },
+  "X001": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "cluster_size_32"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X002": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X003": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X004": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "type0_sop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X005": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "byte_stream_active"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X006": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X007": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "l2_fifo_depth_192"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X008": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "tcc_seed_default",
+      "ecc_seed_default"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X009": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "engine_busy_high_water"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X010": {
+    "coverage_bins": [
+      "last_clear_on_irst",
+      "fifo_full_sticky_w1c",
+      "ticket_overflow_sticky_w1c"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X011": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "frame_count_lane0_32bit",
+      "hit_count_lane0_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X012": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "csr_atomic_write"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X013": {
+    "coverage_bins": [
+      "last_clear_on_irst"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X014": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "fire_csr_conduit_or"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X015": {
+    "coverage_bins": [
+      "runctl_state_SYNC"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X016": {
+    "coverage_bins": [
+      "runctl_trans_RUNNING_to_TERMINATING",
+      "runctl_state_SYNC"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X017": {
+    "coverage_bins": [
+      "runctl_illegal_multibit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X018": {
+    "coverage_bins": [
+      "runctl_illegal_allzero"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X019": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X020": {
+    "coverage_bins": [
+      "runctl_state_IDLE",
+      "runctl_state_RUN_PREPARE",
+      "runctl_state_SYNC",
+      "runctl_state_RUNNING",
+      "runctl_state_TERMINATING",
+      "runctl_state_LINK_TEST",
+      "runctl_state_SYNC_TEST",
+      "runctl_state_RESET",
+      "runctl_state_OUT_OF_DAQ"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X021": {
+    "coverage_bins": [
+      "runctl_state_SYNC"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X022": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X023": {
+    "coverage_bins": [
+      "runctl_state_RUNNING",
+      "runctl_state_IDLE"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X024": {
+    "coverage_bins": [
+      "runctl_state_TERMINATING",
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X025": {
+    "coverage_bins": [
+      "runctl_state_TERMINATING",
+      "runctl_state_SYNC"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X026": {
+    "coverage_bins": [
+      "runctl_state_LINK_TEST",
+      "runctl_trans_IDLE_to_LINK_TEST"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X027": {
+    "coverage_bins": [
+      "runctl_state_OUT_OF_DAQ",
+      "runctl_trans_IDLE_to_OUT_OF_DAQ"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X028": {
+    "coverage_bins": [
+      "runctl_state_SYNC"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X029": {
+    "coverage_bins": [
+      "runctl_state_RESET",
+      "last_clear_on_irst"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X030": {
+    "coverage_bins": [
+      "runctl_state_IDLE"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X031": {
+    "coverage_bins": [
+      "runctl_state_RUNNING",
+      "fire_csr_conduit_or"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X032": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X033": {
+    "coverage_bins": [
+      "csr_during_irst",
+      "csr_addr_0x00"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X034": {
+    "coverage_bins": [
+      "csr_during_irst",
+      "csr_addr_0x07"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X035": {
+    "coverage_bins": [
+      "csr_during_sync"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X036": {
+    "coverage_bins": [
+      "csr_during_sync",
+      "csr_atomic_write"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X037": {
+    "coverage_bins": [
+      "csr_during_running"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X038": {
+    "coverage_bins": [
+      "csr_during_running",
+      "csr_addr_0x0C"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X039": {
+    "coverage_bins": [
+      "csr_addr_0x0A",
+      "frame_short_mode",
+      "frame_long_mode"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X040": {
+    "coverage_bins": [
+      "csr_addr_0x0F"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X041": {
+    "coverage_bins": [
+      "csr_addr_0x12",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X042": {
+    "coverage_bins": [
+      "csr_atomic_write",
+      "csr_atomic_read"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X043": {
+    "coverage_bins": [
+      "csr_during_irst",
+      "csr_access_OOR"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X044": {
+    "coverage_bins": [
+      "csr_addr_0x00",
+      "csr_access_RO"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X045": {
+    "coverage_bins": [
+      "csr_addr_0x13",
+      "csr_during_irst",
+      "fire_w1p_singleshot"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X046": {
+    "coverage_bins": [
+      "csr_addr_0x15",
+      "type0_error_inject_stub"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X047": {
+    "coverage_bins": [
+      "csr_during_running",
+      "runctl_state_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X048": {
+    "coverage_bins": [
+      "csr_atomic_read"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X049": {
+    "coverage_bins": [
+      "ticket_fifo_depth_8",
+      "lane_disabled_silent"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X050": {
+    "coverage_bins": [
+      "ticket_fifo_depth_8",
+      "ticket_overflow_count_inc",
+      "ticket_overflow_sticky_set"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X051": {
+    "coverage_bins": [
+      "ticket_overflow_saturate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X052": {
+    "coverage_bins": [
+      "ticket_fifo_depth_0",
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X053": {
+    "coverage_bins": [
+      "ticket_overflow_sticky_set"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X054": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "ticket_overflow_count_inc"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X055": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "ticket_overflow_count_inc"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X056": {
+    "coverage_bins": [
+      "mode_INTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "internal_dropped_on_stall"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X057": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "ticket_overflow_count_inc"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X058": {
+    "coverage_bins": [
+      "ticket_overflow_sticky_w1c"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X059": {
+    "coverage_bins": [
+      "ticket_fifo_depth_8",
+      "ticket_fifo_depth_0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X060": {
+    "coverage_bins": [
+      "ticket_fifo_depth_7"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X061": {
+    "coverage_bins": [
+      "ticket_fifo_depth_8"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X062": {
+    "coverage_bins": [
+      "ticket_fifo_depth_8",
+      "engine_busy_high_water"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X063": {
+    "coverage_bins": [
+      "last_clear_on_irst"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X064": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "ticket_overflow_count_inc"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X065": {
+    "coverage_bins": [
+      "l2_fifo_depth_256"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X066": {
+    "coverage_bins": [
+      "l2_fifo_depth_192"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X067": {
+    "coverage_bins": [
+      "l2_fifo_depth_128",
+      "ticket_fifo_depth_4"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X068": {
+    "coverage_bins": [
+      "l2_fifo_depth_256",
+      "ticket_fifo_depth_8",
+      "ticket_overflow_count_inc"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X069": {
+    "coverage_bins": [
+      "l2_fifo_depth_0",
+      "l2_fifo_depth_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X070": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "l2_fifo_depth_0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X071": {
+    "coverage_bins": [
+      "runctl_state_TERMINATING",
+      "l2_fifo_depth_192"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X072": {
+    "coverage_bins": [
+      "fifo_full_sticky_set",
+      "l2_fifo_depth_256"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X073": {
+    "coverage_bins": [
+      "fifo_full_sticky_w1c"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X074": {
+    "coverage_bins": [
+      "byte_stream_active",
+      "l2_fifo_depth_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X075": {
+    "coverage_bins": [
+      "byte_stream_active",
+      "l2_fifo_depth_128"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X076": {
+    "coverage_bins": [
+      "l2_fifo_depth_256"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X077": {
+    "coverage_bins": [
+      "type0_sop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X078": {
+    "coverage_bins": [
+      "l2_fifo_depth_192"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X079": {
+    "coverage_bins": [
+      "l2_fifo_depth_256",
+      "l2_fifo_depth_0"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X080": {
+    "coverage_bins": [
+      "l2_fifo_depth_64"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X081": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "frame_boundary_at_inject"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X082": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "l2_fifo_depth_64"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X083": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "type0_eop"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X084": {
+    "coverage_bins": [
+      "runctl_trans_RUNNING_to_TERMINATING",
+      "frame_boundary_at_inject"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X085": {
+    "coverage_bins": [
+      "runctl_trans_RUNNING_to_TERMINATING",
+      "frame_boundary_during_dispense"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X086": {
+    "coverage_bins": [
+      "runctl_state_IDLE",
+      "frame_boundary_during_dispense"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X087": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED",
+      "frame_boundary_during_dispense"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X088": {
+    "coverage_bins": [
+      "mode_EXTERNAL_POISSON_FIX_BKGON_MIRMIRRORED",
+      "frame_boundary_at_inject"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X089": {
+    "coverage_bins": [
+      "frame_empty",
+      "frame_with_one_hit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X090": {
+    "coverage_bins": [
+      "frame_at_event_max",
+      "frame_empty"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X091": {
+    "coverage_bins": [
+      "frame_count_lane0_32bit",
+      "frame_count_lane1_32bit",
+      "frame_count_lane2_32bit",
+      "frame_count_lane3_32bit",
+      "frame_count_lane4_32bit",
+      "frame_count_lane5_32bit",
+      "frame_count_lane6_32bit",
+      "frame_count_lane7_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X092": {
+    "coverage_bins": [
+      "hit_count_lane0_32bit",
+      "hit_count_lane1_32bit",
+      "hit_count_lane2_32bit",
+      "hit_count_lane3_32bit",
+      "hit_count_lane4_32bit",
+      "hit_count_lane5_32bit",
+      "hit_count_lane6_32bit",
+      "hit_count_lane7_32bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X093": {
+    "coverage_bins": [
+      "csr_lo_hi_atomic_snapshot"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X094": {
+    "coverage_bins": [
+      "lane_disabled_silent",
+      "lane_count_0_hits"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X095": {
+    "coverage_bins": [
+      "lane_reenabled_resume"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X096": {
+    "coverage_bins": [
+      "frame_count_lane0_60bit",
+      "frame_count_lane1_60bit",
+      "frame_count_lane2_60bit",
+      "frame_count_lane3_60bit",
+      "frame_count_lane4_60bit",
+      "frame_count_lane5_60bit",
+      "frame_count_lane6_60bit",
+      "frame_count_lane7_60bit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X097": {
+    "coverage_bins": [
+      "csr_addr_0x02",
+      "csr_atomic_write"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X098": {
+    "coverage_bins": [
+      "csr_addr_0x02",
+      "csr_atomic_read"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X099": {
+    "coverage_bins": [
+      "csr_addr_0x0D",
+      "csr_atomic_write"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X100": {
+    "coverage_bins": [
+      "csr_addr_0x07",
+      "csr_addr_0x08",
+      "csr_atomic_write"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X101": {
+    "coverage_bins": [
+      "csr_addr_0x07",
+      "fire_csr_conduit_or",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X102": {
+    "coverage_bins": [
+      "csr_addr_0x07",
+      "global_enable_gate"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X103": {
+    "coverage_bins": [
+      "csr_addr_0x08",
+      "mode_EXTERNAL_POISSON_FIX_BKGOFF_MIRMIRRORED",
+      "mode_EXTERNAL_POISSON_RANDOM_BKGOFF_MIRMIRRORED"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X104": {
+    "coverage_bins": [
+      "csr_addr_0x0D",
+      "cluster_size_32",
+      "cluster_size_64"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X105": {
+    "coverage_bins": [
+      "fifo_full_sticky_w1c",
+      "fifo_full_sticky_set"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X106": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "fire_w1p_singleshot"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X107": {
+    "coverage_bins": [
+      "last_rd_capture",
+      "csr_atomic_read"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X108": {
+    "coverage_bins": [
+      "csr_atomic_read"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X109": {
+    "coverage_bins": [
+      "csr_atomic_write",
+      "csr_atomic_read"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X110": {
+    "coverage_bins": [
+      "csr_addr_0x13",
+      "fire_w1p_singleshot",
+      "engine_back_to_back"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X111": {
+    "coverage_bins": [
+      "fifo_full_sticky_w1c",
+      "ticket_overflow_sticky_w1c"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X112": {
+    "coverage_bins": [
+      "csr_atomic_write",
+      "csr_atomic_read"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X113": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X114": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X115": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X116": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X117": {
+    "coverage_bins": [
+      "runctl_state_IDLE",
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X118": {
+    "coverage_bins": [
+      "runctl_state_TERMINATING",
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X119": {
+    "coverage_bins": [
+      "runctl_state_IDLE",
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X120": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "frame_boundary_at_inject"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X121": {
+    "coverage_bins": [
+      "runctl_state_RESET"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X122": {
+    "coverage_bins": [
+      "fire_csr_conduit_or",
+      "runctl_trans_RUNNING_to_TERMINATING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X123": {
+    "coverage_bins": [
+      "runctl_state_SYNC",
+      "engine_busy_high_water"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X124": {
+    "coverage_bins": [
+      "csr_during_running",
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X125": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X126": {
+    "coverage_bins": [
+      "runctl_illegal_multibit"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X127": {
+    "coverage_bins": [
+      "runctl_state_OUT_OF_DAQ"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  },
+  "X128": {
+    "coverage_bins": [
+      "runctl_state_RUNNING"
+    ],
+    "random_profile": {
+      "type": "directed",
+      "knobs": {}
+    }
+  }
+}
