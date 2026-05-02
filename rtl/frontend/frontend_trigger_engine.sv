@@ -3,7 +3,7 @@
 // Author: Yifeng Wang
 // Version : 26.2.0
 // Date    : 20260502
-// Change  : Add Poisson/Periodic signal launch, random mirror geometry, and RR lane push.
+// Change  : Pipeline signal launch geometry before per-lane ticket shred.
 
 module frontend_trigger_engine
     import frontend_ticket_bus_pkg::*;
@@ -53,6 +53,34 @@ module frontend_trigger_engine
     logic [7:0] busy_run_count;
     logic       dispatch_found;
     logic [LANE_INDEX_WIDTH-1:0] dispatch_lane;
+    logic       geom_stage_valid;
+    logic       geom_stage_random;
+    logic [7:0] geom_stage_channel_low;
+    logic [7:0] geom_stage_channel_high;
+    logic [7:0] geom_stage_size_random;
+    logic [1:0] geom_stage_mirror_mode;
+    logic signed [7:0] geom_stage_mirror_offset;
+    logic [7:0] geom_stage_center_local;
+    logic       geom_stage_primary_right_random;
+    logic [14:0] geom_stage_tcc;
+    logic [14:0] geom_stage_ecc;
+    logic [LANE_INDEX_WIDTH-1:0] geom_stage_dispatch_base;
+    logic       launch_stage_valid;
+    logic [7:0] launch_stage_cluster0_low;
+    logic [7:0] launch_stage_cluster0_high;
+    logic [7:0] launch_stage_cluster1_low;
+    logic [7:0] launch_stage_cluster1_high;
+    logic       launch_stage_cluster1_valid;
+    logic [14:0] launch_stage_tcc;
+    logic [14:0] launch_stage_ecc;
+    logic [LANE_INDEX_WIDTH-1:0] launch_stage_dispatch_base;
+    logic       shred_stage_valid;
+    logic [LANE_COUNT-1:0] shred_stage_mask;
+    logic [4:0] shred_stage_ch_low [LANE_COUNT];
+    logic [4:0] shred_stage_ch_high [LANE_COUNT];
+    logic [14:0] shred_stage_tcc;
+    logic [14:0] shred_stage_ecc;
+    logic [LANE_INDEX_WIDTH-1:0] shred_stage_dispatch_base;
 
     function automatic logic [15:0] prng16_step(input logic [15:0] value);
         logic feedback_value;
@@ -118,12 +146,32 @@ module frontend_trigger_engine
         end
     end
 
-    assign sig_offer_valid = dispatch_found;
-    assign sig_offer_lane = dispatch_lane;
-    assign sig_offer_ticket.ch_low = pending_ch_low[dispatch_lane];
-    assign sig_offer_ticket.ch_high = pending_ch_high[dispatch_lane];
-    assign sig_offer_ticket.ts_a = pending_tcc;
-    assign sig_offer_ticket.ts_b = pending_ecc;
+    // Register the offer outputs to break the worst path that previously
+    // ran from dispatch_base through the per-lane mux into the lane FIFO
+    // write. Adds 1 cycle of latency between pending_mask update and
+    // sig_offer_valid; the lane back-end ticket FIFO already has slack.
+    logic                          sig_offer_valid_q;
+    logic [LANE_INDEX_WIDTH-1:0]   sig_offer_lane_q;
+    frontend_ticket_t              sig_offer_ticket_q;
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            sig_offer_valid_q <= 1'b0;
+            sig_offer_lane_q  <= '0;
+            sig_offer_ticket_q <= '0;
+        end else begin
+            sig_offer_valid_q <= dispatch_found;
+            sig_offer_lane_q  <= dispatch_lane;
+            sig_offer_ticket_q.ch_low  <= pending_ch_low[dispatch_lane];
+            sig_offer_ticket_q.ch_high <= pending_ch_high[dispatch_lane];
+            sig_offer_ticket_q.ts_a    <= pending_tcc;
+            sig_offer_ticket_q.ts_b    <= pending_ecc;
+        end
+    end
+
+    assign sig_offer_valid  = sig_offer_valid_q;
+    assign sig_offer_lane   = sig_offer_lane_q;
+    assign sig_offer_ticket = sig_offer_ticket_q;
 
     always_ff @(posedge clk) begin
         logic [15:0] prng_next;
@@ -132,6 +180,7 @@ module frontend_trigger_engine
         logic        internal_fire;
         logic        launch_fire;
         logic        launch_random;
+        logic        engine_occupied;
         logic [7:0]  cluster0_low;
         logic [7:0]  cluster0_high;
         logic [7:0]  cluster1_low;
@@ -164,6 +213,36 @@ module frontend_trigger_engine
             ticket_overflow_count <= 16'h0000;
             busy_run_count <= 8'h00;
             engine_busy_high_water <= 8'h00;
+            geom_stage_valid <= 1'b0;
+            geom_stage_random <= 1'b0;
+            geom_stage_channel_low <= 8'h00;
+            geom_stage_channel_high <= 8'h00;
+            geom_stage_size_random <= 8'h01;
+            geom_stage_mirror_mode <= 2'b00;
+            geom_stage_mirror_offset <= 8'sh00;
+            geom_stage_center_local <= 8'h00;
+            geom_stage_primary_right_random <= 1'b0;
+            geom_stage_tcc <= 15'h0001;
+            geom_stage_ecc <= 15'h0001;
+            geom_stage_dispatch_base <= '0;
+            launch_stage_valid <= 1'b0;
+            launch_stage_cluster0_low <= 8'h00;
+            launch_stage_cluster0_high <= 8'h00;
+            launch_stage_cluster1_low <= 8'h00;
+            launch_stage_cluster1_high <= 8'h00;
+            launch_stage_cluster1_valid <= 1'b0;
+            launch_stage_tcc <= 15'h0001;
+            launch_stage_ecc <= 15'h0001;
+            launch_stage_dispatch_base <= '0;
+            shred_stage_valid <= 1'b0;
+            shred_stage_mask <= '0;
+            for (int lane_idx = 0; lane_idx < LANE_COUNT; lane_idx++) begin
+                shred_stage_ch_low[lane_idx] <= '0;
+                shred_stage_ch_high[lane_idx] <= '0;
+            end
+            shred_stage_tcc <= 15'h0001;
+            shred_stage_ecc <= 15'h0001;
+            shred_stage_dispatch_base <= '0;
         end else begin
             prng_next = prng16_step(prng_state);
             phase_sum = {1'b0, periodic_phase} + {1'b0, cfg_hit_rate};
@@ -171,6 +250,8 @@ module frontend_trigger_engine
             internal_fire = 1'b0;
             launch_fire = 1'b0;
             launch_random = cfg_cluster_geom_mode;
+            engine_occupied = (pending_mask != '0) || geom_stage_valid ||
+                launch_stage_valid || shred_stage_valid;
             cluster0_low = 8'h00;
             cluster0_high = 8'h00;
             cluster1_low = 8'h00;
@@ -197,7 +278,7 @@ module frontend_trigger_engine
                 end
             end
 
-            if (pending_mask != '0) begin
+            if (engine_occupied) begin
                 if (busy_run_count != 8'hFF) begin
                     busy_run_count <= busy_run_count + 8'd1;
                 end
@@ -208,7 +289,7 @@ module frontend_trigger_engine
                 busy_run_count <= 8'h00;
             end
 
-            if (inject_pulse && (pending_mask != '0)) begin
+            if (inject_pulse && engine_occupied) begin
                 if (external_pending_count != 2'd2) begin
                     external_pending_count <= external_pending_count + 2'd1;
                 end else if (ticket_overflow_count != 16'hFFFF) begin
@@ -216,11 +297,110 @@ module frontend_trigger_engine
                 end
             end
 
-            if ((pending_mask != '0) && sig_offer_valid && sig_offer_ready) begin
-                pending_mask[dispatch_lane] <= 1'b0;
+            // sig_offer_lane is registered (sig_offer_lane_q); clear the
+            // pending bit for the lane that was actually offered last
+            // cycle, not the combinational dispatch_lane.
+            if (sig_offer_valid_q && sig_offer_ready) begin
+                pending_mask[sig_offer_lane_q] <= 1'b0;
             end
 
-            if (pending_mask == '0) begin
+            if (shred_stage_valid) begin
+                pending_mask <= shred_stage_mask;
+                for (int lane_idx = 0; lane_idx < LANE_COUNT; lane_idx++) begin
+                    pending_ch_low[lane_idx] <= shred_stage_ch_low[lane_idx];
+                    pending_ch_high[lane_idx] <= shred_stage_ch_high[lane_idx];
+                end
+
+                pending_tcc <= shred_stage_tcc;
+                pending_ecc <= shred_stage_ecc;
+                dispatch_base <= shred_stage_dispatch_base;
+                shred_stage_valid <= 1'b0;
+            end
+
+            if (geom_stage_valid) begin
+                if (!geom_stage_random) begin
+                    cluster0_low = geom_stage_channel_low;
+                    if (geom_stage_channel_high < geom_stage_channel_low) begin
+                        cluster0_high = geom_stage_channel_low;
+                    end else begin
+                        cluster0_high = geom_stage_channel_high;
+                    end
+                end else begin
+                    unique case (geom_stage_mirror_mode)
+                        2'b00: primary_right = 1'b0;
+                        2'b01: primary_right = 1'b1;
+                        2'b10: primary_right = geom_stage_primary_right_random;
+                        default: primary_right = 1'b0;
+                    endcase
+
+                    size_value = random_size_clamped(geom_stage_size_random);
+                    primary_start = clamp_start_128(int'({1'b0, geom_stage_center_local[6:0]}), size_value);
+                    cluster0_low = primary_start + (primary_right ? 8'd128 : 8'd0);
+                    cluster0_high = cluster0_low + size_value - 8'd1;
+
+                    if (geom_stage_mirror_mode == 2'b10) begin
+                        mirror_center = 127 - int'({1'b0, geom_stage_center_local[6:0]}) +
+                            int'(geom_stage_mirror_offset);
+                        mirror_start = clamp_start_128(mirror_center, size_value);
+                        cluster1_low = mirror_start + (primary_right ? 8'd0 : 8'd128);
+                        cluster1_high = cluster1_low + size_value - 8'd1;
+                        cluster1_valid = 1'b1;
+                    end
+                end
+
+                launch_stage_valid <= 1'b1;
+                launch_stage_cluster0_low <= cluster0_low;
+                launch_stage_cluster0_high <= cluster0_high;
+                launch_stage_cluster1_low <= cluster1_low;
+                launch_stage_cluster1_high <= cluster1_high;
+                launch_stage_cluster1_valid <= cluster1_valid;
+                launch_stage_tcc <= geom_stage_tcc;
+                launch_stage_ecc <= geom_stage_ecc;
+                launch_stage_dispatch_base <= geom_stage_dispatch_base;
+                geom_stage_valid <= 1'b0;
+            end
+
+            if (launch_stage_valid) begin
+                shred_stage_mask <= '0;
+                for (int lane_idx = 0; lane_idx < LANE_COUNT; lane_idx++) begin
+                    shred_stage_ch_low[lane_idx] <= '0;
+                    shred_stage_ch_high[lane_idx] <= '0;
+
+                    lane_base = lane_idx * 32;
+                    lane_limit = lane_base + 31;
+
+                    if ((int'(launch_stage_cluster0_low) <= lane_limit) &&
+                        (int'(launch_stage_cluster0_high) >= lane_base)) begin
+                        overlap_low = (int'(launch_stage_cluster0_low) > lane_base) ?
+                            int'(launch_stage_cluster0_low) : lane_base;
+                        overlap_high = (int'(launch_stage_cluster0_high) < lane_limit) ?
+                            int'(launch_stage_cluster0_high) : lane_limit;
+                        shred_stage_mask[lane_idx] <= 1'b1;
+                        shred_stage_ch_low[lane_idx] <= 5'(overlap_low - lane_base);
+                        shred_stage_ch_high[lane_idx] <= 5'(overlap_high - lane_base);
+                    end
+
+                    if (launch_stage_cluster1_valid &&
+                        (int'(launch_stage_cluster1_low) <= lane_limit) &&
+                        (int'(launch_stage_cluster1_high) >= lane_base)) begin
+                        overlap_low = (int'(launch_stage_cluster1_low) > lane_base) ?
+                            int'(launch_stage_cluster1_low) : lane_base;
+                        overlap_high = (int'(launch_stage_cluster1_high) < lane_limit) ?
+                            int'(launch_stage_cluster1_high) : lane_limit;
+                        shred_stage_mask[lane_idx] <= 1'b1;
+                        shred_stage_ch_low[lane_idx] <= 5'(overlap_low - lane_base);
+                        shred_stage_ch_high[lane_idx] <= 5'(overlap_high - lane_base);
+                    end
+                end
+
+                shred_stage_tcc <= launch_stage_tcc;
+                shred_stage_ecc <= launch_stage_ecc;
+                shred_stage_dispatch_base <= launch_stage_dispatch_base;
+                shred_stage_valid <= 1'b1;
+                launch_stage_valid <= 1'b0;
+            end
+
+            if (!engine_occupied) begin
                 if (inject_pulse) begin
                     launch_fire = cfg_global_enable;
                 end else if (external_pending_count != 2'd0) begin
@@ -231,66 +411,18 @@ module frontend_trigger_engine
                 end
 
                 if (launch_fire) begin
-                    for (int lane_idx = 0; lane_idx < LANE_COUNT; lane_idx++) begin
-                        pending_mask[lane_idx] <= 1'b0;
-                        pending_ch_low[lane_idx] <= '0;
-                        pending_ch_high[lane_idx] <= '0;
-                    end
-
-                    if (!launch_random) begin
-                        cluster0_low = cfg_hit_channel_low;
-                        if (cfg_hit_channel_high < cfg_hit_channel_low) begin
-                            cluster0_high = cfg_hit_channel_low;
-                        end else begin
-                            cluster0_high = cfg_hit_channel_high;
-                        end
-                    end else begin
-                        unique case (cfg_mirror_mode)
-                            2'b00: primary_right = 1'b0;
-                            2'b01: primary_right = 1'b1;
-                            2'b10: primary_right = prng_state[8];
-                            default: primary_right = 1'b0;
-                        endcase
-
-                        primary_start = clamp_start_128(int'({1'b0, center_local[6:0]}), size_value);
-                        cluster0_low = primary_start + (primary_right ? 8'd128 : 8'd0);
-                        cluster0_high = cluster0_low + size_value - 8'd1;
-
-                        if (cfg_mirror_mode == 2'b10) begin
-                            mirror_center = 127 - int'({1'b0, center_local[6:0]}) + int'(cfg_mirror_offset);
-                            mirror_start = clamp_start_128(mirror_center, size_value);
-                            cluster1_low = mirror_start + (primary_right ? 8'd0 : 8'd128);
-                            cluster1_high = cluster1_low + size_value - 8'd1;
-                            cluster1_valid = 1'b1;
-                        end
-                    end
-
-                    for (int lane_idx = 0; lane_idx < LANE_COUNT; lane_idx++) begin
-                        lane_base = lane_idx * 32;
-                        lane_limit = lane_base + 31;
-
-                        if ((int'(cluster0_low) <= lane_limit) && (int'(cluster0_high) >= lane_base)) begin
-                            overlap_low = (int'(cluster0_low) > lane_base) ? int'(cluster0_low) : lane_base;
-                            overlap_high = (int'(cluster0_high) < lane_limit) ? int'(cluster0_high) : lane_limit;
-                            pending_mask[lane_idx] <= 1'b1;
-                            pending_ch_low[lane_idx] <= 5'(overlap_low - lane_base);
-                            pending_ch_high[lane_idx] <= 5'(overlap_high - lane_base);
-                        end
-
-                        if (cluster1_valid &&
-                            (int'(cluster1_low) <= lane_limit) &&
-                            (int'(cluster1_high) >= lane_base)) begin
-                            overlap_low = (int'(cluster1_low) > lane_base) ? int'(cluster1_low) : lane_base;
-                            overlap_high = (int'(cluster1_high) < lane_limit) ? int'(cluster1_high) : lane_limit;
-                            pending_mask[lane_idx] <= 1'b1;
-                            pending_ch_low[lane_idx] <= 5'(overlap_low - lane_base);
-                            pending_ch_high[lane_idx] <= 5'(overlap_high - lane_base);
-                        end
-                    end
-
-                    pending_tcc <= tcc_anchor;
-                    pending_ecc <= ecc_anchor;
-                    dispatch_base <= rr_ptr;
+                    geom_stage_valid <= 1'b1;
+                    geom_stage_random <= launch_random;
+                    geom_stage_channel_low <= cfg_hit_channel_low;
+                    geom_stage_channel_high <= cfg_hit_channel_high;
+                    geom_stage_size_random <= cfg_cluster_size_random;
+                    geom_stage_mirror_mode <= cfg_mirror_mode;
+                    geom_stage_mirror_offset <= cfg_mirror_offset;
+                    geom_stage_center_local <= center_local;
+                    geom_stage_primary_right_random <= prng_state[8];
+                    geom_stage_tcc <= tcc_anchor;
+                    geom_stage_ecc <= ecc_anchor;
+                    geom_stage_dispatch_base <= rr_ptr;
                     rr_ptr <= lane_ptr_next(rr_ptr);
                 end
             end
