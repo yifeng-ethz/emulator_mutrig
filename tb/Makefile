@@ -42,9 +42,47 @@ central_run_short: central_compile
 central_basic: central_compile
 	@echo "═══ Compiling tb_central_top BASIC bucket ═══"
 	cd uvm && $(VLOG) -work ../$(CENTRAL_WORK) -sv tb_central_top.sv
-	@echo "═══ Running tb_central_top (B001-B009 directed) ═══"
+	@echo "═══ Running tb_central_top (full 512-case bucket) ═══"
 	$(VSIM) -c -do "run -all; quit -f" \
 	  -work $(CENTRAL_WORK) -t ps \
+	  tb_central_top
+
+# Coverage-enabled compile: pass +cover to vlog to instrument the DUT.
+central_compile_cov: license_check
+	@echo "═══ Compiling emulator_mutrig RTL with coverage (statement, branch, condition, expression, fsm, toggle) ═══"
+	rm -rf $(CENTRAL_WORK)
+	$(VLIB) $(CENTRAL_WORK)
+	$(VMAP) $(CENTRAL_WORK) $(CENTRAL_WORK)
+	cd ../rtl && $(VLOG) -work ../tb/$(CENTRAL_WORK) -sv +cover=sbcetf -f emulator_mutrig_central_trigger.f
+	cd uvm && $(VLOG) -work ../$(CENTRAL_WORK) -sv tb_central_top.sv
+
+# Per-bucket coverage capture: vsim with -coverage, save bucket-level UCDBs
+# inside the simulation, then vcover-merge them into a single all-buckets
+# UCDB plus a text report. UCDBs land under tb/uvm/log/ucdb/.
+UCDB_DIR := uvm/log/ucdb
+central_basic_cov: central_compile_cov
+	@echo "═══ Running tb_central_top with coverage on (BASIC+EDGE+PROF+ERROR+EXTRA) ═══"
+	mkdir -p $(UCDB_DIR)
+	$(VSIM) -c -coverage -do "coverage save -onexit $(UCDB_DIR)/all_buckets.ucdb; run -all; quit -f" \
+	  -work $(CENTRAL_WORK) -t ps \
+	  +EXTRA=1 \
+	  tb_central_top
+	@echo "═══ Generating coverage report ═══"
+	/data1/questaone_sim/questasim/bin/vcover report -details $(UCDB_DIR)/all_buckets.ucdb \
+	  -output $(UCDB_DIR)/all_buckets.cov.rpt
+	/data1/questaone_sim/questasim/bin/vcover report -summary $(UCDB_DIR)/all_buckets.ucdb \
+	  -output $(UCDB_DIR)/all_buckets.summary
+	@echo "═══ Coverage summary ═══"
+	@cat $(UCDB_DIR)/all_buckets.summary | head -60
+
+# Quick non-coverage compile + extended-case run for fast iteration
+central_basic_extra: central_compile
+	@echo "═══ Compiling tb_central_top with extra cases ═══"
+	cd uvm && $(VLOG) -work ../$(CENTRAL_WORK) -sv tb_central_top.sv
+	@echo "═══ Running with extra cases ═══"
+	$(VSIM) -c -do "run -all; quit -f" \
+	  -work $(CENTRAL_WORK) -t ps \
+	  +EXTRA=1 \
 	  tb_central_top
 
 $(WORK)/_vmake: $(IP_SRC)/emulator_mutrig_pkg.sv \

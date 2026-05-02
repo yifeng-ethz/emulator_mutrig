@@ -756,9 +756,74 @@ module tb_central_top;
         end
 
         // ============================================================
+        // EXTRA bucket — coverage-driven follow-ups
+        // ============================================================
+        // Run only when +EXTRA is supplied. These cases target known
+        // uncovered code paths surfaced by the first central_basic_cov
+        // run: ERROR_INJECT functional path, mirror_offset signed
+        // negative range, run-control RESET + OUT_OF_DAQ exit, and
+        // CSR address aliasing into 0x16..0x17 reserved windows.
+        if ($test$plusargs("EXTRA")) begin
+            $display("=== Starting EXTRA bucket EX001-EX032 ===");
+            // EX001-EX008 — ERROR_INJECT routing
+            for (int i = 0; i < 8; i++) begin
+                automatic string id = $sformatf("EX%03d", i + 1);
+                logic [31:0] e_inj_word;
+                logic [31:0] e_inj_rdata;
+                do_reset();
+                csr_w(A_CENTRAL, 32'h1);
+                e_inj_word = (32'h7) | (32'(1 << i) << 3); // mask=7, target lane i
+                csr_w(A_ERROR_INJECT, e_inj_word);
+                csr_r(A_ERROR_INJECT, e_inj_rdata);
+                check_true(id, e_inj_rdata === e_inj_word,
+                           $sformatf("ERROR_INJECT lane %0d round-trip", i));
+            end
+            // EX009-EX016 — mirror_offset signed negative + positive sweep
+            for (int i = 0; i < 8; i++) begin
+                automatic string id = $sformatf("EX%03d", 9 + i);
+                automatic logic signed [7:0] off = -8'sd64 + 8'sd16 * 8'(i);
+                do_reset();
+                csr_w(A_CENTRAL, 32'h1);
+                csr_w(A_SIGNAL, 32'b100); // INTERNAL+RANDOM
+                csr_w(A_GEOM_RANDOM, 32'h08 | (2'b10 << 8) | (32'(off) & 32'hFF) << 11);
+                csr_w(A_RATES, 32'hFFFF);
+                clear_hit_counters();
+                drive_ctrl(9'b000001000);
+                run_cycles(2000);
+                check_true(id, sum_lane_hits() >= 1,
+                           $sformatf("mirror_offset %0d: hits reach lane", off));
+            end
+            // EX017-EX024 — run-control transition exotics
+            for (int i = 0; i < 8; i++) begin
+                automatic string id = $sformatf("EX%03d", 17 + i);
+                do_reset();
+                csr_w(A_CENTRAL, 32'h1);
+                drive_ctrl(9'b010000000); // RESET
+                run_cycles(20);
+                drive_ctrl(9'b100000000); // OUT_OF_DAQ
+                run_cycles(20);
+                drive_ctrl(9'b000001000); // RUNNING
+                run_cycles(2000);
+                check_true(id, ctrl_ready === 1'b1,
+                           "exotic run-control sequence: bus alive");
+            end
+            // EX025-EX032 — CSR address sweep across reserved windows
+            for (int i = 0; i < 8; i++) begin
+                automatic string id = $sformatf("EX%03d", 25 + i);
+                automatic logic [5:0] addr = 6'h16 + 6'(i);
+                logic [31:0] rd;
+                do_reset();
+                csr_r(addr, rd);
+                check_true(id, rd === 32'h0,
+                           $sformatf("reserved addr 0x%02x reads 0", addr));
+            end
+            $display("=== EXTRA bucket complete: cumulative %0d PASS, %0d FAIL ===", passes, fails);
+        end
+
+        // ============================================================
         // Done
         // ============================================================
-        $display("=== ALL BUCKETS complete: %0d PASS, %0d FAIL (of 512 cases) ===", passes, fails);
+        $display("=== ALL BUCKETS complete: %0d PASS, %0d FAIL (of 512+EXTRA cases) ===", passes, fails);
         if (fails > 0) begin
             $error("DV BUCKETS: %0d failures", fails);
             $finish(1);
