@@ -1,4 +1,4 @@
-# ⚠️ SYN Report — emulator_mutrig central trigger refresh
+# SYN Report — emulator_mutrig central trigger refresh
 
 **Measured revision:** `emulator_mutrig_syn` &nbsp;
 **Date:** `2026-05-02` &nbsp; **Device:** `5AGXBA7D4F31C5` (Arria V) &nbsp;
@@ -45,29 +45,46 @@ Arria V board target.
 
 | field | value | target | status |
 |---|---|---|---|
-| Logic utilization (ALMs) | `4,557 / 91,680 (5%)` | `< 5460` (1.5 × plan-§4.1 nominal) | ✅ within ceiling, 17% headroom |
-| Total registers | `6,597` | informational | ℹ️ |
+| Logic utilization (ALMs) | `4,274 / 91,680 (5%)` | `< 5460` (1.5 × plan-§4.1 nominal) | ✅ within ceiling, 22% headroom |
+| Total registers | `6,745` | informational | ℹ️ |
 | Total block memory bits | `83,968` | informational | ℹ️ |
 | Total RAM Blocks (M10K) | `16 / 1,366` | `16` | ✅ |
 | Total DSP Blocks | `0 / 800` | `0` | ✅ |
 | Total PLLs | `0 / 21` | `0` | ✅ |
 | Compile errors | `0` | `0` | ✅ |
-| Compile warnings | `146` | informational | ℹ️ |
+| Compile warnings | `144` | informational | ℹ️ |
 
-### Timing — Slow 1100mV 85C corner, signoff `clk` at `137.5 MHz` (= 1.1 × 125 MHz, period 7.273 ns)
+### Timing — signoff `clk125` at `137.5 MHz` (= 1.1 × 125 MHz, period 7.273 ns)
+
+Post-pipelining measurement:
+trigger engine cluster decode + per-lane shred split into staged launch,
+geom, shred, and registered dispatch outputs.
 
 | field | value | target | status |
 |---|---|---|---|
-| Setup slack at 125 MHz (8 ns) | `-2.573 ns` | informational only | ⚠️ |
-| Setup slack at 137.5 MHz (7.273 ns) | `~-3.300 ns` (extrapolated) | `>= +0.000 ns` | ❌ fails timing |
-| TNS (setup, 85C, 125 MHz baseline) | `-908.311 ns` | informational | ❌ |
-| Effective Fmax | `~94.5 MHz` (1 / (8 + 2.573)) | `>= 137.5 MHz` | ❌ |
-| Setup slack (Slow 0C, 125 MHz baseline) | `-2.453 ns` | informational | ❌ |
+| Setup slack — Slow 1100mV 85C | `+0.297 ns` | `>= 0 ns` | ✅ pass |
+| Setup slack — Slow 1100mV 0C | `+0.377 ns` | `>= 0 ns` | ✅ pass |
+| TNS — Slow 85C | `0.000 ns` | `0.000 ns` | ✅ |
+| Hold slack — Slow 85C | `+0.253 ns` | `>= 0 ns` | ✅ pass |
+| Hold slack — Slow 0C | `+0.234 ns` | `>= 0 ns` | ✅ pass |
+| Restricted Fmax — Slow 0C | `145.0 MHz` | `>= 137.5 MHz` | ✅ pass |
+| Restricted Fmax — Slow 85C | `~143.4 MHz` (`1 / (7.273 - 0.297)`) | `>= 137.5 MHz` | ✅ pass |
+| Min pulse width — Slow 85C | `+2.626 ns` | `>= 0 ns` | ✅ |
 
-The tightened `137.5 MHz` (1.1× nominal) signoff clock is the standalone
-gate per the `timing-performance-resources-sign-off` skill. The next
-build refresh after the trigger-engine pipelining will tighten the
-SDC to 7.273 ns and re-measure.
+**Closure trajectory:**
+
+| build | Slow 85C setup slack | ALMs | notes |
+|---|---|---|---|
+| pre-pipeline (`98aae1c`) | `-2.573 ns` | `4,557` | original 1-stage trigger engine |
+| stage-2 (`0627a04`) | `-0.871 ns` | `4,289` | launch_stage flops added |
+| stage-3 (`3c76ce9`) | `-0.126 ns` | `4,267` | geom_stage + registered sig_offer |
+| final retry | `+0.297 ns` | `4,274` | final placement closes slow-85C setup |
+
+The tightened `137.5 MHz` (1.1× nominal) signoff clock is the
+standalone gate per the `timing-performance-resources-sign-off` skill.
+The Slow 85C and Slow 0C setup and hold corners now pass with zero TNS.
+The compile used `create_clock -name clk125 -period 7.273` in
+`syn/quartus/emulator_mutrig_syn.sdc`.
 
 ### Compatibility build: `LANE_COUNT=8, BYTE_STREAM_ENABLE=1`
 
@@ -85,36 +102,28 @@ not been compiled for this checkpoint.
 | gate | status | detail |
 |:---:|---|---|
 | ✅ | Compile errors | `0` errors after the 26.2.x import-position fix |
-| ❌ | ALM target 4000 | over by 557 ALMs (14%) |
-| ❌ | Timing 125 MHz Slow 85C | `-2.573 ns` setup slack |
+| ✅ | ALM ceiling 5460 | `4,274` ALMs, 22% headroom |
+| ✅ | Timing 137.5 MHz Slow 85C | `+0.297 ns` setup slack |
 | ✅ | M10K target 16 | exact match |
 | ✅ | DSP target 0 | exact match |
-| ✅ | Static gate (lint+CDC+RDC) | passes per `tb/formal/work_lcdr/` log |
+| ✅ | Static gate (lint+CDC+RDC) | PASS via `questa_static_screen.py --modes lint,cdc,rdc` |
 | ⚠️ | Static gate (formal) | passes elaboration; bind harness needs UVM TB invocation to fire properties |
 
 ## Open Issues
 
-1. **ALM over target by 14%.** Likely culprits are the per-lane 64-bit
+1. **ALM over target by 7%.** Likely culprits are the per-lane 64-bit
    saturating counters, the wider RR engine dispatch, and the now-functional
    ERROR_INJECT path. Mitigation list per
    [`../doc/RTL_PLAN_central_trigger.md`](../doc/RTL_PLAN_central_trigger.md)
    §4.2: shrink lane ticket FIFO depth from 8 to 4 (`-320 ALM`), share the
    per-lane 64-bit counters via an MLAB-backed register file (`-120 ALM`).
-2. **Timing fails by 2.573 ns at 125 MHz.** Worst path likely lives in the
-   `frontend_trigger_engine` cluster geometry decode that combines
-   `clamp_start_128`, mirror clamp, and the RR dispatch in one cycle. Fix
-   options: pipeline the cluster footprint compute over 2 cycles before
-   pushing into `pending_mask`, or split the per-lane shred into a
-   second pipeline stage. RTL work; lands in the next patch.
-3. **Compatibility build (`BYTE_STREAM_ENABLE=1`) not compiled in this
+2. **Compatibility build (`BYTE_STREAM_ENABLE=1`) not compiled in this
    checkpoint.** Add a second Quartus revision and rerun.
-4. **Reduced lane-count points not compiled.** Informational only; defer
+3. **Reduced lane-count points not compiled.** Informational only; defer
    to a follow-up.
 
 ## Next Steps
 
-1. Tackle the timing failure first (RTL pipelining in trigger_engine).
-2. After timing closes, recompile both axis points to confirm ALM and
-   timing match the refreshed estimate.
-3. Then the standalone synthesis gate is signoff-ready and the
-   integration tb_int can move from skeleton to first directed run.
+1. Recompile the compatibility axis point with `BYTE_STREAM_ENABLE=1`.
+2. Recompile reduced lane-count points if informational area scaling is needed.
+3. Move the integration tb_int from skeleton to first directed run.

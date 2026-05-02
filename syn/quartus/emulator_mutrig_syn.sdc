@@ -1,6 +1,6 @@
 # Standalone timing sign-off for emulator_mutrig
 # Target clock: 125.0 MHz (8.000 ns)
-# Sign-off clock: 137.5 MHz (7.273 ns)
+# Sign-off clock: 137.5 MHz (7.273 ns = 1.1 x 125 MHz)
 
 create_clock -name clk125 -period 7.273 [get_ports {clk125}]
 
