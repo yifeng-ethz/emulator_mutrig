@@ -57,8 +57,8 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 
 - catalog_planned_cases: `512`
 - promoted_signoff_cases: `512`
-- evidenced_promoted_cases: `0`
-- promoted functional coverage: `0.0% (0/512)`
+- evidenced_promoted_cases: `9` (B001-B009 from BASIC bucket via `make central_basic`)
+- promoted functional coverage: `1.8% (9/512)`
 
 ## Signoff Runs
 
@@ -67,6 +67,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | ✅ | [`central_trigger_compile_smoke`](transcript) | compile_only | `LANE_COUNT=8 BYTE_STREAM_ENABLE=0` | make -C tb central_smoke | 0 | n/a |
 | ✅ | [`central_trigger_static_screen`](../.questa_static_screen/questa_static_screen.log) | static | `lint,cdc,rdc` | questa_static_screen.py | 0 | n/a |
 | ✅ | [`bucket_format_check`](DV_BASIC.md) | catalog_lint | `BASIC EDGE PROF ERROR` | dv_bucket_format_check.py | 512 | n/a |
+| ✅ | [`central_basic_b001_b009`](uvm/tb_central_top.sv) | directed | `LANE_COUNT=8 BYTE_STREAM_ENABLE=0` | make -C tb central_basic | 9 (9 PASS / 0 FAIL) | n/a |
 
 ## Index
 
