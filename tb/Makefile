@@ -39,6 +39,14 @@ central_run_short: central_compile
 	  -G LANE_COUNT=8 -G BYTE_STREAM_ENABLE=0 \
 	  emulator_mutrig
 
+central_basic: central_compile
+	@echo "═══ Compiling tb_central_top BASIC bucket ═══"
+	cd uvm && $(VLOG) -work ../$(CENTRAL_WORK) -sv tb_central_top.sv
+	@echo "═══ Running tb_central_top (B001-B009 directed) ═══"
+	$(VSIM) -c -do "run -all; quit -f" \
+	  -work $(CENTRAL_WORK) -t ps \
+	  tb_central_top
+
 $(WORK)/_vmake: $(IP_SRC)/emulator_mutrig_pkg.sv \
                 $(IP_SRC)/prbs15_lfsr.sv \
                 $(IP_SRC)/crc16_8.sv \
