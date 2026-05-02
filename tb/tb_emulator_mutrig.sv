@@ -489,6 +489,9 @@ module tb_emulator_mutrig;
         dut.u_hit_gen.fifo_wr_ptr         = '0;
         dut.u_hit_gen.fifo_rd_ptr         = '0;
         dut.u_hit_gen.fifo_count          = '0;
+        dut.u_hit_gen.ticket_wr_ptr       = '0;
+        dut.u_hit_gen.ticket_rd_ptr       = '0;
+        dut.u_hit_gen.ticket_count        = '0;
         dut.u_hit_gen.pending_valid       = 1'b0;
         dut.u_hit_gen.pending_word        = '0;
         dut.u_hit_gen.hit_wr_en           = 1'b0;
@@ -1231,6 +1234,263 @@ module tb_emulator_mutrig;
     endtask
 
     // ========================================
+    // Test T16: external inject is gated until RUNNING
+    // ========================================
+    task automatic test_T16_inject_sync_running_gate();
+        int generated_before_running;
+        int generated_after_running;
+        int frame_len;
+        int evt_count;
+        logic [47:0] expected_hit;
+        logic [47:0] captured_long_word;
+
+        $display("\n=== Test T16: Inject gate around SYNC/RUNNING ===");
+
+        csr_write(4'd0, 32'h0000_0001);
+        csr_write(4'd1, 32'h0000_0000);
+        csr_write(4'd2, 32'h0000_0901);
+        csr_write(4'd3, 32'h1A2B_1300);
+        csr_write(4'd4, 32'h0000_0008);
+        clear_hit_generator_state();
+
+        send_run_state(CTRL_RUN_PREPARE);
+        repeat (4) @(posedge clk);
+        pulse_inject_once();
+
+`ifndef EMUT_GATE_SIM
+        generated_before_running = 0;
+        repeat (24) begin
+            @(negedge clk);
+            if (dut.u_hit_gen.hit_wr_en)
+                generated_before_running++;
+        end
+        check("RUN_PREPARE inject produces no generated hit",
+              generated_before_running == 0);
+`else
+        repeat (24) @(posedge clk);
+`endif
+
+        send_run_state(CTRL_SYNC);
+        repeat (4) @(posedge clk);
+        pulse_inject_once();
+
+`ifndef EMUT_GATE_SIM
+        generated_before_running = 0;
+        repeat (32) begin
+            @(negedge clk);
+            if (dut.u_hit_gen.hit_wr_en)
+                generated_before_running++;
+        end
+        check("SYNC inject produces no generated hit",
+              generated_before_running == 0);
+        check("No frame starts before RUNNING",
+              dut.status_frame_count == 16'd0);
+`else
+        repeat (32) @(posedge clk);
+`endif
+
+        send_run_state(CTRL_RUNNING);
+
+`ifndef EMUT_GATE_SIM
+        generated_after_running = 0;
+        repeat (16) begin
+            @(negedge clk);
+            if (dut.u_hit_gen.hit_wr_en)
+                generated_after_running++;
+        end
+        check("No stale SYNC inject is replayed after RUNNING",
+              generated_after_running == 0);
+`else
+        repeat (16) @(posedge clk);
+`endif
+
+        pulse_inject_once();
+        wait_for_generated_hit(expected_hit);
+        capture_next_nonempty_frame(frame_len, evt_count);
+        check("RUNNING inject generates one hit",
+              evt_count == 1);
+`ifndef EMUT_GATE_SIM
+        captured_long_word = decode_long_hit_from_capture();
+        check("RUNNING inject payload matches generated hit",
+              captured_long_word == expected_hit);
+`endif
+
+        run_sequence_stop();
+    endtask
+
+    // ========================================
+    // Test T13: periodic mode submits timestamp tickets
+    // ========================================
+    task automatic test_T13_periodic_ticket_timestamp();
+        int hit_idx;
+        logic [47:0] seen_hits [0:3];
+
+        $display("\n=== Test T13: Periodic ticket timestamp ===");
+
+        csr_write(4'd0, 32'h0000_0007); // enable + HIT_MODE_PERIODIC
+        csr_write(4'd1, 32'h0000_0100);
+        csr_write(4'd2, {2'b00, 4'd1, 4'd0, 8'd16, 1'b0, 5'd16, 3'b0, 5'd4});
+        csr_write(4'd3, 32'hCAFE_1020);
+        csr_write(4'd4, 32'h0000_0008);
+        clear_hit_generator_state();
+
+        run_sequence_start();
+
+`ifndef EMUT_GATE_SIM
+        hit_idx = 0;
+        while (hit_idx < 4) begin
+            @(negedge clk);
+            if (dut.u_hit_gen.hit_wr_en && !dut.u_hit_gen.fifo_full) begin
+                seen_hits[hit_idx] = dut.u_hit_gen.hit_wr_data;
+                hit_idx++;
+            end
+        end
+
+        for (int i = 0; i < 4; i++) begin
+            $display("  hit[%0d]=0x%012h ch=%0d tcc=0x%04h ecc=0x%04h",
+                     i, seen_hits[i], seen_hits[i][47:43],
+                     seen_hits[i][41:27], seen_hits[i][20:6]);
+        end
+
+        check("Periodic ticket keeps common TCC", seen_hits[0][41:27] == seen_hits[3][41:27]);
+        check("Periodic ticket keeps common ECC", seen_hits[0][20:6] == seen_hits[3][20:6]);
+        check("Periodic ticket drains one hit per cycle",
+              (seen_hits[1][47:43] == (seen_hits[0][47:43] + 5'd1)) &&
+              (seen_hits[2][47:43] == (seen_hits[1][47:43] + 5'd1)) &&
+              (seen_hits[3][47:43] == (seen_hits[2][47:43] + 5'd1)));
+`else
+        repeat (64) @(posedge clk);
+`endif
+
+        run_sequence_stop();
+    endtask
+
+    // ========================================
+    // Test T14: queued periodic tickets create latency growth
+    // ========================================
+    task automatic test_T14_periodic_ticket_backlog_latency();
+        int hit_idx;
+        int timeout_cycles;
+        logic [47:0] seen_hits [0:11];
+        logic [47:0] seen_submit_gts [0:11];
+        logic [47:0] seen_emit_gts [0:11];
+        logic [47:0] latency_first_ticket;
+        logic [47:0] latency_third_ticket;
+
+        $display("\n=== Test T14: Periodic ticket backlog latency ===");
+
+        csr_write(4'd0, 32'h0000_0007); // enable + HIT_MODE_PERIODIC
+        csr_write(4'd1, 32'h0000_0800); // folded rate saturates: one trigger/cycle
+        csr_write(4'd2, {2'b00, 4'd1, 4'd0, 8'd16, 1'b0, 5'd16, 3'b0, 5'd5});
+        csr_write(4'd3, 32'h5EED_1400);
+        csr_write(4'd4, 32'h0000_0008);
+        clear_hit_generator_state();
+
+        run_sequence_start();
+
+`ifndef EMUT_GATE_SIM
+        hit_idx = 0;
+        timeout_cycles = 0;
+        while ((hit_idx < 12) && (timeout_cycles < 2048)) begin
+            @(negedge clk);
+            if (dut.u_hit_gen.hit_wr_en && !dut.u_hit_gen.fifo_full) begin
+                seen_hits[hit_idx]       = dut.u_hit_gen.hit_wr_data;
+                seen_submit_gts[hit_idx] = dut.u_hit_gen.debug_hit_gen_gts_8n;
+                seen_emit_gts[hit_idx]   = dut.u_hit_gen.debug_true_gts_8n;
+                hit_idx++;
+            end
+            timeout_cycles++;
+        end
+
+        check("Backlog test captured 12 generated hits", hit_idx == 12);
+        if (hit_idx == 12) begin
+            latency_first_ticket = seen_emit_gts[0] - seen_submit_gts[0];
+            latency_third_ticket = seen_emit_gts[10] - seen_submit_gts[10];
+
+            for (int i = 0; i < 12; i++) begin
+                $display("  hit[%0d]=0x%012h ch=%0d submit=%0d emit=%0d latency=%0d",
+                         i, seen_hits[i], seen_hits[i][47:43],
+                         seen_submit_gts[i], seen_emit_gts[i],
+                         seen_emit_gts[i] - seen_submit_gts[i]);
+            end
+
+            check("Ticket 0 keeps common TCC",
+                  (seen_hits[0][41:27] == seen_hits[4][41:27]) &&
+                  (seen_hits[0][20:6] == seen_hits[4][20:6]));
+            check("Ticket 1 keeps common TCC",
+                  (seen_hits[5][41:27] == seen_hits[9][41:27]) &&
+                  (seen_hits[5][20:6] == seen_hits[9][20:6]));
+            check("Queued ticket submit timestamps advance",
+                  (seen_submit_gts[5] > seen_submit_gts[0]) &&
+                  (seen_submit_gts[10] > seen_submit_gts[5]));
+            check("Queued ticket latency grows under one-hit-per-cycle drain",
+                  latency_third_ticket > latency_first_ticket + 48'd6);
+        end
+`else
+        repeat (256) @(posedge clk);
+`endif
+
+        run_sequence_stop();
+    endtask
+
+    // ========================================
+    // Test T15: L2 FIFO backpressure stalls active ticket drain
+    // ========================================
+    task automatic test_T15_l2_backpressure_stalls_ticket();
+        logic [4:0] remaining_when_full;
+        logic [4:0] remaining_after_full_wait;
+        logic [4:0] remaining_after_resume;
+
+        $display("\n=== Test T15: L2 backpressure stalls ticket drain ===");
+
+        csr_write(4'd0, 32'h0000_0001); // enable + low-rate Poisson mode
+        csr_write(4'd1, 32'h0000_0000);
+        csr_write(4'd2, {2'b00, 4'd1, 4'd0, 8'd16, 1'b0, 5'd16, 3'b0, 5'd4});
+        csr_write(4'd3, 32'hBA5E_1500);
+        csr_write(4'd4, 32'h0000_0008);
+        clear_hit_generator_state();
+
+        run_sequence_start();
+
+`ifndef EMUT_GATE_SIM
+        @(negedge clk);
+        dut.u_hit_gen.fifo_count          = dut.u_hit_gen.FIFO_COUNT_WIDTH'(FIFO_DEPTH);
+        dut.u_hit_gen.pending_valid       = 1'b0;
+        dut.u_hit_gen.burst_remaining     = 5'd3;
+        dut.u_hit_gen.burst_global_ch     = 8'd7;
+        dut.u_hit_gen.cluster_tcc_anchor  = dut.tcc_lfsr_commit;
+        dut.u_hit_gen.cluster_ecc_anchor  = dut.ecc_lfsr_commit;
+        dut.u_hit_gen.cluster_fine_anchor = 5'd12;
+        remaining_when_full = dut.u_hit_gen.burst_remaining;
+
+        repeat (4) @(posedge clk);
+        remaining_after_full_wait = dut.u_hit_gen.burst_remaining;
+        $display("  remaining full: before=%0d after=%0d fifo_count=%0d pending=%0d",
+                 remaining_when_full, remaining_after_full_wait,
+                 dut.u_hit_gen.fifo_count, dut.u_hit_gen.pending_valid);
+        check("Full L2 FIFO stalls active ticket drain",
+              remaining_after_full_wait == remaining_when_full);
+        check("Full L2 FIFO suppresses generated hit",
+              dut.u_hit_gen.hit_wr_en == 1'b0);
+
+        @(negedge clk);
+        dut.u_hit_gen.fifo_count    = '0;
+        dut.u_hit_gen.pending_valid = 1'b0;
+        repeat (2) @(posedge clk);
+        remaining_after_resume = dut.u_hit_gen.burst_remaining;
+        $display("  remaining resume: full_wait=%0d after=%0d fifo_count=%0d pending=%0d",
+                 remaining_after_full_wait, remaining_after_resume,
+                 dut.u_hit_gen.fifo_count, dut.u_hit_gen.pending_valid);
+        check("Ticket drain resumes after L2 space returns",
+              remaining_after_resume < remaining_after_full_wait);
+`else
+        repeat (256) @(posedge clk);
+`endif
+
+        run_sequence_stop();
+    endtask
+
+    // ========================================
     // Test E03: Back-to-back frames
     // ========================================
     task automatic test_E03_back2back();
@@ -1345,6 +1605,18 @@ module tb_emulator_mutrig;
 
         if (test_name == "ALL" || test_name == "T12_sync_hold_timestamp")
             test_T12_sync_hold_timestamp();
+
+        if (test_name == "ALL" || test_name == "T13_periodic_ticket_timestamp")
+            test_T13_periodic_ticket_timestamp();
+
+        if (test_name == "ALL" || test_name == "T14_periodic_ticket_backlog_latency")
+            test_T14_periodic_ticket_backlog_latency();
+
+        if (test_name == "ALL" || test_name == "T15_l2_backpressure_stalls_ticket")
+            test_T15_l2_backpressure_stalls_ticket();
+
+        if (test_name == "ALL" || test_name == "T16_inject_sync_running_gate")
+            test_T16_inject_sync_running_gate();
 
         if (test_name == "ALL" || test_name == "E03_back2back")
             test_E03_back2back();

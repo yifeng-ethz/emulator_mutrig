@@ -28,3 +28,8 @@ tb/mutrig_true_ab/*.pyc
 
 # Quartus build outputs
 syn/quartus/output_files/
+.questa_static_screen/
+.qverify/
+qverify.log
+qverify_cmds.tcl
+work_*/
