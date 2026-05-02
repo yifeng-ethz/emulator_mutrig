@@ -87,21 +87,14 @@ module be_mutrig_lane_emitter
         input logic [14:0] ecc,
         input logic [15:0] rnd
     );
-        logic [4:0] fine_a;
-        logic [4:0] fine_b;
-        logic [4:0] t_fine;
-        logic [4:0] e_fine;
-
-        fine_a = clamp_fine_with_jitter(rnd[4:0], rnd[2:0], rnd[5:3]);
-        fine_b = clamp_fine_with_jitter(rnd[9:5], rnd[8:6], rnd[11:9]);
-        if (fine_a <= fine_b) begin
-            t_fine = fine_a;
-            e_fine = fine_b;
-        end else begin
-            t_fine = fine_b;
-            e_fine = fine_a;
-        end
-        return pack_hit_long(channel, 1'b0, tcc, t_fine, 1'b0, ecc, e_fine, 1'b1);
+        // Simple model per RTL_PLAN_central_trigger.md §2.5: T_Fine and
+        // E_Fine are tied to 5'd0 for every emitted hit. The `rnd`
+        // argument is kept for ABI stability with the prior fine-PRNG
+        // signature; future patches can re-introduce jitter here under a
+        // CSR enable without touching the call site.
+        logic unused_rnd;
+        unused_rnd = |rnd;
+        return pack_hit_long(channel, 1'b0, tcc, 5'd0, 1'b0, ecc, 5'd0, 1'b1);
     endfunction
 
     assign ticket_ready = enable && (ticket_count != TICKET_COUNT_WIDTH'(TICKET_DEPTH));
