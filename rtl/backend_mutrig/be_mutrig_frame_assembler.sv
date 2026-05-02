@@ -114,11 +114,11 @@ module be_mutrig_frame_assembler
             p_fifo_full         <= 1'b0;
             p_fifo_rd_en        <= 1'b0;
             p_dbyteisk          <= 1'b1;
-            p_dbyte             <= K28_5;
+            p_dbyte             <= be_mutrig_pkg::K28_5_CONST;
             p_crc_rst           <= 1'b1;
             p_crc_dvalid        <= 1'b0;
             frame_start         <= 1'b0;
-            tx_byte_q           <= K28_5;
+            tx_byte_q           <= be_mutrig_pkg::K28_5_CONST;
             tx_isk_q            <= 1'b1;
         end else begin
             p_state             <= n_state;
@@ -168,7 +168,7 @@ module be_mutrig_frame_assembler
 
         case (p_state)
             FS_IDLE: begin
-                n_dbyte          = K28_5;
+                n_dbyte          = be_mutrig_pkg::K28_5_CONST;
                 n_dbyteisk       = 1'b1;
                 n_event_count    = event_count[EVENT_COUNT_WIDTH-1:0];
                 n_event_cnt_decr = event_count[EVENT_COUNT_WIDTH-1:0];
@@ -190,19 +190,19 @@ module be_mutrig_frame_assembler
             end
 
             FS_ENC_RESET0: begin
-                n_dbyte    = K28_5;
+                n_dbyte    = be_mutrig_pkg::K28_5_CONST;
                 n_dbyteisk = 1'b1;
                 n_state    = FS_ENC_RESET1;
             end
 
             FS_ENC_RESET1: begin
-                n_dbyte    = K28_5;
+                n_dbyte    = be_mutrig_pkg::K28_5_CONST;
                 n_dbyteisk = 1'b1;
                 n_state    = FS_HEADER;
             end
 
             FS_HEADER: begin
-                n_dbyte      = K28_0;
+                n_dbyte      = be_mutrig_pkg::K28_0_CONST;
                 n_dbyteisk   = 1'b1;
                 n_state      = FS_FRAMECOUNT;
                 n_byte_count = 3'd2;
@@ -374,11 +374,11 @@ module be_mutrig_frame_assembler
             FS_TRAILER: begin
                 n_byte_count = p_byte_count - 3'd1;
                 if (p_byte_count != 3'd1) begin
-                    n_dbyte    = K28_4;
+                    n_dbyte    = be_mutrig_pkg::K28_4_CONST;
                     n_dbyteisk = 1'b1;
                 end else begin
                     n_frame_count    = p_frame_count + 16'd1;
-                    n_dbyte          = K28_5;
+                    n_dbyte          = be_mutrig_pkg::K28_5_CONST;
                     n_dbyteisk       = 1'b1;
                     n_state          = FS_IDLE;
                     n_event_count    = event_count[EVENT_COUNT_WIDTH-1:0];

@@ -6,10 +6,8 @@
 // Change  : Add lane ticket FIFO, fine PRNG, L2 FIFO, and 64-bit counters.
 
 module be_mutrig_lane_emitter
-    import frontend_ticket_bus_pkg::*;
-    import be_mutrig_pkg::*;
 #(
-    parameter int FIFO_DEPTH = RAW_FIFO_DEPTH_CONST
+    parameter int FIFO_DEPTH = be_mutrig_pkg::RAW_FIFO_DEPTH_CONST
 ) (
     input  logic              clk,
     input  logic              rst,
@@ -17,7 +15,7 @@ module be_mutrig_lane_emitter
     input  logic [31:0]       cfg_prng_seed,
     input  logic              frame_count_pulse,
 
-    input  frontend_ticket_t  ticket_data,
+    input  frontend_ticket_bus_pkg::frontend_ticket_t  ticket_data,
     input  logic              ticket_valid,
     output logic              ticket_ready,
 
@@ -37,7 +35,10 @@ module be_mutrig_lane_emitter
     output logic              ticket_overflow_sticky
 );
 
-    localparam int TICKET_DEPTH = TICKET_FIFO_DEPTH_CONST;
+    import frontend_ticket_bus_pkg::*;
+    import be_mutrig_pkg::*;
+
+    localparam int TICKET_DEPTH = be_mutrig_pkg::TICKET_FIFO_DEPTH_CONST;
     localparam int TICKET_PTR_WIDTH = $clog2(TICKET_DEPTH);
     localparam int TICKET_COUNT_WIDTH = TICKET_PTR_WIDTH + 1;
 
@@ -109,7 +110,7 @@ module be_mutrig_lane_emitter
     be_mutrig_l2_fifo #(
         .WIDTH              (48),
         .DEPTH              (FIFO_DEPTH),
-        .ALMOST_FULL_MARGIN (FIFO_ALMOST_FULL_MARGIN_CONST)
+        .ALMOST_FULL_MARGIN (be_mutrig_pkg::FIFO_ALMOST_FULL_MARGIN_CONST)
     ) u_l2_fifo (
         .clk         (clk),
         .rst         (rst),

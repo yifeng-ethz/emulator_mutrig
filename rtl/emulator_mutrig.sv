@@ -6,8 +6,6 @@
 // Change  : Add 26.2 central-trigger top with lane-count and byte-stream axes.
 
 module emulator_mutrig
-    import frontend_ticket_bus_pkg::*;
-    import be_mutrig_pkg::*;
 #(
     parameter int LANE_COUNT = 8,
     parameter bit BYTE_STREAM_ENABLE = 0,
@@ -49,6 +47,9 @@ module emulator_mutrig
     output logic [LANE_COUNT-1:0][2:0] aso_tx8b1k_error,
     output logic [LANE_COUNT-1:0][3:0] aso_tx8b1k_channel
 );
+
+    import frontend_ticket_bus_pkg::*;
+    import be_mutrig_pkg::*;
 
     localparam int LANE_INDEX_WIDTH = (LANE_COUNT > 1) ? $clog2(LANE_COUNT) : 1;
     localparam int FRAME_COUNTER_WIDTH = 11;
@@ -149,8 +150,8 @@ module emulator_mutrig
     endfunction
 
     assign frame_interval_max = cfg_short_mode ?
-        FRAME_COUNTER_WIDTH'(FRAME_INTERVAL_SHORT) :
-        FRAME_COUNTER_WIDTH'(FRAME_INTERVAL_LONG);
+        FRAME_COUNTER_WIDTH'(be_mutrig_pkg::FRAME_INTERVAL_SHORT_CONST) :
+        FRAME_COUNTER_WIDTH'(be_mutrig_pkg::FRAME_INTERVAL_LONG_CONST);
     assign csr_timebase_seed_load = avs_csr_write && (avs_csr_address == 6'h0F);
     assign engine_inject_pulse = cfg_global_enable && inject_pulse;
 
@@ -225,11 +226,11 @@ module emulator_mutrig
 
     always_ff @(posedge i_clk) begin
         if (emu_rst || csr_timebase_seed_load) begin
-            tcc_lfsr    <= (cfg_tcc_seed == 15'h0000) ? LFSR15_INIT : cfg_tcc_seed;
-            ecc_lfsr    <= (cfg_ecc_seed == 15'h0000) ? LFSR15_INIT : cfg_ecc_seed;
+            tcc_lfsr    <= (cfg_tcc_seed == 15'h0000) ? be_mutrig_pkg::LFSR15_INIT_CONST : cfg_tcc_seed;
+            ecc_lfsr    <= (cfg_ecc_seed == 15'h0000) ? be_mutrig_pkg::LFSR15_INIT_CONST : cfg_ecc_seed;
         end else if (run_draining) begin
-            tcc_lfsr    <= prbs15_step_n(tcc_lfsr, MUTRIG_COARSE_STEPS_PER_CYCLE);
-            ecc_lfsr    <= prbs15_step_n(ecc_lfsr, MUTRIG_COARSE_STEPS_PER_CYCLE);
+            tcc_lfsr    <= prbs15_step_n(tcc_lfsr, be_mutrig_pkg::MUTRIG_COARSE_STEPS_PER_CYCLE_CONST);
+            ecc_lfsr    <= prbs15_step_n(ecc_lfsr, be_mutrig_pkg::MUTRIG_COARSE_STEPS_PER_CYCLE_CONST);
         end
     end
 
@@ -325,7 +326,7 @@ module emulator_mutrig
                 (!lane_l2_empty[lane_idx] || cfg_gen_idle);
 
             be_mutrig_lane_emitter #(
-                .FIFO_DEPTH(RAW_FIFO_DEPTH)
+                .FIFO_DEPTH(be_mutrig_pkg::RAW_FIFO_DEPTH_CONST)
             ) u_lane_emitter (
                 .clk                    (i_clk),
                 .rst                    (emu_rst),
@@ -402,7 +403,7 @@ module emulator_mutrig
                 assign frame_l2_rd_en[lane_idx] = 1'b0;
                 assign lane_l2_rd_en[lane_idx] = type0_l2_rd_en[lane_idx];
                 assign lane_frame_start[lane_idx] = frame_start_req && lane_frame_allowed;
-                assign aso_tx8b1k_data[lane_idx] = {1'b1, K28_5};
+                assign aso_tx8b1k_data[lane_idx] = {1'b1, be_mutrig_pkg::K28_5_CONST};
                 assign aso_tx8b1k_valid[lane_idx] = 1'b0;
             end
 
