@@ -1,9 +1,10 @@
 // be_mutrig_lane_type0_emit.sv
-// MuTRiG lane hit_type0 emitter.
+// MuTRiG lane hit_type0 emitter with link-bottleneck pacer.
 // Author: Yifeng Wang
-// Version : 26.2.0
+// Version : 26.2.1
 // Date    : 20260502
-// Change  : Add direct 45-bit hit_type0 path with functional error injection.
+// Change  : Add L2-pop pacer (3.5 cycles/hit short-mode ping-pong, 6
+//           cycles/hit long-mode) per RTL_PLAN section 2.6.
 
 module be_mutrig_lane_type0_emit
     import be_mutrig_pkg::*;
@@ -18,6 +19,7 @@ module be_mutrig_lane_type0_emit
     input  logic                         frame_start_allowed,
     input  logic                         run_terminating,
     input  logic                         run_idle,
+    input  logic                         cfg_short_mode,
     input  logic [3:0]                   asic_id,
     input  logic [2:0]                   error_inject_mask,
     input  logic                         error_target_lane,
@@ -42,7 +44,28 @@ module be_mutrig_lane_type0_emit
     logic in_packet;
     logic prev_terminating;
 
-    assign l2_rd_en = own_drain && enable && (issue_remaining != '0) && !l2_empty;
+    // Link-bottleneck pacer. Models the real MuTRiG output bandwidth at
+    // the 125 MHz emulator boundary so the hit_type0 path imposes the
+    // same offered-rate envelope as if the byte stream were running.
+    //   short_mode = 1: alternating 3 / 4 cycles between l2_rd_en pulses
+    //                   (ping-pong, average 3.5 cycles/hit)
+    //   short_mode = 0: every 6 cycles between l2_rd_en pulses (long hit)
+    logic [2:0] pacer_cnt;
+    logic       pacer_pingpong;
+    logic       pacer_window_open;
+    logic       pacer_pop;
+    logic [2:0] pacer_window_max;
+
+    assign pacer_window_max = cfg_short_mode
+        ? (pacer_pingpong ? 3'd2 : 3'd3)   // 3-cycle + 4-cycle alternation
+        : 3'd5;                            // 6-cycle long-hit window
+    assign pacer_window_open = (pacer_cnt == pacer_window_max);
+    assign pacer_pop = own_drain && enable && (issue_remaining != '0)
+                       && !l2_empty && pacer_window_open;
+
+    assign l2_rd_en = pacer_pop;
+    // -- legacy unconstrained pop kept here for reference; see pacer above
+    // assign l2_rd_en = own_drain && enable && (issue_remaining != '0) && !l2_empty;
     assign aso_hit_type0_channel = asic_id;
     assign aso_hit_type0_error = error_target_lane ? error_inject_mask : 3'b000;
 
@@ -52,12 +75,23 @@ module be_mutrig_lane_type0_emit
             emit_remaining <= '0;
             in_packet <= 1'b0;
             prev_terminating <= 1'b0;
+            pacer_cnt <= '0;
+            pacer_pingpong <= 1'b0;
             aso_hit_type0_startofpacket <= 1'b0;
             aso_hit_type0_endofpacket <= 1'b0;
             aso_hit_type0_endofrun <= 1'b0;
             aso_hit_type0_data <= '0;
             aso_hit_type0_valid <= 1'b0;
         end else begin
+            // Pacer counter advances every cycle; resets on a successful
+            // pop and toggles the ping-pong bit so the next short-mode
+            // window alternates 3 vs 4 cycles.
+            if (pacer_pop) begin
+                pacer_cnt <= '0;
+                pacer_pingpong <= ~pacer_pingpong;
+            end else if (pacer_cnt != pacer_window_max) begin
+                pacer_cnt <= pacer_cnt + 3'd1;
+            end
             aso_hit_type0_startofpacket <= 1'b0;
             aso_hit_type0_endofpacket <= 1'b0;
             aso_hit_type0_endofrun <= 1'b0;

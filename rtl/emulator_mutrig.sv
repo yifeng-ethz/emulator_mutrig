@@ -16,7 +16,8 @@ module emulator_mutrig
     parameter int BUILD = 502,
     parameter int VERSION_DATE = 20260502,
     parameter logic [31:0] VERSION_GIT = 32'h0,
-    parameter logic [31:0] INSTANCE_ID = 32'h0
+    parameter logic [31:0] INSTANCE_ID = 32'h0,
+    parameter logic [3:0] ASIC_ID_BASE_DEFAULT = 4'd0
 ) (
     input  logic i_clk,
     input  logic i_rst,
@@ -65,8 +66,33 @@ module emulator_mutrig
     logic cfg_enable_type0_stream;
     logic [15:0] cfg_hit_rate;
     logic [15:0] cfg_noise_rate;
+    // GEOM_FIX dual-side bridge to legacy single-pair engine input.
+    // The CSR exposes left/right halves with low/high/enable each;
+    // the trigger engine (until its own dual-side refactor lands) still
+    // takes one (low, high) pair. We synthesise that pair from the
+    // currently-enabled side, defaulting to side A when both are set.
+    // Per RTL_PLAN section 3, dual-side simultaneous launch is a
+    // follow-up patch in the trigger engine.
+    logic [6:0] cfg_geom_fix_left_low;
+    logic [6:0] cfg_geom_fix_left_high;
+    logic       cfg_geom_fix_left_enable;
+    logic [6:0] cfg_geom_fix_right_low;
+    logic [6:0] cfg_geom_fix_right_high;
+    logic       cfg_geom_fix_right_enable;
     logic [7:0] cfg_hit_channel_low;
     logic [7:0] cfg_hit_channel_high;
+    always_comb begin
+        if (cfg_geom_fix_left_enable) begin
+            cfg_hit_channel_low  = {1'b0, cfg_geom_fix_left_low};
+            cfg_hit_channel_high = {1'b0, cfg_geom_fix_left_high};
+        end else if (cfg_geom_fix_right_enable) begin
+            cfg_hit_channel_low  = {1'b1, cfg_geom_fix_right_low};
+            cfg_hit_channel_high = {1'b1, cfg_geom_fix_right_high};
+        end else begin
+            cfg_hit_channel_low  = 8'd0;
+            cfg_hit_channel_high = 8'd0;
+        end
+    end
     logic [7:0] cfg_cluster_size_random;
     logic [1:0] cfg_mirror_mode;
     logic signed [7:0] cfg_mirror_offset;
@@ -163,7 +189,8 @@ module emulator_mutrig
         .BUILD        (BUILD),
         .VERSION_DATE (VERSION_DATE),
         .VERSION_GIT  (VERSION_GIT),
-        .INSTANCE_ID  (INSTANCE_ID)
+        .INSTANCE_ID  (INSTANCE_ID),
+        .ASIC_ID_BASE_DEFAULT(ASIC_ID_BASE_DEFAULT)
     ) u_frontend_csr (
         .i_clk                                           (i_clk),
         .i_rst                                           (i_rst),
@@ -184,8 +211,12 @@ module emulator_mutrig
         .cfg_mutrig_format_enable_type0_stream           (cfg_enable_type0_stream),
         .cfg_rates_hit_rate                              (cfg_hit_rate),
         .cfg_rates_noise_rate                            (cfg_noise_rate),
-        .cfg_cluster_geom_fix_hit_channel_low            (cfg_hit_channel_low),
-        .cfg_cluster_geom_fix_hit_channel_high           (cfg_hit_channel_high),
+        .cfg_geom_fix_left_low                            (cfg_geom_fix_left_low),
+        .cfg_geom_fix_left_high                           (cfg_geom_fix_left_high),
+        .cfg_geom_fix_left_enable                         (cfg_geom_fix_left_enable),
+        .cfg_geom_fix_right_low                           (cfg_geom_fix_right_low),
+        .cfg_geom_fix_right_high                          (cfg_geom_fix_right_high),
+        .cfg_geom_fix_right_enable                        (cfg_geom_fix_right_enable),
         .cfg_cluster_geom_random_cluster_size_random     (cfg_cluster_size_random),
         .cfg_cluster_geom_random_mirror_mode             (cfg_mirror_mode),
         .cfg_cluster_geom_random_mirror_offset           (cfg_mirror_offset),
@@ -360,6 +391,7 @@ module emulator_mutrig
                 .frame_start_allowed         (lane_frame_allowed),
                 .run_terminating             (ctrl_state_q[4]),
                 .run_idle                    (ctrl_state_q[0]),
+                .cfg_short_mode              (cfg_short_mode),
                 .asic_id                     (lane_asic_id(lane_idx)),
                 .error_inject_mask           (cfg_type0_error_inject_mask),
                 .error_target_lane           (cfg_lane_error_target_mask[lane_idx]),

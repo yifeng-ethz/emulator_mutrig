@@ -13,7 +13,8 @@ module frontend_csr #(
     parameter int          BUILD         = 502,
     parameter int          VERSION_DATE  = 32'h2026_0502,
     parameter logic [31:0] VERSION_GIT   = 32'h0000_0000,
-    parameter logic [31:0] INSTANCE_ID   = 32'h0000_0000
+    parameter logic [31:0] INSTANCE_ID   = 32'h0000_0000,
+    parameter logic [3:0]  ASIC_ID_BASE_DEFAULT = 4'd0
 ) (
     input  logic              i_clk,
     input  logic              i_rst,
@@ -36,8 +37,12 @@ module frontend_csr #(
     output logic              cfg_mutrig_format_enable_type0_stream,
     output logic [15:0]       cfg_rates_hit_rate,
     output logic [15:0]       cfg_rates_noise_rate,
-    output logic [7:0]        cfg_cluster_geom_fix_hit_channel_low,
-    output logic [7:0]        cfg_cluster_geom_fix_hit_channel_high,
+    output logic [6:0]        cfg_geom_fix_left_low,
+    output logic [6:0]        cfg_geom_fix_left_high,
+    output logic              cfg_geom_fix_left_enable,
+    output logic [6:0]        cfg_geom_fix_right_low,
+    output logic [6:0]        cfg_geom_fix_right_high,
+    output logic              cfg_geom_fix_right_enable,
     output logic [7:0]        cfg_cluster_geom_random_cluster_size_random,
     output logic [1:0]        cfg_cluster_geom_random_mirror_mode,
     output logic signed [7:0] cfg_cluster_geom_random_mirror_offset,
@@ -151,9 +156,14 @@ module frontend_csr #(
             ADDR_RATES_CONST: csr_readdata = {cfg_rates_noise_rate, cfg_rates_hit_rate};
             ADDR_CLUSTER_FIX_CONST: begin
                 csr_readdata = {
-                    16'b0,
-                    cfg_cluster_geom_fix_hit_channel_high,
-                    cfg_cluster_geom_fix_hit_channel_low
+                    1'b0,
+                    cfg_geom_fix_right_enable,
+                    cfg_geom_fix_right_high,
+                    cfg_geom_fix_right_low,
+                    1'b0,
+                    cfg_geom_fix_left_enable,
+                    cfg_geom_fix_left_high,
+                    cfg_geom_fix_left_low
                 };
             end
             ADDR_CLUSTER_RANDOM_CONST: begin
@@ -211,8 +221,12 @@ module frontend_csr #(
             cfg_mutrig_format_enable_type0_stream          <= 1'b1;
             cfg_rates_hit_rate                             <= 16'h0800;
             cfg_rates_noise_rate                           <= 16'h0100;
-            cfg_cluster_geom_fix_hit_channel_low           <= 8'd0;
-            cfg_cluster_geom_fix_hit_channel_high          <= 8'd3;
+            cfg_geom_fix_left_low                          <= 7'd0;
+            cfg_geom_fix_left_high                         <= 7'd3;
+            cfg_geom_fix_left_enable                       <= 1'b1;
+            cfg_geom_fix_right_low                         <= 7'd0;
+            cfg_geom_fix_right_high                        <= 7'd3;
+            cfg_geom_fix_right_enable                      <= 1'b0;
             cfg_cluster_geom_random_cluster_size_random    <= 8'd4;
             cfg_cluster_geom_random_mirror_mode            <= 2'b10;
             cfg_cluster_geom_random_mirror_offset          <= 8'sd0;
@@ -221,7 +235,7 @@ module frontend_csr #(
             cfg_timebase_seed_tcc_seed                     <= 15'h0001;
             cfg_timebase_seed_ecc_seed                     <= 15'h0001;
             cfg_lane_enable_lane_enable_mask               <= 8'hFF;
-            cfg_lane_enable_asic_id_base                   <= 4'd0;
+            cfg_lane_enable_asic_id_base                   <= {1'b0, ASIC_ID_BASE_DEFAULT[2:0]};
             cfg_error_inject_type0_error_inject_mask       <= 3'b000;
             cfg_error_inject_lane_error_target_mask        <= 8'h00;
             fire_inject_pulse_csr                          <= 1'b0;
@@ -279,8 +293,12 @@ module frontend_csr #(
                         cfg_rates_noise_rate    <= avs_csr_writedata[31:16];
                     end
                     ADDR_CLUSTER_FIX_CONST: begin
-                        cfg_cluster_geom_fix_hit_channel_low     <= avs_csr_writedata[7:0];
-                        cfg_cluster_geom_fix_hit_channel_high    <= avs_csr_writedata[15:8];
+                        cfg_geom_fix_left_low       <= avs_csr_writedata[6:0];
+                        cfg_geom_fix_left_high      <= avs_csr_writedata[13:7];
+                        cfg_geom_fix_left_enable    <= avs_csr_writedata[14];
+                        cfg_geom_fix_right_low      <= avs_csr_writedata[22:16];
+                        cfg_geom_fix_right_high     <= avs_csr_writedata[29:23];
+                        cfg_geom_fix_right_enable   <= avs_csr_writedata[30];
                     end
                     ADDR_CLUSTER_RANDOM_CONST: begin
                         cfg_cluster_geom_random_cluster_size_random    <= avs_csr_writedata[7:0];
