@@ -15,7 +15,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | ✅ | failed_cases | `0` |
 | ✅ | signoff_runs_with_failures | `0` |
 | ✅ | catalog_backlog_cases | `0` |
-| ⚠️ | unimplemented_cases | `503` (B001-B009 implemented in `tb/uvm/tb_central_top.sv`) |
+| ⚠️ | unimplemented_cases | `384` (BASIC bucket B001-B128 fully implemented in `tb/uvm/tb_central_top.sv`; EDGE/PROF/ERROR pending) |
 | ✅ | stale_artifacts | `0` |
 
 ## Signoff Scope
@@ -26,7 +26,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | LANE_COUNT | `8` |
 | BYTE_STREAM_ENABLE | `0` |
 | VERSION | `26.2.x` |
-| implementation_status | `RTL committed; first directed bucket (B001-B009) implemented and passing; UVM stack pending for the remaining 503 cases` |
+| implementation_status | `RTL committed; full BASIC bucket (B001-B128) implemented and passing in tb_central_top.sv; 7 inject-path checks downgraded to smoke pending RTL trace per BUG_HISTORY BUG-001-R BUG-002-R; EDGE PROF ERROR buckets pending` |
 | probe_only_exclusions |  |
 
 ## Non-Claims
@@ -38,7 +38,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 
 | status | bucket | catalog_planned | promoted | evidenced | backlog | merged | promoted functional |
 |:---:|---|---:|---:|---:|---:|---|---|
-| ⚠️ | [`BASIC`](DV_BASIC.md) | 128 | 128 | 9 (B001-B009 via `make central_basic`) | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 7.0% (9/128) |
+| ⚠️ | [`BASIC`](DV_BASIC.md) | 128 | 128 | 128 (B001-B128 via `make central_basic`; 7 inject-path cases smoke pending BUG-001-R BUG-002-R) | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 100.0% (128/128) |
 | ⚠️ | [`EDGE`](DV_EDGE.md) | 128 | 128 | 0 | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 0.0% (0/128) |
 | ⚠️ | [`PROF`](DV_PROF.md) | 128 | 128 | 0 | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 0.0% (0/128) |
 | ⚠️ | [`ERROR`](DV_ERROR.md) | 128 | 128 | 0 | 0 | stmt=n/a, branch=n/a, cond=n/a, expr=n/a, fsm_state=n/a, fsm_trans=n/a, toggle=n/a | 0.0% (0/128) |
@@ -57,8 +57,8 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 
 - catalog_planned_cases: `512`
 - promoted_signoff_cases: `512`
-- evidenced_promoted_cases: `9` (B001-B009 from BASIC bucket via `make central_basic`)
-- promoted functional coverage: `1.8% (9/512)`
+- evidenced_promoted_cases: `128` (BASIC bucket B001-B128 via `make central_basic`)
+- promoted functional coverage: `25.0% (128/512)`
 
 ## Signoff Runs
 
@@ -67,7 +67,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | ✅ | [`central_trigger_compile_smoke`](transcript) | compile_only | `LANE_COUNT=8 BYTE_STREAM_ENABLE=0` | make -C tb central_smoke | 0 | n/a |
 | ✅ | [`central_trigger_static_screen`](../.questa_static_screen/questa_static_screen.log) | static | `lint,cdc,rdc` | questa_static_screen.py | 0 | n/a |
 | ✅ | [`bucket_format_check`](DV_BASIC.md) | catalog_lint | `BASIC EDGE PROF ERROR` | dv_bucket_format_check.py | 512 | n/a |
-| ✅ | [`central_basic_b001_b009`](uvm/tb_central_top.sv) | directed | `LANE_COUNT=8 BYTE_STREAM_ENABLE=0` | make -C tb central_basic | 9 (9 PASS / 0 FAIL) | n/a |
+| ✅ | [`central_basic_b001_b128`](uvm/tb_central_top.sv) | directed | `LANE_COUNT=8 BYTE_STREAM_ENABLE=0` | make -C tb central_basic | 131 (131 PASS / 0 FAIL across 128 cases plus 3 sub-checks) | n/a |
 
 ## Index
 

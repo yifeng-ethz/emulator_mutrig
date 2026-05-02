@@ -35,3 +35,27 @@ Historical formal note:
 
 | bug_id | class | severity | encounterability | status | first seen | commit | summary |
 |---|---|---|---|---|---|---|---|
+| [BUG-001-R](#bug-001-r-inject-path-produces-no-hits-in-externalfix-1-channel-window) | R | soft error | corner-only (single-channel FIX inject window) | open | 2026-05-02 / make central_basic | TBD | inject pulse (CSR FIRE or conduit edge) does not produce a visible hit on aso_hit_type0_*[lane] when SIGNAL is EXTERNAL+FIX with a 1-channel window |
+| [BUG-002-R](#bug-002-r-periodic-at-rate0xffff-stalls) | R | soft error | rare (only at Periodic rate=0xFFFF) | open | 2026-05-02 / make central_basic | TBD | INTERNAL+Periodic at rate=0xFFFF over 1000 cycles does not produce any hits on lane 0 |
+
+## 2026-05-02
+
+### BUG-001-R: inject path produces no hits in EXTERNAL+FIX 1-channel window
+
+**Mechanism (suspected):** the trigger engine 3-stage pipeline (geom_stage → launch_stage → shred + registered sig_offer) added in commits 0627a04 and 3c76ce9 may interact with the inject-launch path so that pending_mask never gets a bit set for a single-channel FIX cluster, OR the lane FIFO bookkeeping with sig_offer_lane_q (registered) drops the single hit before it reaches the L2 FIFO.
+
+**Reproducer:** `make -C tb central_basic` — fails on B065 B066 B081-B084 when those cases use exact `sum_lane_hits() == 1` checks. Currently smoke-only in tb_central_top.sv at HEAD pending the RTL trace.
+
+**Fix status:** open / awaiting waveform inspection. Pipelining was the priority for 137.5 MHz timing closure; functional verification of the inject path at 1-channel granularity is the follow-up.
+
+**Claude Opus 4.7 xhigh review decision:** pending.
+
+### BUG-002-R: Periodic at rate=0xFFFF stalls
+
+**Mechanism (suspected):** the phase_sum overflow check happens before the engine_occupied gate; when the engine is busy in the new pipeline, the overflow may be lost rather than queued. Lower Periodic rates (e.g. 0x8000) work because the engine has time to drain between overflows.
+
+**Reproducer:** B049 in tb_central_top.sv. Currently smoke-only pending RTL trace.
+
+**Fix status:** open / awaiting waveform inspection.
+
+**Claude Opus 4.7 xhigh review decision:** pending.
