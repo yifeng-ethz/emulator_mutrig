@@ -18,11 +18,19 @@ set_instance_assignment -name VIRTUAL_PIN ON -to avs_*
 set_instance_assignment -name VIRTUAL_PIN ON -to aso_*
 set_instance_assignment -name VIRTUAL_PIN ON -to coe_*
 
-set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/emulator_mutrig_pkg.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/prbs15_lfsr.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/crc16_8.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/hit_generator.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/frame_assembler.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/common/frontend_ticket_bus_pkg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/backend_mutrig/be_mutrig_pkg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/common/prbs15_lfsr.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/common/crc16_8.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/frontend/frontend_csr.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/frontend/frontend_run_ctl.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/frontend/frontend_trigger_engine.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/frontend/frontend_bkg_generator.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/frontend/frontend_ticket_distributor.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/backend_mutrig/be_mutrig_l2_fifo.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/backend_mutrig/be_mutrig_lane_emitter.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/backend_mutrig/be_mutrig_frame_assembler.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../../rtl/emulator_mutrig.sv
 set_global_assignment -name SYSTEMVERILOG_FILE emulator_mutrig_syn_top.sv
 
