@@ -16,7 +16,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | ✅ | signoff_runs_with_failures | `0` |
 | ✅ | catalog_backlog_cases | `0` |
 | ✅ | unimplemented_cases | `0` (all 512 cases implemented in `tb/uvm/tb_central_top.sv` with real functional invariants; 0 smoke-only cases remain) |
-| ⚠️ | code_coverage_below_target | `1` (toggle 60.41% < 80% target; remaining gap concentrates in waived `BYTE_STREAM_ENABLE=1` frame_assembler instances and per-lane counter upper bits on lanes 1-7 — both waived per `tb/doc/FEATURE_AXES.md`. Auto-filter on the vcover report is a follow-up; raw report does not yet apply the policy filter) |
+| ⚠️ | code_coverage_below_target | `1` (toggle 63.04% < 80% target post-waiver; the locked exclusions in `tb/uvm/cov_excludes.do` are now applied to the saved UCDB and the vcover report reflects the filtered view. Remaining gap concentrates in `frontend_csr` (34% toggle) — reserved/RO CSR storage bits not driven by the test set; not currently in the waiver scope) |
 | ✅ | stale_artifacts | `0` |
 
 ## Signoff Scope
@@ -41,10 +41,10 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 
 | status | bucket | catalog_planned | promoted | evidenced | backlog | merged | promoted functional |
 |:---:|---|---:|---:|---:|---:|---|---|
-| ✅ | [`BASIC`](DV_BASIC.md) | 128 | 128 | 128 (B001-B128 via `make central_basic`; all functional invariants pass; BUG-001-R BUG-002-R mitigated in tb with multi-inject + longer settle) | 0 | stmt=96.11, branch=92.10, cond=75.40, expr=93.47, fsm_state=n/a, fsm_trans=n/a, toggle=60.41 | 100.0% (128/128) |
-| ✅ | [`EDGE`](DV_EDGE.md) | 128 | 128 | 128 (E001-E128 functional invariants via `make central_basic`) | 0 | stmt=96.11, branch=92.10, cond=75.40, expr=93.47, fsm_state=n/a, fsm_trans=n/a, toggle=60.41 | 100.0% (128/128) |
-| ✅ | [`PROF`](DV_PROF.md) | 128 | 128 | 128 (P001-P128 functional invariants via `make central_basic`) | 0 | stmt=96.11, branch=92.10, cond=75.40, expr=93.47, fsm_state=n/a, fsm_trans=n/a, toggle=60.41 | 100.0% (128/128) |
-| ✅ | [`ERROR`](DV_ERROR.md) | 128 | 128 | 128 (X001-X128 functional invariants via `make central_basic`) | 0 | stmt=96.11, branch=92.10, cond=75.40, expr=93.47, fsm_state=n/a, fsm_trans=n/a, toggle=60.41 | 100.0% (128/128) |
+| ✅ | [`BASIC`](DV_BASIC.md) | 128 | 128 | 128 (B001-B128 via `make central_basic`; all functional invariants pass; BUG-001-R BUG-002-R mitigated in tb with multi-inject + longer settle) | 0 | stmt=96.11, branch=92.10, cond=75.40, expr=93.47, fsm_state=n/a, fsm_trans=n/a, toggle=63.04 | 100.0% (128/128) |
+| ✅ | [`EDGE`](DV_EDGE.md) | 128 | 128 | 128 (E001-E128 functional invariants via `make central_basic`) | 0 | stmt=96.11, branch=92.10, cond=75.40, expr=93.47, fsm_state=n/a, fsm_trans=n/a, toggle=63.04 | 100.0% (128/128) |
+| ✅ | [`PROF`](DV_PROF.md) | 128 | 128 | 128 (P001-P128 functional invariants via `make central_basic`) | 0 | stmt=96.11, branch=92.10, cond=75.40, expr=93.47, fsm_state=n/a, fsm_trans=n/a, toggle=63.04 | 100.0% (128/128) |
+| ✅ | [`ERROR`](DV_ERROR.md) | 128 | 128 | 128 (X001-X128 functional invariants via `make central_basic`) | 0 | stmt=96.11, branch=92.10, cond=75.40, expr=93.47, fsm_state=n/a, fsm_trans=n/a, toggle=63.04 | 100.0% (128/128) |
 
 ## Totals
 
@@ -56,7 +56,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | ℹ️ | expr | 93.47 | - |
 | ⚠️ | fsm_state | n/a | 95.0 |
 | ⚠️ | fsm_trans | n/a | 90.0 |
-| ⚠️ | toggle | 60.41 | 80.0 |
+| ⚠️ | toggle | 63.04 | 80.0 |
 
 - catalog_planned_cases: `512`
 - promoted_signoff_cases: `512`
@@ -71,7 +71,7 @@ This page is the chief-architect dashboard for the standalone central-trigger re
 | ✅ | [`central_trigger_static_screen`](../.questa_static_screen/questa_static_screen.log) | static | `lint,cdc,rdc` | questa_static_screen.py | 0 | n/a |
 | ✅ | [`bucket_format_check`](DV_BASIC.md) | catalog_lint | `BASIC EDGE PROF ERROR` | dv_bucket_format_check.py | 512 | n/a |
 | ✅ | [`central_basic_b001_b128`](uvm/tb_central_top.sv) | directed | `LANE_COUNT=8 BYTE_STREAM_ENABLE=0` | make -C tb central_basic | 515 (515 PASS / 0 FAIL across 512 cases (BASIC+EDGE+PROF+ERROR) plus 3 sub-checks) | n/a |
-| ⚠️ | [`central_basic_cov`](uvm/log/ucdb/all_buckets.summary) | coverage | `LANE_COUNT=8 BYTE_STREAM_ENABLE=0` | make -C tb central_basic_cov | 567 PASS / 0 FAIL with vsim -coverage on the DUT (BASIC+EDGE+PROF+ERROR+EXTRA+LONG) | stmt=96.11%, branch=92.10%, cond=75.40%, expr=93.47%, toggle=60.41%, total=83.50% |
+| ⚠️ | [`central_basic_cov`](uvm/log/ucdb/all_buckets.summary) | coverage | `LANE_COUNT=8 BYTE_STREAM_ENABLE=0` | make -C tb central_basic_cov | 567 PASS / 0 FAIL with vsim -coverage on the DUT (BASIC+EDGE+PROF+ERROR+EXTRA+LONG); UCDB has 896 toggle bins excluded per `tb/uvm/cov_excludes.do` policy | stmt=96.11%, branch=92.10%, cond=75.40%, expr=93.47%, toggle=63.04%, total=84.02% |
 
 ## Index
 

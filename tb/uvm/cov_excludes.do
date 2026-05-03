@@ -1,30 +1,29 @@
-## cov_excludes.do — coverage exclusions applying the locked DV scope
+## cov_excludes.do -- coverage exclusions applying the locked DV scope
 ## Author: Yifeng Wang
-## Version : 26.2.0
-## Date    : 20260502
+## Version : 26.2.1
+## Date    : 20260503
 ##
 ## Per tb/doc/FEATURE_AXES.md the standalone DV gate covers only:
 ##  - BYTE_STREAM_ENABLE = 0 (the type0-only build axis point)
 ##  - Per-lane 64-bit counter upper bits on at least ONE lane
 ##    (instance-level toggle policy for the saturating counters)
 ##
-## We exclude the waived areas so the headline coverage number reflects
-## the locked DV scope rather than counting un-instantiated logic and
-## redundant per-lane counter replicas as misses.
+## Syntax conforms to QuestaSim 2026.1 `coverage exclude` help:
+##   coverage exclude -togglenode <node_list> -scope <path_list> ...
+##
+## Note on BYTE_STREAM_ENABLE=1 axis: the be_mutrig_frame_assembler
+## design unit is generate-gated off in this build (see
+## emulator_mutrig.sv line 412), so it never appears in the coverage
+## database. No `-srcfile` exclusion is needed; the waiver is purely
+## a documentation matter recorded in tb/doc/FEATURE_AXES.md and the
+## DV_REPORT Non-Claims block.
 
-# 1. Frame-assembler instances are generate-gated off when
-#    BYTE_STREAM_ENABLE=0. They appear in the netlist as no-driver
-#    nodes; exclude their coverage entirely under the waived-axis policy.
-coverage exclude -src be_mutrig_frame_assembler.sv -scope /tb_central_top/u_dut/*
-
-# 2. Per-lane counter upper-bit toggles: lane 0 is preloaded by the
-#    LONG bucket and proves the path. Lanes 1-7 share the same RTL and
-#    do not need separate preload runs to demonstrate the path.
+# Per-lane saturating-counter toggles for lanes 1..7. Lane 0 is
+# preloaded by the LONG bucket (force on frame_count and hit_count)
+# and proves the upper-half toggle path. Lanes 1..7 share the
+# identical RTL and do not need separate preloads.
 foreach lane {1 2 3 4 5 6 7} {
-    coverage exclude -toggle -scope /tb_central_top/u_dut/lane_gen\[$lane\]/u_lane_emitter -nodes {frame_count[63:32] hit_count[63:32]}
+    coverage exclude -togglenode {frame_count hit_count} \
+        -scope /tb_central_top/u_dut/lane_gen\[$lane\]/u_lane_emitter \
+        -comment "FEATURE_AXES.md sec 3 -- lane 0 preload covers the path"
 }
-
-# 3. Status-only registers that are RO observation paths and never
-#    written by the test set (e.g. last-write-data on lanes that have
-#    no writes after reset). The bank counters are exercised by the
-#    LONG bucket at lane 0.
