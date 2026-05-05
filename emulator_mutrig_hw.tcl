@@ -17,15 +17,16 @@ if {[string length $SCRIPT_DIR] == 0} {
 
 set CSR_ADDR_W_CONST            4
 set TX8B1K_WIDTH_CONST          9
+set HIT_TYPE0_WIDTH_CONST       45
 set RUN_CONTROL_WIDTH_CONST     9
 
 # Identity defaults (no identity header in RTL — catalog tracking only)
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
-set VERSION_MINOR_DEFAULT_CONST 1
-set VERSION_PATCH_DEFAULT_CONST 13
-set BUILD_DEFAULT_CONST         425
-set VERSION_DATE_DEFAULT_CONST  20260425
+set VERSION_MINOR_DEFAULT_CONST 2
+set VERSION_PATCH_DEFAULT_CONST 0
+set BUILD_DEFAULT_CONST         502
+set VERSION_DATE_DEFAULT_CONST  20260502
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -246,26 +247,44 @@ proc elaborate {} {
 # File sets
 # ========================================================================
 add_fileset QUARTUS_SYNTH QUARTUS_SYNTH "" ""
-set_fileset_property QUARTUS_SYNTH TOP_LEVEL emulator_mutrig
+set_fileset_property QUARTUS_SYNTH TOP_LEVEL emulator_mutrig_qsys_lane
 set_fileset_property QUARTUS_SYNTH ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property QUARTUS_SYNTH ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file emulator_mutrig_pkg.sv SYSTEM_VERILOG PATH rtl/emulator_mutrig_pkg.sv
-add_fileset_file prbs15_lfsr.sv         SYSTEM_VERILOG PATH rtl/prbs15_lfsr.sv
-add_fileset_file crc16_8.sv             SYSTEM_VERILOG PATH rtl/crc16_8.sv
-add_fileset_file hit_generator.sv       SYSTEM_VERILOG PATH rtl/hit_generator.sv
-add_fileset_file frame_assembler.sv     SYSTEM_VERILOG PATH rtl/frame_assembler.sv
-add_fileset_file emulator_mutrig.sv     SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv TOP_LEVEL_FILE
+add_fileset_file frontend_ticket_bus_pkg.sv        SYSTEM_VERILOG PATH rtl/common/frontend_ticket_bus_pkg.sv
+add_fileset_file be_mutrig_pkg.sv                  SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_pkg.sv
+add_fileset_file prbs15_lfsr.sv                    SYSTEM_VERILOG PATH rtl/common/prbs15_lfsr.sv
+add_fileset_file crc16_8.sv                        SYSTEM_VERILOG PATH rtl/common/crc16_8.sv
+add_fileset_file frontend_csr.sv                   SYSTEM_VERILOG PATH rtl/frontend/frontend_csr.sv
+add_fileset_file frontend_run_ctl.sv               SYSTEM_VERILOG PATH rtl/frontend/frontend_run_ctl.sv
+add_fileset_file frontend_trigger_engine.sv        SYSTEM_VERILOG PATH rtl/frontend/frontend_trigger_engine.sv
+add_fileset_file frontend_bkg_generator.sv         SYSTEM_VERILOG PATH rtl/frontend/frontend_bkg_generator.sv
+add_fileset_file frontend_ticket_distributor.sv    SYSTEM_VERILOG PATH rtl/frontend/frontend_ticket_distributor.sv
+add_fileset_file be_mutrig_l2_fifo.sv              SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_l2_fifo.sv
+add_fileset_file be_mutrig_lane_emitter.sv         SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_emitter.sv
+add_fileset_file be_mutrig_lane_type0_emit.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv
+add_fileset_file be_mutrig_frame_assembler.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_frame_assembler.sv
+add_fileset_file emulator_mutrig.sv                SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv
+add_fileset_file emulator_mutrig_qsys_lane.sv      SYSTEM_VERILOG PATH rtl/emulator_mutrig_qsys_lane.sv TOP_LEVEL_FILE
 
 add_fileset SIM_VERILOG SIM_VERILOG "" ""
-set_fileset_property SIM_VERILOG TOP_LEVEL emulator_mutrig
+set_fileset_property SIM_VERILOG TOP_LEVEL emulator_mutrig_qsys_lane
 set_fileset_property SIM_VERILOG ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property SIM_VERILOG ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file emulator_mutrig_pkg.sv SYSTEM_VERILOG PATH rtl/emulator_mutrig_pkg.sv
-add_fileset_file prbs15_lfsr.sv         SYSTEM_VERILOG PATH rtl/prbs15_lfsr.sv
-add_fileset_file crc16_8.sv             SYSTEM_VERILOG PATH rtl/crc16_8.sv
-add_fileset_file hit_generator.sv       SYSTEM_VERILOG PATH rtl/hit_generator.sv
-add_fileset_file frame_assembler.sv     SYSTEM_VERILOG PATH rtl/frame_assembler.sv
-add_fileset_file emulator_mutrig.sv     SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv TOP_LEVEL_FILE
+add_fileset_file frontend_ticket_bus_pkg.sv        SYSTEM_VERILOG PATH rtl/common/frontend_ticket_bus_pkg.sv
+add_fileset_file be_mutrig_pkg.sv                  SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_pkg.sv
+add_fileset_file prbs15_lfsr.sv                    SYSTEM_VERILOG PATH rtl/common/prbs15_lfsr.sv
+add_fileset_file crc16_8.sv                        SYSTEM_VERILOG PATH rtl/common/crc16_8.sv
+add_fileset_file frontend_csr.sv                   SYSTEM_VERILOG PATH rtl/frontend/frontend_csr.sv
+add_fileset_file frontend_run_ctl.sv               SYSTEM_VERILOG PATH rtl/frontend/frontend_run_ctl.sv
+add_fileset_file frontend_trigger_engine.sv        SYSTEM_VERILOG PATH rtl/frontend/frontend_trigger_engine.sv
+add_fileset_file frontend_bkg_generator.sv         SYSTEM_VERILOG PATH rtl/frontend/frontend_bkg_generator.sv
+add_fileset_file frontend_ticket_distributor.sv    SYSTEM_VERILOG PATH rtl/frontend/frontend_ticket_distributor.sv
+add_fileset_file be_mutrig_l2_fifo.sv              SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_l2_fifo.sv
+add_fileset_file be_mutrig_lane_emitter.sv         SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_emitter.sv
+add_fileset_file be_mutrig_lane_type0_emit.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv
+add_fileset_file be_mutrig_frame_assembler.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_frame_assembler.sv
+add_fileset_file emulator_mutrig.sv                SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv
+add_fileset_file emulator_mutrig_qsys_lane.sv      SYSTEM_VERILOG PATH rtl/emulator_mutrig_qsys_lane.sv TOP_LEVEL_FILE
 
 # ========================================================================
 # Parameters — HDL
@@ -584,6 +603,25 @@ set_interface_property data_reset associatedClock data_clock
 set_interface_property data_reset synchronousEdges DEASSERT
 set_interface_property data_reset ENABLED true
 add_interface_port data_reset i_rst reset Input 1
+
+# Avalon-ST source [hit_type0] — direct hit stream to source mux
+add_interface hit_type0 avalon_streaming source
+set_interface_property hit_type0 associatedClock data_clock
+set_interface_property hit_type0 associatedReset data_reset
+set_interface_property hit_type0 dataBitsPerSymbol $HIT_TYPE0_WIDTH_CONST
+set_interface_property hit_type0 firstSymbolInHighOrderBits true
+set_interface_property hit_type0 maxChannel 15
+set_interface_property hit_type0 symbolsPerBeat 1
+set_interface_property hit_type0 readyLatency 0
+set_interface_property hit_type0 errorDescriptor "hiterr frameerr overflow"
+set_interface_property hit_type0 ENABLED true
+add_interface_port hit_type0 aso_hit_type0_data          data          Output $HIT_TYPE0_WIDTH_CONST
+add_interface_port hit_type0 aso_hit_type0_valid         valid         Output 1
+add_interface_port hit_type0 aso_hit_type0_error         error         Output 3
+add_interface_port hit_type0 aso_hit_type0_channel       channel       Output 4
+add_interface_port hit_type0 aso_hit_type0_startofpacket startofpacket Output 1
+add_interface_port hit_type0 aso_hit_type0_endofpacket   endofpacket   Output 1
+add_interface_port hit_type0 aso_hit_type0_endofrun      endofrun      Output 1
 
 # Avalon-ST source [tx8b1k] — 8b/1k output to frame_rcv_ip
 add_interface tx8b1k avalon_streaming source
