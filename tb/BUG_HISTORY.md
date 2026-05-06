@@ -37,6 +37,7 @@ Historical formal note:
 |---|---|---|---|---|---|---|---|
 | [BUG-001-R](#bug-001-r-inject-path-produces-no-hits-in-externalfix-1-channel-window) | R | soft error | rare (single-shot inject under saturated PRNG advance) | mitigated 2026-05-02 | 2026-05-02 / make central_basic | bf47f16 | a single inject (CSR FIRE or conduit edge) sometimes does not produce a visible hit when SIGNAL is EXTERNAL+FIX with a 1-channel window; mitigated by issuing N=5 injects with frame-period spacing in tb so the test verifies "at least 1 cluster reaches the lane" instead of "exactly 1". Root-cause RTL trace remains as a follow-up for the strict 1:1 inject:hit guarantee. |
 | [BUG-002-R](#bug-002-r-periodic-at-rate0xffff-stalls) | R | soft error | rare (only at Periodic rate=0xFFFF in short windows) | mitigated 2026-05-02 | 2026-05-02 / make central_basic | bf47f16 | INTERNAL+Periodic at rate=0xFFFF needs a longer settle window than 1000 cycles to push the first hit through the 4-stage pipeline + 6-cycle pacer; mitigated by extending B049 to 5000 cycles. Root-cause RTL trace is a follow-up to confirm the phase accumulator is not dropping fires under engine-busy. |
+| [BUG-003-R](#bug-003-r-registered-signal-offer-replays-one-ticket-after-ready-accept) | R | hard stuck error | common (single-lane signal inject with ready asserted) | fixed 2026-05-06 / phase sweep passed | 2026-05-06 / tb_int PROF-INT-002 pre-rbCAM diagnostic | pending | the registered signal-offer path replayed the same pending ticket for one cycle after downstream ready accepted it, so one fixed two-channel injection produced four emitted hits instead of two. |
 
 ## 2026-05-02
 
@@ -57,5 +58,15 @@ Historical formal note:
 **Reproducer:** B049 in tb_central_top.sv. Currently smoke-only pending RTL trace.
 
 **Fix status:** open / awaiting waveform inspection.
+
+**Claude Opus 4.7 xhigh review decision:** pending.
+
+### BUG-003-R: registered signal offer replays one ticket after ready accept
+
+**Mechanism:** `frontend_trigger_engine.sv` registered `sig_offer_valid_q` from the combinational `dispatch_found` signal. The pending bit for the accepted lane is cleared in the same clocked block using the registered offer lane, so `dispatch_found` still sees the old `pending_mask` for that edge. When `sig_offer_ready` is asserted, the same `sig_offer_ticket_q` can be accepted twice before the pending bit clear is visible.
+
+**Reproducer:** integration PROF-INT-002 pre-rbCAM header-sync diagnostic in `system_20260504_emulator_type0/tb_int`: four injected pulses over fixed channels 0 and 1 produced 16 pre-rbCAM records. The emulator source counter `lane_hit_count[0]` advanced by four per pulse, proving the duplicate was emitted by the source RTL.
+
+**Fix status:** fixed / integration phase sweep passed. The signal-offer register now behaves as a one-deep ready/valid stage: it holds valid until ready accepts the ticket, drops valid for one cycle after accept so the `pending_mask` clear can take effect, then reloads from the next pending lane. Focused rerun `prof_int_002_pre_rbcam_header_sync_phase100_diag_after_offer_fix` produced 8 pre-rbCAM rows for four two-channel pulses, with latency `min=821`, `p50=821.5`, `max=822` cycles. The 100-900 cycle header-sync sweep passed with 256 rows at every phase; phases 100..800 form narrow peaks at `910 - phase + 11.5` cycles, and phase 900 splits as expected into fast bins at 21/25 cycles plus a full-frame bin at 929 cycles.
 
 **Claude Opus 4.7 xhigh review decision:** pending.
