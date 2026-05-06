@@ -1,9 +1,9 @@
 // be_mutrig_lane_emitter.sv
 // MuTRiG per-lane ticket consumer and L2 hit-word emitter.
 // Author: Yifeng Wang
-// Version : 26.2.0
-// Date    : 20260502
-// Change  : Add lane ticket FIFO, fine PRNG, L2 FIFO, and 64-bit counters.
+// Version : 26.3.0
+// Date    : 20260506
+// Change  : Export ticket and L2 FIFO fill levels for DEBUG_LEVEL observability.
 
 module be_mutrig_lane_emitter
 #(
@@ -26,6 +26,8 @@ module be_mutrig_lane_emitter
     output logic              l2_full,
     output logic              l2_almost_full,
     output logic [9:0]        l2_event_count,
+    output logic [3:0]        debug_ticket_fifo_level,
+    output logic [9:0]        debug_l2_fifo_level,
 
     output logic [63:0]       frame_count,
     output logic [63:0]       hit_count,
@@ -99,6 +101,8 @@ module be_mutrig_lane_emitter
 
     assign ticket_ready = enable && (ticket_count != TICKET_COUNT_WIDTH'(TICKET_DEPTH));
     assign l2_event_count = {1'b0, l2_level};
+    assign debug_ticket_fifo_level = ticket_count;
+    assign debug_l2_fifo_level = {1'b0, l2_level};
 
     be_mutrig_l2_fifo #(
         .WIDTH              (48),

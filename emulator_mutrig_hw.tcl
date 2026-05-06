@@ -18,15 +18,17 @@ if {[string length $SCRIPT_DIR] == 0} {
 set CSR_ADDR_W_CONST            4
 set TX8B1K_WIDTH_CONST          9
 set HIT_TYPE0_WIDTH_CONST       45
+set HIT_DEBUG_WIDTH_CONST       64
+set DEBUG_FIFO_WIDTH_CONST      16
 set RUN_CONTROL_WIDTH_CONST     9
 
 # Identity defaults (no identity header in RTL — catalog tracking only)
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
-set VERSION_MINOR_DEFAULT_CONST 2
+set VERSION_MINOR_DEFAULT_CONST 3
 set VERSION_PATCH_DEFAULT_CONST 0
-set BUILD_DEFAULT_CONST         502
-set VERSION_DATE_DEFAULT_CONST  20260502
+set BUILD_DEFAULT_CONST         506
+set VERSION_DATE_DEFAULT_CONST  20260506
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -181,7 +183,7 @@ proc validate {} {
     set ver_date     [get_parameter_value VERSION_DATE]
     set ver_git      [get_parameter_value VERSION_GIT]
     set instance_id  [get_parameter_value INSTANCE_ID]
-    set debug_level  [get_parameter_value DEBUG]
+    set debug_level  [get_parameter_value DEBUG_LEVEL]
     set cluster_cross [get_parameter_value CLUSTER_CROSS_ASIC_DEFAULT]
     set cluster_center [get_parameter_value CLUSTER_CENTER_GLOBAL_DEFAULT]
     set cluster_lane_index [get_parameter_value CLUSTER_LANE_INDEX_DEFAULT]
@@ -215,7 +217,7 @@ proc validate {} {
         send_message error "INSTANCE_ID must stay in the signed 31-bit range."
     }
     if {$debug_level < 0 || $debug_level > 2} {
-        send_message error "DEBUG must stay in the range 0..2."
+        send_message error "DEBUG_LEVEL must stay in the range 0..2."
     }
     if {$cluster_cross < 0 || $cluster_cross > 1} {
         send_message error "CLUSTER_CROSS_ASIC_DEFAULT must stay in the range 0..1."
@@ -234,7 +236,10 @@ proc validate {} {
 proc elaborate {} {
     compute_derived_values
     set_parameter_property FIFO_DEPTH ALLOWED_RANGES {16 32 64 128 256}
-    set_parameter_property DEBUG ENABLED false
+    set_parameter_property DEBUG_LEVEL ENABLED true
+    set_interface_property debug_fifo_fill ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 1}]
+    set_interface_property hit_debug_metadata ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
+    set_interface_property hit_type0_debug ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
     set_parameter_property VERSION_MAJOR ENABLED false
     set_parameter_property VERSION_MINOR ENABLED false
     set_parameter_property VERSION_PATCH ENABLED false
@@ -335,13 +340,13 @@ set_parameter_property CLUSTER_LANE_COUNT_DEFAULT ALLOWED_RANGES 1:8
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT HDL_PARAMETER true
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DESCRIPTION {Reset value of BURST_CFG[29:26]. Number of emulated MuTRiG lanes participating in the shared cluster domain.}
 
-add_parameter DEBUG NATURAL 0
-set_parameter_property DEBUG DISPLAY_NAME "Debug Level"
-set_parameter_property DEBUG UNITS None
-set_parameter_property DEBUG ALLOWED_RANGES 0:2
-set_parameter_property DEBUG HDL_PARAMETER false
-set_parameter_property DEBUG ENABLED false
-set_parameter_property DEBUG DESCRIPTION "Current packaged revision has no optional debug RTL. The field is kept to preserve the standard Mu3e Configuration/Debug GUI contract."
+add_parameter DEBUG_LEVEL NATURAL 0
+set_parameter_property DEBUG_LEVEL DISPLAY_NAME "Debug Level"
+set_parameter_property DEBUG_LEVEL UNITS None
+set_parameter_property DEBUG_LEVEL ALLOWED_RANGES 0:2
+set_parameter_property DEBUG_LEVEL HDL_PARAMETER true
+set_parameter_property DEBUG_LEVEL AFFECTS_ELABORATION true
+set_parameter_property DEBUG_LEVEL DESCRIPTION "0 keeps the nominal 45-bit hit stream only; 1 adds FIFO fill-level debug; 2 also emits a one-to-one per-hit debug metadata stream."
 
 # ========================================================================
 # Parameters — Identity (catalog tracking; no identity header in RTL)
@@ -438,8 +443,8 @@ add_display_item "Hit Generation" CLUSTER_LANE_COUNT_DEFAULT parameter
 add_html_text "Hit Generation" hitgen_html "<html><b>Hit FIFO</b><br/>Updated by the validation callback.</html>"
 
 add_html_text "Frame Assembly" frame_html "<html><b>Frame format</b><br/>Updated by the validation callback.</html>"
-add_display_item "Debug" DEBUG parameter
-add_html_text "Debug" debug_html {<html><b>Debug control</b><br/>This packaged revision does not expose optional debug RTL knobs. The fixed <b>DEBUG=0</b> entry is kept so the GUI layout matches the standard Mu3e IP packaging contract used by the upgraded wrappers while the standalone sign-off build remains comparable across releases.</html>}
+add_display_item "Debug" DEBUG_LEVEL parameter
+add_html_text "Debug" debug_html {<html><b>Debug control</b><br/><b>DEBUG_LEVEL=0</b> keeps only the nominal hit_type0 and tx8b1k interfaces. <b>DEBUG_LEVEL=1</b> additionally exports packed ticket/L2 FIFO fill levels. <b>DEBUG_LEVEL=2</b> also emits a parallel per-hit metadata stream for simulation scoreboards; the nominal 45-bit hit_type0 stream is unchanged.</html>}
 
 # ========================================================================
 # GUI — Tab 2: Identity
@@ -622,6 +627,40 @@ add_interface_port hit_type0 aso_hit_type0_channel       channel       Output 4
 add_interface_port hit_type0 aso_hit_type0_startofpacket startofpacket Output 1
 add_interface_port hit_type0 aso_hit_type0_endofpacket   endofpacket   Output 1
 add_interface_port hit_type0 aso_hit_type0_endofrun      endofrun      Output 1
+
+# Conduit source [debug_fifo_fill] — packed ticket/L2 FIFO fill levels.
+# [9:0] = L2 FIFO level, [13:10] = ticket FIFO level.
+add_interface debug_fifo_fill conduit start
+set_interface_property debug_fifo_fill associatedClock data_clock
+set_interface_property debug_fifo_fill associatedReset data_reset
+set_interface_property debug_fifo_fill ENABLED false
+add_interface_port debug_fifo_fill coe_debug_fifo_fill_level fill_level Output $DEBUG_FIFO_WIDTH_CONST
+
+# Conduit source [hit_debug_metadata] — scalar metadata aligned to hit_type0 valid.
+add_interface hit_debug_metadata conduit start
+set_interface_property hit_debug_metadata associatedClock data_clock
+set_interface_property hit_debug_metadata associatedReset data_reset
+set_interface_property hit_debug_metadata ENABLED false
+add_interface_port hit_debug_metadata coe_debug_hit_metadata       metadata Output $HIT_DEBUG_WIDTH_CONST
+add_interface_port hit_debug_metadata coe_debug_hit_metadata_valid valid    Output 1
+
+# Avalon-ST source [hit_type0_debug] — one 64-bit metadata beat per hit_type0 beat.
+add_interface hit_type0_debug avalon_streaming source
+set_interface_property hit_type0_debug associatedClock data_clock
+set_interface_property hit_type0_debug associatedReset data_reset
+set_interface_property hit_type0_debug dataBitsPerSymbol $HIT_DEBUG_WIDTH_CONST
+set_interface_property hit_type0_debug firstSymbolInHighOrderBits true
+set_interface_property hit_type0_debug maxChannel 15
+set_interface_property hit_type0_debug symbolsPerBeat 1
+set_interface_property hit_type0_debug readyLatency 0
+set_interface_property hit_type0_debug errorDescriptor ""
+set_interface_property hit_type0_debug ENABLED false
+add_interface_port hit_type0_debug aso_hit_debug_data          data          Output $HIT_DEBUG_WIDTH_CONST
+add_interface_port hit_type0_debug aso_hit_debug_valid         valid         Output 1
+add_interface_port hit_type0_debug aso_hit_debug_channel       channel       Output 4
+add_interface_port hit_type0_debug aso_hit_debug_startofpacket startofpacket Output 1
+add_interface_port hit_type0_debug aso_hit_debug_endofpacket   endofpacket   Output 1
+add_interface_port hit_type0_debug aso_hit_debug_endofrun      endofrun      Output 1
 
 # Avalon-ST source [tx8b1k] — 8b/1k output to frame_rcv_ip
 add_interface tx8b1k avalon_streaming source

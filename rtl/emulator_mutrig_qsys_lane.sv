@@ -15,12 +15,13 @@ module emulator_mutrig_qsys_lane #(
     parameter bit BYTE_STREAM_ENABLE = 1'b0,
     parameter logic [31:0] IP_UID = 32'h454D_5554,
     parameter int VERSION_MAJOR = 26,
-    parameter int VERSION_MINOR = 2,
+    parameter int VERSION_MINOR = 3,
     parameter int VERSION_PATCH = 0,
-    parameter int BUILD = 502,
-    parameter int VERSION_DATE = 20260502,
+    parameter int BUILD = 506,
+    parameter int VERSION_DATE = 20260506,
     parameter logic [31:0] VERSION_GIT = 32'h0000_0000,
-    parameter logic [31:0] INSTANCE_ID = 32'h0000_0000
+    parameter logic [31:0] INSTANCE_ID = 32'h0000_0000,
+    parameter int DEBUG_LEVEL = 0
 ) (
     input  logic        i_clk,
     input  logic        i_rst,
@@ -32,6 +33,15 @@ module emulator_mutrig_qsys_lane #(
     output logic        aso_hit_type0_startofpacket,
     output logic        aso_hit_type0_endofpacket,
     output logic        aso_hit_type0_endofrun,
+    output logic [15:0] coe_debug_fifo_fill_level,
+    output logic [63:0] coe_debug_hit_metadata,
+    output logic        coe_debug_hit_metadata_valid,
+    output logic [63:0] aso_hit_debug_data,
+    output logic        aso_hit_debug_valid,
+    output logic [3:0]  aso_hit_debug_channel,
+    output logic        aso_hit_debug_startofpacket,
+    output logic        aso_hit_debug_endofpacket,
+    output logic        aso_hit_debug_endofrun,
 
     output logic [8:0]  aso_tx8b1k_data,
     output logic        aso_tx8b1k_valid,
@@ -60,6 +70,13 @@ module emulator_mutrig_qsys_lane #(
     logic [0:0]       hit_type0_endofrun;
     logic [0:0][2:0]  hit_type0_error;
     logic [0:0][3:0]  hit_type0_channel;
+    logic [0:0][15:0] debug_fifo_fill_level;
+    logic [0:0][63:0] hit_debug_data;
+    logic [0:0]       hit_debug_valid;
+    logic [0:0][3:0]  hit_debug_channel;
+    logic [0:0]       hit_debug_startofpacket;
+    logic [0:0]       hit_debug_endofpacket;
+    logic [0:0]       hit_debug_endofrun;
     logic [0:0][8:0]  tx8b1k_data;
     logic [0:0]       tx8b1k_valid;
     logic [0:0][2:0]  tx8b1k_error;
@@ -82,6 +99,15 @@ module emulator_mutrig_qsys_lane #(
     assign aso_hit_type0_endofrun = hit_type0_endofrun[0];
     assign aso_hit_type0_error = hit_type0_error[0];
     assign aso_hit_type0_channel = hit_type0_channel[0];
+    assign coe_debug_fifo_fill_level = debug_fifo_fill_level[0];
+    assign coe_debug_hit_metadata = hit_debug_data[0];
+    assign coe_debug_hit_metadata_valid = hit_debug_valid[0];
+    assign aso_hit_debug_data = hit_debug_data[0];
+    assign aso_hit_debug_valid = hit_debug_valid[0];
+    assign aso_hit_debug_channel = hit_debug_channel[0];
+    assign aso_hit_debug_startofpacket = hit_debug_startofpacket[0];
+    assign aso_hit_debug_endofpacket = hit_debug_endofpacket[0];
+    assign aso_hit_debug_endofrun = hit_debug_endofrun[0];
     assign aso_tx8b1k_data = tx8b1k_data[0];
     assign aso_tx8b1k_valid = tx8b1k_valid[0];
     assign aso_tx8b1k_error = tx8b1k_error[0];
@@ -98,7 +124,8 @@ module emulator_mutrig_qsys_lane #(
         .VERSION_DATE(VERSION_DATE),
         .VERSION_GIT(VERSION_GIT),
         .INSTANCE_ID(INSTANCE_ID),
-        .ASIC_ID_BASE_DEFAULT(ASIC_ID_DEFAULT)
+        .ASIC_ID_BASE_DEFAULT(ASIC_ID_DEFAULT),
+        .DEBUG_LEVEL(DEBUG_LEVEL)
     ) u_emulator_mutrig (
         .i_clk(i_clk),
         .i_rst(i_rst),
@@ -119,6 +146,13 @@ module emulator_mutrig_qsys_lane #(
         .aso_hit_type0_endofrun(hit_type0_endofrun),
         .aso_hit_type0_error(hit_type0_error),
         .aso_hit_type0_channel(hit_type0_channel),
+        .coe_debug_fifo_fill_level(debug_fifo_fill_level),
+        .aso_hit_debug_data(hit_debug_data),
+        .aso_hit_debug_valid(hit_debug_valid),
+        .aso_hit_debug_channel(hit_debug_channel),
+        .aso_hit_debug_startofpacket(hit_debug_startofpacket),
+        .aso_hit_debug_endofpacket(hit_debug_endofpacket),
+        .aso_hit_debug_endofrun(hit_debug_endofrun),
         .aso_tx8b1k_data(tx8b1k_data),
         .aso_tx8b1k_valid(tx8b1k_valid),
         .aso_tx8b1k_error(tx8b1k_error),

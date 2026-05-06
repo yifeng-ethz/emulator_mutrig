@@ -33,8 +33,8 @@ Read the new emulator's golden CSR header through the sc_hub aperture; confirm U
 | ID | Method | Scenario | Iter | Stimulus | Pass Criteria | Function Reference |
 |----|--------|----------|------|----------|---------------|---------------------|
 | INTB001 | D | Read UID through sc_hub aperture | 1 | Issue CSR read at emulator_mutrig CSR base + 0x00 via the system slow-control bus. | Returns 0x454D5554 (ASCII EMUT). | TBD |
-| INTB002 | D | Read META page 0 (VERSION) | 1 | Write 0 to base+0x01, then read. | Returns VERSION word with MAJOR=26 MINOR=2 PATCH=0 BUILD=502. | TBD |
-| INTB003 | D | Read META page 1 (DATE) | 1 | Write 1 to base+0x01, then read. | Returns 20260502. | TBD |
+| INTB002 | D | Read META page 0 (VERSION) | 1 | Write 0 to base+0x01, then read. | Returns VERSION word with MAJOR=26 MINOR=3 PATCH=0 BUILD=506. | TBD |
+| INTB003 | D | Read META page 1 (DATE) | 1 | Write 1 to base+0x01, then read. | Returns 20260506. | TBD |
 | INTB004 | D | SCRATCH ping | 1 | Write 0xDEADBEEF to base+0x02, read back. | Read returns 0xDEADBEEF; bus liveness OK. | TBD |
 | INTB005 | D | LAST_RD_ADDR captures | 1 | Read base+0x14 (BANK_STATUS), then read base+0x03. | 0x03 returns 0x14 in [4:0]. | TBD |
 | INTB006 | D | LAST_WR_ADDR captures | 1 | Write 0xAA to base+0x02, read base+0x05. | 0x05 returns 0x02 in [4:0]. | TBD |
