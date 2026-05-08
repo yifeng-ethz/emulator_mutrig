@@ -37,6 +37,28 @@ Historical formal note:
 |---|---|---|---|---|---|---|---|
 | [BUG-001-R](#bug-001-r-inject-path-produces-no-hits-in-externalfix-1-channel-window) | R | soft error | rare (single-shot inject under saturated PRNG advance) | mitigated 2026-05-02 | 2026-05-02 / make central_basic | bf47f16 | a single inject (CSR FIRE or conduit edge) sometimes does not produce a visible hit when SIGNAL is EXTERNAL+FIX with a 1-channel window; mitigated by issuing N=5 injects with frame-period spacing in tb so the test verifies "at least 1 cluster reaches the lane" instead of "exactly 1". Root-cause RTL trace remains as a follow-up for the strict 1:1 inject:hit guarantee. |
 | [BUG-002-R](#bug-002-r-periodic-at-rate0xffff-stalls) | R | soft error | rare (only at Periodic rate=0xFFFF in short windows) | mitigated 2026-05-02 | 2026-05-02 / make central_basic | bf47f16 | INTERNAL+Periodic at rate=0xFFFF needs a longer settle window than 1000 cycles to push the first hit through the 4-stage pipeline + 6-cycle pacer; mitigated by extending B049 to 5000 cycles. Root-cause RTL trace is a follow-up to confirm the phase accumulator is not dropping fires under engine-busy. |
+| [BUG-003-R](#bug-003-r-l2-fifo-write-request-asserts-while-full) | R | soft error | corner-only (sustained high-rate 4-channel clusters or stalled L2 drain) | open 2026-05-08 | 2026-05-08 / MuTRiG Poisson 4-channel + dark-noise rate scan | 8e5c901 / 205f3be | the locally added 26.2.x lane backend can assert the lane L2 FIFO write request while the FIFO is full; this violates the no-write-when-full contract and correlates with FIFO saturation and channel-hit loss in the rate scan. |
+
+## 2026-05-08
+
+### BUG-003-R: L2 FIFO write request asserts while full
+
+- First seen in: 2026-05-08 MuTRiG Poisson 4-channel cluster plus dark-noise rate scan
+- Symptom: lane L2 FIFO write request asserted while the FIFO was already full, coincident with 256-word FIFO saturation and rising channel-hit loss at high input rate
+- Root cause: the local 26.2.x `be_mutrig_lane_emitter` creates and presents a pending L2 word without requiring `l2_wr_ready`
+- Fix status: open / awaiting RTL repair
+
+**Classification:** supplementary RTL bug, not a pulled MuTRiG source bug. The pulled `main` source at `5fa6750` contains the legacy `rtl/emulator_mutrig.sv` / `rtl/hit_generator.sv` path and does not contain `rtl/backend_mutrig/be_mutrig_l2_fifo.sv` or `rtl/backend_mutrig/be_mutrig_lane_emitter.sv`. The L2 FIFO wrapper was introduced locally in `205f3be`, and the lane emitter that drives it was introduced locally in `8e5c901` as part of the 26.2.x central-trigger backend reconstruction.
+
+**Mechanism (confirmed by code inspection):** `rtl/backend_mutrig/be_mutrig_lane_emitter.sv` drives `u_l2_fifo.wr_valid` directly from `pending_valid`. It creates a new pending word on `enable && active_valid && !pending_valid` without first requiring `l2_wr_ready`. If `rtl/backend_mutrig/be_mutrig_l2_fifo.sv` is already full, the caller therefore presents a write request to a full FIFO. The FIFO wrapper masks the actual RAM write with `push_fire = wr_valid && wr_ready`, but the L2 protocol and the X067/X068 DV intent require back-pressure to stop the lane emitter before any full-FIFO write request or ticket/channel advance.
+
+**Observed evidence:** the 2026-05-08 MuTRiG Poisson 4-channel cluster plus dark-noise rate scan showed the L2 FIFO fill band reaching the 256-word limit while total channel-hit loss rose at high input rate. The protocol monitor/debug review identified the illegal L2 write-while-full condition in the same stress region.
+
+**Reproducer:** run the high-rate MuTRiG Poisson 4-channel + dark-noise scan, or add a directed X067/X068-style back-pressure check that asserts `!(u_l2_fifo.full && u_l2_fifo.wr_valid)` under `be_mutrig_lane_emitter`. Existing `tb/DV_ERROR.md` already reserves X067 and X068 for L2 back-pressure propagation and ticket FIFO overflow after L2 stall.
+
+**Repair plan:** gate pending-word creation and ticket/channel advancement on `l2_wr_ready` or an explicit L2 credit, then add the no-write-when-full assertion and rerun X065-X068 plus the rate scan.
+
+**Claude Opus 4.7 xhigh review decision:** pending.
 
 ## 2026-05-02
 
