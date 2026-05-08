@@ -340,6 +340,12 @@ set_parameter_property CLUSTER_LANE_COUNT_DEFAULT ALLOWED_RANGES 1:8
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT HDL_PARAMETER true
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DESCRIPTION {Reset value of BURST_CFG[29:26]. Number of emulated MuTRiG lanes participating in the shared cluster domain.}
 
+add_parameter BYTE_STREAM_ENABLE BOOLEAN false
+set_parameter_property BYTE_STREAM_ENABLE DISPLAY_NAME "Enable 8b/1k Byte Stream"
+set_parameter_property BYTE_STREAM_ENABLE UNITS None
+set_parameter_property BYTE_STREAM_ENABLE HDL_PARAMETER true
+set_parameter_property BYTE_STREAM_ENABLE DESCRIPTION {When enabled, the emulator drains the lane FIFO through tx8b1k for legacy decoded-lane consumers. When disabled, the direct hit_type0 stream owns the FIFO drain.}
+
 add_parameter DEBUG_LEVEL NATURAL 0
 set_parameter_property DEBUG_LEVEL DISPLAY_NAME "Debug Level"
 set_parameter_property DEBUG_LEVEL UNITS None

@@ -453,7 +453,8 @@ module emulator_mutrig
                 assign lane_l2_rd_en[lane_idx] = frame_l2_rd_en[lane_idx];
                 assign lane_frame_start[lane_idx] = frame_start_int;
                 assign aso_tx8b1k_data[lane_idx] = tx_data_int;
-                assign aso_tx8b1k_valid[lane_idx] = tx_valid_int;
+                assign aso_tx8b1k_valid[lane_idx] = tx_valid_int &&
+                    (tx_data_int != {1'b1, be_mutrig_pkg::K28_5_CONST});
             end else begin : no_byte_stream_gen
                 assign frame_l2_rd_en[lane_idx] = 1'b0;
                 assign lane_l2_rd_en[lane_idx] = type0_l2_rd_en[lane_idx];
