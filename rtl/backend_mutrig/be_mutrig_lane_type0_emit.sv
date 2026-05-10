@@ -1,15 +1,15 @@
 // be_mutrig_lane_type0_emit.sv
 // MuTRiG lane hit_type0 emitter with link-bottleneck pacer.
 // Author: Yifeng Wang
-// Version : 26.2.1
-// Date    : 20260502
-// Change  : Add L2-pop pacer (3.5 cycles/hit short-mode ping-pong, 6
-//           cycles/hit long-mode) per RTL_PLAN section 2.6.
+// Version : 26.3.0
+// Date    : 20260506
+// Change  : Add DEBUG_LEVEL metadata emitted one-to-one with hit_type0 payloads.
 
 module be_mutrig_lane_type0_emit
     import be_mutrig_pkg::*;
 #(
-    parameter int FIFO_COUNT_WIDTH = 10
+    parameter int FIFO_COUNT_WIDTH = 10,
+    parameter int DEBUG_LEVEL = 0
 ) (
     input  logic                         clk,
     input  logic                         rst,
@@ -36,13 +36,23 @@ module be_mutrig_lane_type0_emit
     output logic                         aso_hit_type0_endofrun,
     output logic [2:0]                   aso_hit_type0_error,
     output logic [44:0]                  aso_hit_type0_data,
-    output logic                         aso_hit_type0_valid
+    output logic                         aso_hit_type0_valid,
+
+    output logic [63:0]                  aso_hit_debug_data,
+    output logic                         aso_hit_debug_valid,
+    output logic [3:0]                   aso_hit_debug_channel,
+    output logic                         aso_hit_debug_startofpacket,
+    output logic                         aso_hit_debug_endofpacket,
+    output logic                         aso_hit_debug_endofrun
 );
 
     logic [FIFO_COUNT_WIDTH-1:0] issue_remaining;
     logic [FIFO_COUNT_WIDTH-1:0] emit_remaining;
     logic in_packet;
     logic prev_terminating;
+    logic [31:0] debug_cycle;
+    logic [23:0] debug_hit_seq;
+    logic [63:0] debug_data_comb;
 
     // Link-bottleneck pacer. Models the real MuTRiG output bandwidth at
     // the 125 MHz emulator boundary so the hit_type0 path imposes the
@@ -68,6 +78,12 @@ module be_mutrig_lane_type0_emit
     // assign l2_rd_en = own_drain && enable && (issue_remaining != '0) && !l2_empty;
     assign aso_hit_type0_channel = asic_id;
     assign aso_hit_type0_error = error_target_lane ? error_inject_mask : 3'b000;
+    assign debug_data_comb = {
+        debug_cycle,
+        4'h1,
+        asic_id,
+        debug_hit_seq
+    };
 
     always_ff @(posedge clk) begin
         if (rst) begin
@@ -82,7 +98,16 @@ module be_mutrig_lane_type0_emit
             aso_hit_type0_endofrun <= 1'b0;
             aso_hit_type0_data <= '0;
             aso_hit_type0_valid <= 1'b0;
+            aso_hit_debug_data <= '0;
+            aso_hit_debug_valid <= 1'b0;
+            aso_hit_debug_channel <= 4'd0;
+            aso_hit_debug_startofpacket <= 1'b0;
+            aso_hit_debug_endofpacket <= 1'b0;
+            aso_hit_debug_endofrun <= 1'b0;
+            debug_cycle <= 32'h0000_0000;
+            debug_hit_seq <= 24'h000000;
         end else begin
+            debug_cycle <= debug_cycle + 32'd1;
             // Pacer counter advances every cycle; resets on a successful
             // pop and toggles the ping-pong bit so the next short-mode
             // window alternates 3 vs 4 cycles.
@@ -96,6 +121,10 @@ module be_mutrig_lane_type0_emit
             aso_hit_type0_endofpacket <= 1'b0;
             aso_hit_type0_endofrun <= 1'b0;
             aso_hit_type0_valid <= 1'b0;
+            aso_hit_debug_valid <= 1'b0;
+            aso_hit_debug_startofpacket <= 1'b0;
+            aso_hit_debug_endofpacket <= 1'b0;
+            aso_hit_debug_endofrun <= 1'b0;
             prev_terminating <= run_terminating;
 
             if (frame_start_req && frame_start_allowed && enable && !l2_empty) begin
@@ -112,6 +141,14 @@ module be_mutrig_lane_type0_emit
                 aso_hit_type0_data <= pack_hit_type0(l2_rd_data, asic_id);
                 aso_hit_type0_startofpacket <= !in_packet;
                 aso_hit_type0_endofpacket <= (emit_remaining == FIFO_COUNT_WIDTH'(1));
+                debug_hit_seq <= debug_hit_seq + 24'd1;
+                if (DEBUG_LEVEL >= 2) begin
+                    aso_hit_debug_valid <= 1'b1;
+                    aso_hit_debug_data <= debug_data_comb;
+                    aso_hit_debug_channel <= asic_id;
+                    aso_hit_debug_startofpacket <= !in_packet;
+                    aso_hit_debug_endofpacket <= (emit_remaining == FIFO_COUNT_WIDTH'(1));
+                end
 
                 if (emit_remaining == FIFO_COUNT_WIDTH'(1)) begin
                     emit_remaining <= '0;
@@ -124,6 +161,9 @@ module be_mutrig_lane_type0_emit
 
             if (prev_terminating && run_idle && l2_empty && (emit_remaining == '0)) begin
                 aso_hit_type0_endofrun <= 1'b1;
+                if (DEBUG_LEVEL >= 2) begin
+                    aso_hit_debug_endofrun <= 1'b1;
+                end
             end
 
             if (!enable) begin

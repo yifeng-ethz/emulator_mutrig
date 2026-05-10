@@ -15,7 +15,7 @@ module emut_internal_sva (
 );
   property p_idle_when_disabled;
     @(posedge clk) disable iff (rst)
-      (!run_draining || !csr_enable) |-> (tx_valid && tx_data == {1'b1, 8'hBC});
+      (!run_draining || !csr_enable) |-> (!tx_valid && tx_data == {1'b1, 8'hBC});
   endproperty
 
   property p_inject_single_cycle;

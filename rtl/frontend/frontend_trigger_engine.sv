@@ -150,15 +150,21 @@ module frontend_trigger_engine
     // ran from dispatch_base through the per-lane mux into the lane FIFO
     // write. Adds 1 cycle of latency between pending_mask update and
     // sig_offer_valid; the lane back-end ticket FIFO already has slack.
+    // Drop valid for one cycle after accept because pending_mask is cleared
+    // on the same edge; reloading immediately would replay the same ticket.
     logic                          sig_offer_valid_q;
     logic [LANE_INDEX_WIDTH-1:0]   sig_offer_lane_q;
     frontend_ticket_t              sig_offer_ticket_q;
 
     always_ff @(posedge clk) begin
         if (rst) begin
-            sig_offer_valid_q <= 1'b0;
-            sig_offer_lane_q  <= '0;
+            sig_offer_valid_q  <= 1'b0;
+            sig_offer_lane_q   <= '0;
             sig_offer_ticket_q <= '0;
+        end else if (sig_offer_valid_q) begin
+            if (sig_offer_ready) begin
+                sig_offer_valid_q <= 1'b0;
+            end
         end else begin
             sig_offer_valid_q <= dispatch_found;
             sig_offer_lane_q  <= dispatch_lane;

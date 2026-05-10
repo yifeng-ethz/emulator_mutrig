@@ -2,18 +2,18 @@
 
 **Companion docs:** [DV_BASIC.md](DV_BASIC.md), [DV_HARNESS.md](DV_HARNESS.md), [DV_REPORT.md](DV_REPORT.md), [BUG_HISTORY.md](BUG_HISTORY.md), `REPORT/`
 
-**Patch under verification:** central-trigger refresh 26.2.x dropped into the FE SciFi datapath Qsys system (`scifi_datapath_system_v3_pipe.qsys`), replacing the legacy 8x single-lane instances of `emulator_mutrig` 26.1.13 with one 8-lane bank instance.
+**Patch under verification:** central-trigger refresh 26.3.x dropped into the FE SciFi datapath Qsys system (`scifi_datapath_system_v3_pipe.qsys`), replacing the legacy 8x single-lane instances of `emulator_mutrig` 26.1.13 with one 8-lane bank instance and optional DEBUG metadata sidecars.
 
 ## 1. Verification Targets
 
 The integration must prove:
 
-1. **Qsys swap-in compatibility.** The new `emulator_mutrig` 26.2.x replaces the legacy `emulator_mutrig_0..7` instances at the same Qsys ports — ctrl AvST sink, CSR AvMM slave (now consolidated into one slave at the bank level), conduit `inject_pulse`, per-lane `hit_type0` AvST source, optional per-lane `tx8b1k` AvST source.
-2. **CSR aperture preserved.** The `sc_hub` mapping for the emulator slave still answers; reads of UID/META return the new IP identity (UID `0x454D5554` = `EMUT`, VERSION 26.2.0); per-lane status registers (`LANE_FRAME_*`, `LANE_HIT_*`) accessible via the same address window.
+1. **Qsys swap-in compatibility.** The new `emulator_mutrig` 26.3.x replaces the legacy `emulator_mutrig_0..7` instances at the same Qsys ports — ctrl AvST sink, CSR AvMM slave (now consolidated into one slave at the bank level), conduit `inject_pulse`, per-lane `hit_type0` AvST source, optional per-lane `tx8b1k` AvST source, and DEBUG>=2 hit metadata sidecars.
+2. **CSR aperture preserved.** The `sc_hub` mapping for the emulator slave still answers; reads of UID/META return the new IP identity (UID `0x454D5554` = `EMUT`, VERSION 26.3.0); per-lane status registers (`LANE_FRAME_*`, `LANE_HIT_*`) accessible via the same address window.
 3. **Downstream consumers happy.** `mutrig_timestamp_processor` decodes the new emulator's TCC/ECC stream without a phase shift; `packet_scheduler` accepts the per-lane stream; `ring_buffer_cam` push counters increment.
 4. **Run-control discipline.** RUNNING/TERMINATING/SYNC drive the bank correctly under the integration `run_control_mgmt` host; SYNC clears state on the same boundary as the rest of the system.
 5. **Inject path connected.** `mutrig_injector` conduit pulse produces a cluster across all 8 lanes when `cluster_geom_mode = FIX` with low=0, high=255.
-6. **Backwards-compat toggle.** Build under `BYTE_STREAM_ENABLE = 0` (type0-only) is the gated point; `BYTE_STREAM_ENABLE = 1` is reported but not gated for 26.2.x.
+6. **Backwards-compat toggle.** Build under `BYTE_STREAM_ENABLE = 0` (type0-only) is the gated point; `BYTE_STREAM_ENABLE = 1` is reported but not gated for 26.3.x.
 
 ## 2. Bucket Layout
 
@@ -54,4 +54,4 @@ Both gated points must pass DV_BASIC before the integration is considered green.
 ## 6. Open Items
 
 - Hardware bring-up on the FEB SciFi board is **deferred** pending lab access. All gate-1 evidence here is simulation-based against the integration Qsys system.
-- The `emulator_mutrig_hw.tcl` packaging file at the IP root must be refreshed to the 26.2.x port shape (8-lane bank + new CSR map) before the Qsys system can re-instantiate the new IP. This is a prerequisite for tb_int to even compile against the integration system. **Tracked separately under the ip-packaging skill deliverable.**
+- The `emulator_mutrig_hw.tcl` packaging file at the IP root is refreshed to the 26.3.x port shape (single-lane Qsys wrapper plus DEBUG_LEVEL sidecars). tb_int must keep this package version pinned while the generated system is regenerated.

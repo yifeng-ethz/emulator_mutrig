@@ -1,9 +1,9 @@
 // emulator_mutrig.sv
 // Packaged MuTRiG emulator top with central trigger frontend and per-lane backend.
 // Author: Yifeng Wang
-// Version : 26.2.0
-// Date    : 20260502
-// Change  : Add 26.2 central-trigger top with lane-count and byte-stream axes.
+// Version : 26.3.0
+// Date    : 20260506
+// Change  : Add DEBUG_LEVEL FIFO observability and per-hit metadata sidebands.
 
 module emulator_mutrig
 #(
@@ -11,13 +11,14 @@ module emulator_mutrig
     parameter bit BYTE_STREAM_ENABLE = 0,
     parameter logic [31:0] IP_UID = 32'h454D5554,
     parameter int VERSION_MAJOR = 26,
-    parameter int VERSION_MINOR = 2,
+    parameter int VERSION_MINOR = 3,
     parameter int VERSION_PATCH = 0,
-    parameter int BUILD = 502,
-    parameter int VERSION_DATE = 20260502,
+    parameter int BUILD = 506,
+    parameter int VERSION_DATE = 20260506,
     parameter logic [31:0] VERSION_GIT = 32'h0,
     parameter logic [31:0] INSTANCE_ID = 32'h0,
-    parameter logic [3:0] ASIC_ID_BASE_DEFAULT = 4'd0
+    parameter logic [3:0] ASIC_ID_BASE_DEFAULT = 4'd0,
+    parameter int DEBUG_LEVEL = 0
 ) (
     input  logic i_clk,
     input  logic i_rst,
@@ -42,6 +43,13 @@ module emulator_mutrig
     output logic [LANE_COUNT-1:0]       aso_hit_type0_endofrun,
     output logic [LANE_COUNT-1:0][2:0]  aso_hit_type0_error,
     output logic [LANE_COUNT-1:0][3:0]  aso_hit_type0_channel,
+    output logic [LANE_COUNT-1:0][15:0] coe_debug_fifo_fill_level,
+    output logic [LANE_COUNT-1:0][63:0] aso_hit_debug_data,
+    output logic [LANE_COUNT-1:0]       aso_hit_debug_valid,
+    output logic [LANE_COUNT-1:0][3:0]  aso_hit_debug_channel,
+    output logic [LANE_COUNT-1:0]       aso_hit_debug_startofpacket,
+    output logic [LANE_COUNT-1:0]       aso_hit_debug_endofpacket,
+    output logic [LANE_COUNT-1:0]       aso_hit_debug_endofrun,
 
     output logic [LANE_COUNT-1:0][8:0] aso_tx8b1k_data,
     output logic [LANE_COUNT-1:0]      aso_tx8b1k_valid,
@@ -143,6 +151,8 @@ module emulator_mutrig
     logic [LANE_COUNT-1:0] lane_l2_full;
     logic [LANE_COUNT-1:0] lane_l2_almost_full;
     logic [LANE_COUNT-1:0][9:0] lane_l2_event_count;
+    logic [LANE_COUNT-1:0][3:0] lane_ticket_fifo_level;
+    logic [LANE_COUNT-1:0][9:0] lane_l2_fifo_level;
     logic [LANE_COUNT-1:0] lane_l2_rd_en;
     logic [LANE_COUNT-1:0] type0_l2_rd_en;
     logic [LANE_COUNT-1:0] frame_l2_rd_en;
@@ -374,6 +384,8 @@ module emulator_mutrig
                 .l2_full                (lane_l2_full[lane_idx]),
                 .l2_almost_full         (lane_l2_almost_full[lane_idx]),
                 .l2_event_count         (lane_l2_event_count[lane_idx]),
+                .debug_ticket_fifo_level(lane_ticket_fifo_level[lane_idx]),
+                .debug_l2_fifo_level    (lane_l2_fifo_level[lane_idx]),
                 .frame_count            (lane_frame_count[lane_idx]),
                 .hit_count              (lane_hit_count[lane_idx]),
                 .clear_fifo_full_sticky (clear_fifo_full_sticky[lane_idx]),
@@ -382,7 +394,9 @@ module emulator_mutrig
                 .ticket_overflow_sticky (lane_ticket_overflow_sticky[lane_idx])
             );
 
-            be_mutrig_lane_type0_emit u_lane_type0_emit (
+            be_mutrig_lane_type0_emit #(
+                .DEBUG_LEVEL(DEBUG_LEVEL)
+            ) u_lane_type0_emit (
                 .clk                         (i_clk),
                 .rst                         (emu_rst),
                 .enable                      (cfg_enable_type0_stream && cfg_lane_enable_mask[lane_idx]),
@@ -406,8 +420,17 @@ module emulator_mutrig
                 .aso_hit_type0_endofrun      (aso_hit_type0_endofrun[lane_idx]),
                 .aso_hit_type0_error         (aso_hit_type0_error[lane_idx]),
                 .aso_hit_type0_data          (aso_hit_type0_data[lane_idx]),
-                .aso_hit_type0_valid         (aso_hit_type0_valid[lane_idx])
+                .aso_hit_type0_valid         (aso_hit_type0_valid[lane_idx]),
+                .aso_hit_debug_data          (aso_hit_debug_data[lane_idx]),
+                .aso_hit_debug_valid         (aso_hit_debug_valid[lane_idx]),
+                .aso_hit_debug_channel       (aso_hit_debug_channel[lane_idx]),
+                .aso_hit_debug_startofpacket (aso_hit_debug_startofpacket[lane_idx]),
+                .aso_hit_debug_endofpacket   (aso_hit_debug_endofpacket[lane_idx]),
+                .aso_hit_debug_endofrun      (aso_hit_debug_endofrun[lane_idx])
             );
+
+            assign coe_debug_fifo_fill_level[lane_idx] =
+                (DEBUG_LEVEL >= 1) ? {2'b00, lane_ticket_fifo_level[lane_idx], lane_l2_fifo_level[lane_idx]} : 16'h0000;
 
             if (BYTE_STREAM_ENABLE) begin : byte_stream_gen
                 be_mutrig_frame_assembler u_frame_assembler (
@@ -430,7 +453,8 @@ module emulator_mutrig
                 assign lane_l2_rd_en[lane_idx] = frame_l2_rd_en[lane_idx];
                 assign lane_frame_start[lane_idx] = frame_start_int;
                 assign aso_tx8b1k_data[lane_idx] = tx_data_int;
-                assign aso_tx8b1k_valid[lane_idx] = tx_valid_int;
+                assign aso_tx8b1k_valid[lane_idx] = tx_valid_int &&
+                    (tx_data_int != {1'b1, be_mutrig_pkg::K28_5_CONST});
             end else begin : no_byte_stream_gen
                 assign frame_l2_rd_en[lane_idx] = 1'b0;
                 assign lane_l2_rd_en[lane_idx] = type0_l2_rd_en[lane_idx];

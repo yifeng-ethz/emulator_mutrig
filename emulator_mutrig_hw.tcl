@@ -17,15 +17,18 @@ if {[string length $SCRIPT_DIR] == 0} {
 
 set CSR_ADDR_W_CONST            4
 set TX8B1K_WIDTH_CONST          9
+set HIT_TYPE0_WIDTH_CONST       45
+set HIT_DEBUG_WIDTH_CONST       64
+set DEBUG_FIFO_WIDTH_CONST      16
 set RUN_CONTROL_WIDTH_CONST     9
 
 # Identity defaults (no identity header in RTL — catalog tracking only)
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
-set VERSION_MINOR_DEFAULT_CONST 1
-set VERSION_PATCH_DEFAULT_CONST 13
-set BUILD_DEFAULT_CONST         425
-set VERSION_DATE_DEFAULT_CONST  20260425
+set VERSION_MINOR_DEFAULT_CONST 3
+set VERSION_PATCH_DEFAULT_CONST 0
+set BUILD_DEFAULT_CONST         506
+set VERSION_DATE_DEFAULT_CONST  20260506
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -180,7 +183,7 @@ proc validate {} {
     set ver_date     [get_parameter_value VERSION_DATE]
     set ver_git      [get_parameter_value VERSION_GIT]
     set instance_id  [get_parameter_value INSTANCE_ID]
-    set debug_level  [get_parameter_value DEBUG]
+    set debug_level  [get_parameter_value DEBUG_LEVEL]
     set cluster_cross [get_parameter_value CLUSTER_CROSS_ASIC_DEFAULT]
     set cluster_center [get_parameter_value CLUSTER_CENTER_GLOBAL_DEFAULT]
     set cluster_lane_index [get_parameter_value CLUSTER_LANE_INDEX_DEFAULT]
@@ -214,7 +217,7 @@ proc validate {} {
         send_message error "INSTANCE_ID must stay in the signed 31-bit range."
     }
     if {$debug_level < 0 || $debug_level > 2} {
-        send_message error "DEBUG must stay in the range 0..2."
+        send_message error "DEBUG_LEVEL must stay in the range 0..2."
     }
     if {$cluster_cross < 0 || $cluster_cross > 1} {
         send_message error "CLUSTER_CROSS_ASIC_DEFAULT must stay in the range 0..1."
@@ -233,7 +236,10 @@ proc validate {} {
 proc elaborate {} {
     compute_derived_values
     set_parameter_property FIFO_DEPTH ALLOWED_RANGES {16 32 64 128 256}
-    set_parameter_property DEBUG ENABLED false
+    set_parameter_property DEBUG_LEVEL ENABLED true
+    set_interface_property debug_fifo_fill ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 1}]
+    set_interface_property hit_debug_metadata ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
+    set_interface_property hit_type0_debug ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
     set_parameter_property VERSION_MAJOR ENABLED false
     set_parameter_property VERSION_MINOR ENABLED false
     set_parameter_property VERSION_PATCH ENABLED false
@@ -246,26 +252,44 @@ proc elaborate {} {
 # File sets
 # ========================================================================
 add_fileset QUARTUS_SYNTH QUARTUS_SYNTH "" ""
-set_fileset_property QUARTUS_SYNTH TOP_LEVEL emulator_mutrig
+set_fileset_property QUARTUS_SYNTH TOP_LEVEL emulator_mutrig_qsys_lane
 set_fileset_property QUARTUS_SYNTH ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property QUARTUS_SYNTH ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file emulator_mutrig_pkg.sv SYSTEM_VERILOG PATH rtl/emulator_mutrig_pkg.sv
-add_fileset_file prbs15_lfsr.sv         SYSTEM_VERILOG PATH rtl/prbs15_lfsr.sv
-add_fileset_file crc16_8.sv             SYSTEM_VERILOG PATH rtl/crc16_8.sv
-add_fileset_file hit_generator.sv       SYSTEM_VERILOG PATH rtl/hit_generator.sv
-add_fileset_file frame_assembler.sv     SYSTEM_VERILOG PATH rtl/frame_assembler.sv
-add_fileset_file emulator_mutrig.sv     SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv TOP_LEVEL_FILE
+add_fileset_file frontend_ticket_bus_pkg.sv        SYSTEM_VERILOG PATH rtl/common/frontend_ticket_bus_pkg.sv
+add_fileset_file be_mutrig_pkg.sv                  SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_pkg.sv
+add_fileset_file prbs15_lfsr.sv                    SYSTEM_VERILOG PATH rtl/common/prbs15_lfsr.sv
+add_fileset_file crc16_8.sv                        SYSTEM_VERILOG PATH rtl/common/crc16_8.sv
+add_fileset_file frontend_csr.sv                   SYSTEM_VERILOG PATH rtl/frontend/frontend_csr.sv
+add_fileset_file frontend_run_ctl.sv               SYSTEM_VERILOG PATH rtl/frontend/frontend_run_ctl.sv
+add_fileset_file frontend_trigger_engine.sv        SYSTEM_VERILOG PATH rtl/frontend/frontend_trigger_engine.sv
+add_fileset_file frontend_bkg_generator.sv         SYSTEM_VERILOG PATH rtl/frontend/frontend_bkg_generator.sv
+add_fileset_file frontend_ticket_distributor.sv    SYSTEM_VERILOG PATH rtl/frontend/frontend_ticket_distributor.sv
+add_fileset_file be_mutrig_l2_fifo.sv              SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_l2_fifo.sv
+add_fileset_file be_mutrig_lane_emitter.sv         SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_emitter.sv
+add_fileset_file be_mutrig_lane_type0_emit.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv
+add_fileset_file be_mutrig_frame_assembler.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_frame_assembler.sv
+add_fileset_file emulator_mutrig.sv                SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv
+add_fileset_file emulator_mutrig_qsys_lane.sv      SYSTEM_VERILOG PATH rtl/emulator_mutrig_qsys_lane.sv TOP_LEVEL_FILE
 
 add_fileset SIM_VERILOG SIM_VERILOG "" ""
-set_fileset_property SIM_VERILOG TOP_LEVEL emulator_mutrig
+set_fileset_property SIM_VERILOG TOP_LEVEL emulator_mutrig_qsys_lane
 set_fileset_property SIM_VERILOG ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property SIM_VERILOG ENABLE_FILE_OVERWRITE_MODE false
-add_fileset_file emulator_mutrig_pkg.sv SYSTEM_VERILOG PATH rtl/emulator_mutrig_pkg.sv
-add_fileset_file prbs15_lfsr.sv         SYSTEM_VERILOG PATH rtl/prbs15_lfsr.sv
-add_fileset_file crc16_8.sv             SYSTEM_VERILOG PATH rtl/crc16_8.sv
-add_fileset_file hit_generator.sv       SYSTEM_VERILOG PATH rtl/hit_generator.sv
-add_fileset_file frame_assembler.sv     SYSTEM_VERILOG PATH rtl/frame_assembler.sv
-add_fileset_file emulator_mutrig.sv     SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv TOP_LEVEL_FILE
+add_fileset_file frontend_ticket_bus_pkg.sv        SYSTEM_VERILOG PATH rtl/common/frontend_ticket_bus_pkg.sv
+add_fileset_file be_mutrig_pkg.sv                  SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_pkg.sv
+add_fileset_file prbs15_lfsr.sv                    SYSTEM_VERILOG PATH rtl/common/prbs15_lfsr.sv
+add_fileset_file crc16_8.sv                        SYSTEM_VERILOG PATH rtl/common/crc16_8.sv
+add_fileset_file frontend_csr.sv                   SYSTEM_VERILOG PATH rtl/frontend/frontend_csr.sv
+add_fileset_file frontend_run_ctl.sv               SYSTEM_VERILOG PATH rtl/frontend/frontend_run_ctl.sv
+add_fileset_file frontend_trigger_engine.sv        SYSTEM_VERILOG PATH rtl/frontend/frontend_trigger_engine.sv
+add_fileset_file frontend_bkg_generator.sv         SYSTEM_VERILOG PATH rtl/frontend/frontend_bkg_generator.sv
+add_fileset_file frontend_ticket_distributor.sv    SYSTEM_VERILOG PATH rtl/frontend/frontend_ticket_distributor.sv
+add_fileset_file be_mutrig_l2_fifo.sv              SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_l2_fifo.sv
+add_fileset_file be_mutrig_lane_emitter.sv         SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_emitter.sv
+add_fileset_file be_mutrig_lane_type0_emit.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv
+add_fileset_file be_mutrig_frame_assembler.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_frame_assembler.sv
+add_fileset_file emulator_mutrig.sv                SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv
+add_fileset_file emulator_mutrig_qsys_lane.sv      SYSTEM_VERILOG PATH rtl/emulator_mutrig_qsys_lane.sv TOP_LEVEL_FILE
 
 # ========================================================================
 # Parameters — HDL
@@ -316,13 +340,19 @@ set_parameter_property CLUSTER_LANE_COUNT_DEFAULT ALLOWED_RANGES 1:8
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT HDL_PARAMETER true
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DESCRIPTION {Reset value of BURST_CFG[29:26]. Number of emulated MuTRiG lanes participating in the shared cluster domain.}
 
-add_parameter DEBUG NATURAL 0
-set_parameter_property DEBUG DISPLAY_NAME "Debug Level"
-set_parameter_property DEBUG UNITS None
-set_parameter_property DEBUG ALLOWED_RANGES 0:2
-set_parameter_property DEBUG HDL_PARAMETER false
-set_parameter_property DEBUG ENABLED false
-set_parameter_property DEBUG DESCRIPTION "Current packaged revision has no optional debug RTL. The field is kept to preserve the standard Mu3e Configuration/Debug GUI contract."
+add_parameter BYTE_STREAM_ENABLE BOOLEAN false
+set_parameter_property BYTE_STREAM_ENABLE DISPLAY_NAME "Enable 8b/1k Byte Stream"
+set_parameter_property BYTE_STREAM_ENABLE UNITS None
+set_parameter_property BYTE_STREAM_ENABLE HDL_PARAMETER true
+set_parameter_property BYTE_STREAM_ENABLE DESCRIPTION {When enabled, the emulator drains the lane FIFO through tx8b1k for legacy decoded-lane consumers. When disabled, the direct hit_type0 stream owns the FIFO drain.}
+
+add_parameter DEBUG_LEVEL NATURAL 0
+set_parameter_property DEBUG_LEVEL DISPLAY_NAME "Debug Level"
+set_parameter_property DEBUG_LEVEL UNITS None
+set_parameter_property DEBUG_LEVEL ALLOWED_RANGES 0:2
+set_parameter_property DEBUG_LEVEL HDL_PARAMETER true
+set_parameter_property DEBUG_LEVEL AFFECTS_ELABORATION true
+set_parameter_property DEBUG_LEVEL DESCRIPTION "0 keeps the nominal 45-bit hit stream only; 1 adds FIFO fill-level debug; 2 also emits a one-to-one per-hit debug metadata stream."
 
 # ========================================================================
 # Parameters — Identity (catalog tracking; no identity header in RTL)
@@ -419,8 +449,8 @@ add_display_item "Hit Generation" CLUSTER_LANE_COUNT_DEFAULT parameter
 add_html_text "Hit Generation" hitgen_html "<html><b>Hit FIFO</b><br/>Updated by the validation callback.</html>"
 
 add_html_text "Frame Assembly" frame_html "<html><b>Frame format</b><br/>Updated by the validation callback.</html>"
-add_display_item "Debug" DEBUG parameter
-add_html_text "Debug" debug_html {<html><b>Debug control</b><br/>This packaged revision does not expose optional debug RTL knobs. The fixed <b>DEBUG=0</b> entry is kept so the GUI layout matches the standard Mu3e IP packaging contract used by the upgraded wrappers while the standalone sign-off build remains comparable across releases.</html>}
+add_display_item "Debug" DEBUG_LEVEL parameter
+add_html_text "Debug" debug_html {<html><b>Debug control</b><br/><b>DEBUG_LEVEL=0</b> keeps only the nominal hit_type0 and tx8b1k interfaces. <b>DEBUG_LEVEL=1</b> additionally exports packed ticket/L2 FIFO fill levels. <b>DEBUG_LEVEL=2</b> also emits a parallel per-hit metadata stream for simulation scoreboards; the nominal 45-bit hit_type0 stream is unchanged.</html>}
 
 # ========================================================================
 # GUI — Tab 2: Identity
@@ -584,6 +614,59 @@ set_interface_property data_reset associatedClock data_clock
 set_interface_property data_reset synchronousEdges DEASSERT
 set_interface_property data_reset ENABLED true
 add_interface_port data_reset i_rst reset Input 1
+
+# Avalon-ST source [hit_type0] — direct hit stream to source mux
+add_interface hit_type0 avalon_streaming source
+set_interface_property hit_type0 associatedClock data_clock
+set_interface_property hit_type0 associatedReset data_reset
+set_interface_property hit_type0 dataBitsPerSymbol $HIT_TYPE0_WIDTH_CONST
+set_interface_property hit_type0 firstSymbolInHighOrderBits true
+set_interface_property hit_type0 maxChannel 15
+set_interface_property hit_type0 symbolsPerBeat 1
+set_interface_property hit_type0 readyLatency 0
+set_interface_property hit_type0 errorDescriptor "hiterr frameerr overflow"
+set_interface_property hit_type0 ENABLED true
+add_interface_port hit_type0 aso_hit_type0_data          data          Output $HIT_TYPE0_WIDTH_CONST
+add_interface_port hit_type0 aso_hit_type0_valid         valid         Output 1
+add_interface_port hit_type0 aso_hit_type0_error         error         Output 3
+add_interface_port hit_type0 aso_hit_type0_channel       channel       Output 4
+add_interface_port hit_type0 aso_hit_type0_startofpacket startofpacket Output 1
+add_interface_port hit_type0 aso_hit_type0_endofpacket   endofpacket   Output 1
+add_interface_port hit_type0 aso_hit_type0_endofrun      endofrun      Output 1
+
+# Conduit source [debug_fifo_fill] — packed ticket/L2 FIFO fill levels.
+# [9:0] = L2 FIFO level, [13:10] = ticket FIFO level.
+add_interface debug_fifo_fill conduit start
+set_interface_property debug_fifo_fill associatedClock data_clock
+set_interface_property debug_fifo_fill associatedReset data_reset
+set_interface_property debug_fifo_fill ENABLED false
+add_interface_port debug_fifo_fill coe_debug_fifo_fill_level fill_level Output $DEBUG_FIFO_WIDTH_CONST
+
+# Conduit source [hit_debug_metadata] — scalar metadata aligned to hit_type0 valid.
+add_interface hit_debug_metadata conduit start
+set_interface_property hit_debug_metadata associatedClock data_clock
+set_interface_property hit_debug_metadata associatedReset data_reset
+set_interface_property hit_debug_metadata ENABLED false
+add_interface_port hit_debug_metadata coe_debug_hit_metadata       metadata Output $HIT_DEBUG_WIDTH_CONST
+add_interface_port hit_debug_metadata coe_debug_hit_metadata_valid valid    Output 1
+
+# Avalon-ST source [hit_type0_debug] — one 64-bit metadata beat per hit_type0 beat.
+add_interface hit_type0_debug avalon_streaming source
+set_interface_property hit_type0_debug associatedClock data_clock
+set_interface_property hit_type0_debug associatedReset data_reset
+set_interface_property hit_type0_debug dataBitsPerSymbol $HIT_DEBUG_WIDTH_CONST
+set_interface_property hit_type0_debug firstSymbolInHighOrderBits true
+set_interface_property hit_type0_debug maxChannel 15
+set_interface_property hit_type0_debug symbolsPerBeat 1
+set_interface_property hit_type0_debug readyLatency 0
+set_interface_property hit_type0_debug errorDescriptor ""
+set_interface_property hit_type0_debug ENABLED false
+add_interface_port hit_type0_debug aso_hit_debug_data          data          Output $HIT_DEBUG_WIDTH_CONST
+add_interface_port hit_type0_debug aso_hit_debug_valid         valid         Output 1
+add_interface_port hit_type0_debug aso_hit_debug_channel       channel       Output 4
+add_interface_port hit_type0_debug aso_hit_debug_startofpacket startofpacket Output 1
+add_interface_port hit_type0_debug aso_hit_debug_endofpacket   endofpacket   Output 1
+add_interface_port hit_type0_debug aso_hit_debug_endofrun      endofrun      Output 1
 
 # Avalon-ST source [tx8b1k] — 8b/1k output to frame_rcv_ip
 add_interface tx8b1k avalon_streaming source
