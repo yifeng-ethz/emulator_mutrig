@@ -1,0 +1,594 @@
+----------------
+; Command Info ;
+----------------
+Report Timing: Found 5 setup paths (0 violated).  Worst case slack is 1.003
+
+Tcl Command:
+    report_timing -setup -file sta_reports/emulator_mutrig_syn_20260511_slow_1100mv_85c_setup.rpt -from_clock [get_clocks {clk125}] -to_clock [get_clocks {clk125}] -npaths 5 -detail full_path
+
+Options:
+    -from_clock [get_clocks {clk125}]
+    -to_clock [get_clocks {clk125}]
+    -setup
+    -npaths 5
+    -detail full_path
+    -file {sta_reports/emulator_mutrig_syn_20260511_slow_1100mv_85c_setup.rpt}
+
+Delay Model:
+    Slow 1100mV 85C Model
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Summary of Paths                                                                                                                                                                                                                                                                        ;
++-------+---------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------+--------------+-------------+--------------+------------+------------+
+; Slack ; From Node                                                                                         ; To Node                                                                                               ; Launch Clock ; Latch Clock ; Relationship ; Clock Skew ; Data Delay ;
++-------+---------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------+--------------+-------------+--------------+------------+------------+
+; 1.003 ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7] ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ; clk125       ; clk125      ; 7.273        ; -0.086     ; 6.134      ;
+; 1.004 ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7] ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ; clk125       ; clk125      ; 7.273        ; -0.086     ; 6.133      ;
+; 1.007 ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7] ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ; clk125       ; clk125      ; 7.273        ; -0.090     ; 6.126      ;
+; 1.008 ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7] ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ; clk125       ; clk125      ; 7.273        ; -0.090     ; 6.125      ;
+; 1.031 ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7] ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[7] ; clk125       ; clk125      ; 7.273        ; -0.090     ; 6.102      ;
++-------+---------------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------+--------------+-------------+--------------+------------+------------+
+
+Path #1: Setup slack is 1.003
+===============================================================================
++----------------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                               ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; To Node            ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ;
+; Launch Clock       ; clk125                                                                                                ;
+; Latch Clock        ; clk125                                                                                                ;
+; Data Arrival Time  ; 9.914                                                                                                 ;
+; Data Required Time ; 10.917                                                                                                ;
+; Slack              ; 1.003                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.086 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 6.134  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 7     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.285       ; 60         ; 0.000 ; 1.919 ;
+;    Cell                ;        ; 3     ; 1.495       ; 40         ; 0.265 ; 0.757 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 14    ; 2.653       ; 43         ; 0.000 ; 0.645 ;
+;    Cell                ;        ; 15    ; 3.481       ; 57         ; 0.000 ; 0.643 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.179       ; 60         ; 0.000 ; 1.832 ;
+;    Cell                ;        ; 3     ; 1.429       ; 40         ; 0.247 ; 0.749 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                                     ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location             ; Element                                                                                               ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                      ; launch edge time                                                                                      ;
+; 3.780   ; 3.780   ;    ;      ;        ;                      ; clock path                                                                                            ;
+;   0.000 ;   0.000 ;    ;      ;        ;                      ; source latency                                                                                        ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20             ; clk125                                                                                                ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|i                                                                                        ;
+;   0.757 ;   0.757 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|o                                                                                        ;
+;   1.123 ;   0.366 ; RR ; IC   ; 1      ; CLKCTRL_G6           ; clk125~inputCLKENA0|inclk                                                                             ;
+;   1.388 ;   0.265 ; RR ; CELL ; 6761   ; CLKCTRL_G6           ; clk125~inputCLKENA0|outclk                                                                            ;
+;   3.307 ;   1.919 ; RR ; IC   ; 1      ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|clk                                         ;
+;   3.780 ;   0.473 ; RR ; CELL ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; 9.914   ; 6.134   ;    ;      ;        ;                      ; data path                                                                                             ;
+;   3.780 ;   0.000 ;    ; uTco ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+;   3.780 ;   0.000 ; RR ; CELL ; 14     ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|q                                           ;
+;   4.348 ;   0.568 ; RR ; IC   ; 1      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|datac                                           ;
+;   4.770 ;   0.422 ; RF ; CELL ; 5      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|combout                                         ;
+;   5.233 ;   0.463 ; FF ; IC   ; 3      ; MLABCELL_X62_Y56_N36 ; u_dut|u_frontend_trigger_engine|Add13~13|datad                                                        ;
+;   5.876 ;   0.643 ; FR ; CELL ; 1      ; MLABCELL_X62_Y56_N36 ; u_dut|u_frontend_trigger_engine|Add13~13|cout                                                         ;
+;   5.876 ;   0.000 ; RR ; IC   ; 2      ; MLABCELL_X62_Y56_N39 ; u_dut|u_frontend_trigger_engine|Add13~9|cin                                                           ;
+;   5.876 ;   0.000 ; RR ; CELL ; 1      ; MLABCELL_X62_Y56_N39 ; u_dut|u_frontend_trigger_engine|Add13~9|cout                                                          ;
+;   5.876 ;   0.000 ; RR ; IC   ; 2      ; MLABCELL_X62_Y56_N42 ; u_dut|u_frontend_trigger_engine|Add13~5|cin                                                           ;
+;   6.194 ;   0.318 ; RF ; CELL ; 6      ; MLABCELL_X62_Y56_N42 ; u_dut|u_frontend_trigger_engine|Add13~5|sumout                                                        ;
+;   6.532 ;   0.338 ; FF ; IC   ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|datad                                                     ;
+;   6.842 ;   0.310 ; FR ; CELL ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|combout                                                   ;
+;   7.061 ;   0.219 ; RR ; IC   ; 1      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|dataf                                                     ;
+;   7.150 ;   0.089 ; RF ; CELL ; 6      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|combout                                                   ;
+;   7.795 ;   0.645 ; FF ; IC   ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|datac                                                  ;
+;   8.174 ;   0.379 ; FF ; CELL ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|combout                                                ;
+;   8.394 ;   0.220 ; FF ; IC   ; 3      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|datad                                                        ;
+;   9.037 ;   0.643 ; FR ; CELL ; 1      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|cout                                                         ;
+;   9.037 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cin                                                          ;
+;   9.037 ;   0.000 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cout                                                         ;
+;   9.037 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|cin                                                          ;
+;   9.079 ;   0.042 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|cout                                                         ;
+;   9.079 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N15  ; u_dut|u_frontend_trigger_engine|Add15~9|cin                                                           ;
+;   9.079 ;   0.000 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N15  ; u_dut|u_frontend_trigger_engine|Add15~9|cout                                                          ;
+;   9.079 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N18  ; u_dut|u_frontend_trigger_engine|Add15~5|cin                                                           ;
+;   9.379 ;   0.300 ; RF ; CELL ; 1      ; LABCELL_X63_Y55_N18  ; u_dut|u_frontend_trigger_engine|Add15~5|sumout                                                        ;
+;   9.579 ;   0.200 ; FF ; IC   ; 1      ; LABCELL_X63_Y55_N27  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~1|dataf                                    ;
+;   9.652 ;   0.073 ; FF ; CELL ; 1      ; LABCELL_X63_Y55_N27  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~1|combout                                  ;
+;   9.652 ;   0.000 ; FF ; IC   ; 1      ; FF_X63_Y55_N29       ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[6]|d                                       ;
+;   9.914 ;   0.262 ; FF ; CELL ; 1      ; FF_X63_Y55_N29       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                                  ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; Total    ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                               ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; 7.273    ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                                       ;
+; 10.967   ; 3.694   ;    ;      ;        ;                   ; clock path                                                                                            ;
+;   7.273  ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                        ;
+;   7.273  ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                                ;
+;   7.273  ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                        ;
+;   8.022  ;   0.749 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                        ;
+;   8.369  ;   0.347 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                             ;
+;   8.616  ;   0.247 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                            ;
+;   10.448 ;   1.832 ; RR ; IC   ; 1      ; FF_X63_Y55_N29    ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[6]|clk                                     ;
+;   10.881 ;   0.433 ; RR ; CELL ; 1      ; FF_X63_Y55_N29    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ;
+;   10.967 ;   0.086 ;    ;      ;        ;                   ; clock pessimism removed                                                                               ;
+; 10.917   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                                     ;
+; 10.917   ; 0.000   ;    ; uTsu ; 1      ; FF_X63_Y55_N29    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.
+
+
+Path #2: Setup slack is 1.004
+===============================================================================
++----------------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                               ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; To Node            ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ;
+; Launch Clock       ; clk125                                                                                                ;
+; Latch Clock        ; clk125                                                                                                ;
+; Data Arrival Time  ; 9.913                                                                                                 ;
+; Data Required Time ; 10.917                                                                                                ;
+; Slack              ; 1.004                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.086 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 6.133  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 7     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.285       ; 60         ; 0.000 ; 1.919 ;
+;    Cell                ;        ; 3     ; 1.495       ; 40         ; 0.265 ; 0.757 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 13    ; 2.632       ; 43         ; 0.000 ; 0.613 ;
+;    Cell                ;        ; 14    ; 3.501       ; 57         ; 0.000 ; 0.643 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.179       ; 60         ; 0.000 ; 1.832 ;
+;    Cell                ;        ; 3     ; 1.429       ; 40         ; 0.247 ; 0.749 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                                     ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location             ; Element                                                                                               ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                      ; launch edge time                                                                                      ;
+; 3.780   ; 3.780   ;    ;      ;        ;                      ; clock path                                                                                            ;
+;   0.000 ;   0.000 ;    ;      ;        ;                      ; source latency                                                                                        ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20             ; clk125                                                                                                ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|i                                                                                        ;
+;   0.757 ;   0.757 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|o                                                                                        ;
+;   1.123 ;   0.366 ; RR ; IC   ; 1      ; CLKCTRL_G6           ; clk125~inputCLKENA0|inclk                                                                             ;
+;   1.388 ;   0.265 ; RR ; CELL ; 6761   ; CLKCTRL_G6           ; clk125~inputCLKENA0|outclk                                                                            ;
+;   3.307 ;   1.919 ; RR ; IC   ; 1      ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|clk                                         ;
+;   3.780 ;   0.473 ; RR ; CELL ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; 9.913   ; 6.133   ;    ;      ;        ;                      ; data path                                                                                             ;
+;   3.780 ;   0.000 ;    ; uTco ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+;   3.780 ;   0.000 ; RR ; CELL ; 14     ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|q                                           ;
+;   4.348 ;   0.568 ; RR ; IC   ; 1      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|datac                                           ;
+;   4.770 ;   0.422 ; RF ; CELL ; 5      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|combout                                         ;
+;   5.097 ;   0.327 ; FF ; IC   ; 2      ; LABCELL_X63_Y56_N39  ; u_dut|u_frontend_trigger_engine|Add12~13|datad                                                        ;
+;   5.698 ;   0.601 ; FR ; CELL ; 1      ; LABCELL_X63_Y56_N39  ; u_dut|u_frontend_trigger_engine|Add12~13|cout                                                         ;
+;   5.698 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y56_N42  ; u_dut|u_frontend_trigger_engine|Add12~9|cin                                                           ;
+;   6.016 ;   0.318 ; RF ; CELL ; 12     ; LABCELL_X63_Y56_N42  ; u_dut|u_frontend_trigger_engine|Add12~9|sumout                                                        ;
+;   6.526 ;   0.510 ; FF ; IC   ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|datac                                                     ;
+;   6.895 ;   0.369 ; FF ; CELL ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|combout                                                   ;
+;   7.089 ;   0.194 ; FF ; IC   ; 1      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|dataf                                                     ;
+;   7.176 ;   0.087 ; FR ; CELL ; 6      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|combout                                                   ;
+;   7.789 ;   0.613 ; RR ; IC   ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|datac                                                  ;
+;   8.173 ;   0.384 ; RF ; CELL ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|combout                                                ;
+;   8.393 ;   0.220 ; FF ; IC   ; 3      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|datad                                                        ;
+;   9.036 ;   0.643 ; FR ; CELL ; 1      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|cout                                                         ;
+;   9.036 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cin                                                          ;
+;   9.036 ;   0.000 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cout                                                         ;
+;   9.036 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|cin                                                          ;
+;   9.078 ;   0.042 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|cout                                                         ;
+;   9.078 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N15  ; u_dut|u_frontend_trigger_engine|Add15~9|cin                                                           ;
+;   9.078 ;   0.000 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N15  ; u_dut|u_frontend_trigger_engine|Add15~9|cout                                                          ;
+;   9.078 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N18  ; u_dut|u_frontend_trigger_engine|Add15~5|cin                                                           ;
+;   9.378 ;   0.300 ; RF ; CELL ; 1      ; LABCELL_X63_Y55_N18  ; u_dut|u_frontend_trigger_engine|Add15~5|sumout                                                        ;
+;   9.578 ;   0.200 ; FF ; IC   ; 1      ; LABCELL_X63_Y55_N27  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~1|dataf                                    ;
+;   9.651 ;   0.073 ; FF ; CELL ; 1      ; LABCELL_X63_Y55_N27  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~1|combout                                  ;
+;   9.651 ;   0.000 ; FF ; IC   ; 1      ; FF_X63_Y55_N29       ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[6]|d                                       ;
+;   9.913 ;   0.262 ; FF ; CELL ; 1      ; FF_X63_Y55_N29       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                                  ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; Total    ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                               ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; 7.273    ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                                       ;
+; 10.967   ; 3.694   ;    ;      ;        ;                   ; clock path                                                                                            ;
+;   7.273  ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                        ;
+;   7.273  ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                                ;
+;   7.273  ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                        ;
+;   8.022  ;   0.749 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                        ;
+;   8.369  ;   0.347 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                             ;
+;   8.616  ;   0.247 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                            ;
+;   10.448 ;   1.832 ; RR ; IC   ; 1      ; FF_X63_Y55_N29    ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[6]|clk                                     ;
+;   10.881 ;   0.433 ; RR ; CELL ; 1      ; FF_X63_Y55_N29    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ;
+;   10.967 ;   0.086 ;    ;      ;        ;                   ; clock pessimism removed                                                                               ;
+; 10.917   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                                     ;
+; 10.917   ; 0.000   ;    ; uTsu ; 1      ; FF_X63_Y55_N29    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6] ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.
+
+
+Path #3: Setup slack is 1.007
+===============================================================================
++----------------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                               ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; To Node            ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ;
+; Launch Clock       ; clk125                                                                                                ;
+; Latch Clock        ; clk125                                                                                                ;
+; Data Arrival Time  ; 9.906                                                                                                 ;
+; Data Required Time ; 10.913                                                                                                ;
+; Slack              ; 1.007                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.090 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 6.126  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 7     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.285       ; 60         ; 0.000 ; 1.919 ;
+;    Cell                ;        ; 3     ; 1.495       ; 40         ; 0.265 ; 0.757 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 12    ; 2.668       ; 44         ; 0.000 ; 0.645 ;
+;    Cell                ;        ; 13    ; 3.458       ; 56         ; 0.000 ; 0.643 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.179       ; 60         ; 0.000 ; 1.832 ;
+;    Cell                ;        ; 3     ; 1.425       ; 40         ; 0.247 ; 0.749 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                                     ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location             ; Element                                                                                               ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                      ; launch edge time                                                                                      ;
+; 3.780   ; 3.780   ;    ;      ;        ;                      ; clock path                                                                                            ;
+;   0.000 ;   0.000 ;    ;      ;        ;                      ; source latency                                                                                        ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20             ; clk125                                                                                                ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|i                                                                                        ;
+;   0.757 ;   0.757 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|o                                                                                        ;
+;   1.123 ;   0.366 ; RR ; IC   ; 1      ; CLKCTRL_G6           ; clk125~inputCLKENA0|inclk                                                                             ;
+;   1.388 ;   0.265 ; RR ; CELL ; 6761   ; CLKCTRL_G6           ; clk125~inputCLKENA0|outclk                                                                            ;
+;   3.307 ;   1.919 ; RR ; IC   ; 1      ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|clk                                         ;
+;   3.780 ;   0.473 ; RR ; CELL ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; 9.906   ; 6.126   ;    ;      ;        ;                      ; data path                                                                                             ;
+;   3.780 ;   0.000 ;    ; uTco ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+;   3.780 ;   0.000 ; RR ; CELL ; 14     ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|q                                           ;
+;   4.348 ;   0.568 ; RR ; IC   ; 1      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|datac                                           ;
+;   4.770 ;   0.422 ; RF ; CELL ; 5      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|combout                                         ;
+;   5.233 ;   0.463 ; FF ; IC   ; 3      ; MLABCELL_X62_Y56_N36 ; u_dut|u_frontend_trigger_engine|Add13~13|datad                                                        ;
+;   5.876 ;   0.643 ; FR ; CELL ; 1      ; MLABCELL_X62_Y56_N36 ; u_dut|u_frontend_trigger_engine|Add13~13|cout                                                         ;
+;   5.876 ;   0.000 ; RR ; IC   ; 2      ; MLABCELL_X62_Y56_N39 ; u_dut|u_frontend_trigger_engine|Add13~9|cin                                                           ;
+;   5.876 ;   0.000 ; RR ; CELL ; 1      ; MLABCELL_X62_Y56_N39 ; u_dut|u_frontend_trigger_engine|Add13~9|cout                                                          ;
+;   5.876 ;   0.000 ; RR ; IC   ; 2      ; MLABCELL_X62_Y56_N42 ; u_dut|u_frontend_trigger_engine|Add13~5|cin                                                           ;
+;   6.194 ;   0.318 ; RF ; CELL ; 6      ; MLABCELL_X62_Y56_N42 ; u_dut|u_frontend_trigger_engine|Add13~5|sumout                                                        ;
+;   6.532 ;   0.338 ; FF ; IC   ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|datad                                                     ;
+;   6.842 ;   0.310 ; FR ; CELL ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|combout                                                   ;
+;   7.061 ;   0.219 ; RR ; IC   ; 1      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|dataf                                                     ;
+;   7.150 ;   0.089 ; RF ; CELL ; 6      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|combout                                                   ;
+;   7.795 ;   0.645 ; FF ; IC   ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|datac                                                  ;
+;   8.174 ;   0.379 ; FF ; CELL ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|combout                                                ;
+;   8.394 ;   0.220 ; FF ; IC   ; 3      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|datad                                                        ;
+;   9.037 ;   0.643 ; FR ; CELL ; 1      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|cout                                                         ;
+;   9.037 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cin                                                          ;
+;   9.037 ;   0.000 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cout                                                         ;
+;   9.037 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|cin                                                          ;
+;   9.353 ;   0.316 ; RF ; CELL ; 1      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|sumout                                                       ;
+;   9.568 ;   0.215 ; FF ; IC   ; 1      ; LABCELL_X63_Y55_N30  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~3|dataf                                    ;
+;   9.643 ;   0.075 ; FF ; CELL ; 1      ; LABCELL_X63_Y55_N30  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~3|combout                                  ;
+;   9.643 ;   0.000 ; FF ; IC   ; 1      ; FF_X63_Y55_N32       ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[4]|d                                       ;
+;   9.906 ;   0.263 ; FF ; CELL ; 1      ; FF_X63_Y55_N32       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                                  ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; Total    ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                               ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; 7.273    ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                                       ;
+; 10.963   ; 3.690   ;    ;      ;        ;                   ; clock path                                                                                            ;
+;   7.273  ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                        ;
+;   7.273  ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                                ;
+;   7.273  ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                        ;
+;   8.022  ;   0.749 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                        ;
+;   8.369  ;   0.347 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                             ;
+;   8.616  ;   0.247 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                            ;
+;   10.448 ;   1.832 ; RR ; IC   ; 1      ; FF_X63_Y55_N32    ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[4]|clk                                     ;
+;   10.877 ;   0.429 ; RR ; CELL ; 1      ; FF_X63_Y55_N32    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ;
+;   10.963 ;   0.086 ;    ;      ;        ;                   ; clock pessimism removed                                                                               ;
+; 10.913   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                                     ;
+; 10.913   ; 0.000   ;    ; uTsu ; 1      ; FF_X63_Y55_N32    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.
+
+
+Path #4: Setup slack is 1.008
+===============================================================================
++----------------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                               ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; To Node            ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ;
+; Launch Clock       ; clk125                                                                                                ;
+; Latch Clock        ; clk125                                                                                                ;
+; Data Arrival Time  ; 9.905                                                                                                 ;
+; Data Required Time ; 10.913                                                                                                ;
+; Slack              ; 1.008                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.090 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 6.125  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 7     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.285       ; 60         ; 0.000 ; 1.919 ;
+;    Cell                ;        ; 3     ; 1.495       ; 40         ; 0.265 ; 0.757 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 11    ; 2.647       ; 43         ; 0.000 ; 0.613 ;
+;    Cell                ;        ; 12    ; 3.478       ; 57         ; 0.000 ; 0.643 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.179       ; 60         ; 0.000 ; 1.832 ;
+;    Cell                ;        ; 3     ; 1.425       ; 40         ; 0.247 ; 0.749 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                                     ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location             ; Element                                                                                               ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                      ; launch edge time                                                                                      ;
+; 3.780   ; 3.780   ;    ;      ;        ;                      ; clock path                                                                                            ;
+;   0.000 ;   0.000 ;    ;      ;        ;                      ; source latency                                                                                        ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20             ; clk125                                                                                                ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|i                                                                                        ;
+;   0.757 ;   0.757 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|o                                                                                        ;
+;   1.123 ;   0.366 ; RR ; IC   ; 1      ; CLKCTRL_G6           ; clk125~inputCLKENA0|inclk                                                                             ;
+;   1.388 ;   0.265 ; RR ; CELL ; 6761   ; CLKCTRL_G6           ; clk125~inputCLKENA0|outclk                                                                            ;
+;   3.307 ;   1.919 ; RR ; IC   ; 1      ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|clk                                         ;
+;   3.780 ;   0.473 ; RR ; CELL ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; 9.905   ; 6.125   ;    ;      ;        ;                      ; data path                                                                                             ;
+;   3.780 ;   0.000 ;    ; uTco ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+;   3.780 ;   0.000 ; RR ; CELL ; 14     ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|q                                           ;
+;   4.348 ;   0.568 ; RR ; IC   ; 1      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|datac                                           ;
+;   4.770 ;   0.422 ; RF ; CELL ; 5      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|combout                                         ;
+;   5.097 ;   0.327 ; FF ; IC   ; 2      ; LABCELL_X63_Y56_N39  ; u_dut|u_frontend_trigger_engine|Add12~13|datad                                                        ;
+;   5.698 ;   0.601 ; FR ; CELL ; 1      ; LABCELL_X63_Y56_N39  ; u_dut|u_frontend_trigger_engine|Add12~13|cout                                                         ;
+;   5.698 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y56_N42  ; u_dut|u_frontend_trigger_engine|Add12~9|cin                                                           ;
+;   6.016 ;   0.318 ; RF ; CELL ; 12     ; LABCELL_X63_Y56_N42  ; u_dut|u_frontend_trigger_engine|Add12~9|sumout                                                        ;
+;   6.526 ;   0.510 ; FF ; IC   ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|datac                                                     ;
+;   6.895 ;   0.369 ; FF ; CELL ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|combout                                                   ;
+;   7.089 ;   0.194 ; FF ; IC   ; 1      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|dataf                                                     ;
+;   7.176 ;   0.087 ; FR ; CELL ; 6      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|combout                                                   ;
+;   7.789 ;   0.613 ; RR ; IC   ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|datac                                                  ;
+;   8.173 ;   0.384 ; RF ; CELL ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|combout                                                ;
+;   8.393 ;   0.220 ; FF ; IC   ; 3      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|datad                                                        ;
+;   9.036 ;   0.643 ; FR ; CELL ; 1      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|cout                                                         ;
+;   9.036 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cin                                                          ;
+;   9.036 ;   0.000 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cout                                                         ;
+;   9.036 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|cin                                                          ;
+;   9.352 ;   0.316 ; RF ; CELL ; 1      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|sumout                                                       ;
+;   9.567 ;   0.215 ; FF ; IC   ; 1      ; LABCELL_X63_Y55_N30  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~3|dataf                                    ;
+;   9.642 ;   0.075 ; FF ; CELL ; 1      ; LABCELL_X63_Y55_N30  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~3|combout                                  ;
+;   9.642 ;   0.000 ; FF ; IC   ; 1      ; FF_X63_Y55_N32       ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[4]|d                                       ;
+;   9.905 ;   0.263 ; FF ; CELL ; 1      ; FF_X63_Y55_N32       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                                  ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; Total    ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                               ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; 7.273    ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                                       ;
+; 10.963   ; 3.690   ;    ;      ;        ;                   ; clock path                                                                                            ;
+;   7.273  ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                        ;
+;   7.273  ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                                ;
+;   7.273  ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                        ;
+;   8.022  ;   0.749 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                        ;
+;   8.369  ;   0.347 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                             ;
+;   8.616  ;   0.247 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                            ;
+;   10.448 ;   1.832 ; RR ; IC   ; 1      ; FF_X63_Y55_N32    ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[4]|clk                                     ;
+;   10.877 ;   0.429 ; RR ; CELL ; 1      ; FF_X63_Y55_N32    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ;
+;   10.963 ;   0.086 ;    ;      ;        ;                   ; clock pessimism removed                                                                               ;
+; 10.913   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                                     ;
+; 10.913   ; 0.000   ;    ; uTsu ; 1      ; FF_X63_Y55_N32    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[4] ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.
+
+
+Path #5: Setup slack is 1.031
+===============================================================================
++----------------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                               ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; To Node            ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[7] ;
+; Launch Clock       ; clk125                                                                                                ;
+; Latch Clock        ; clk125                                                                                                ;
+; Data Arrival Time  ; 9.882                                                                                                 ;
+; Data Required Time ; 10.913                                                                                                ;
+; Slack              ; 1.031                                                                                                 ;
++--------------------+-------------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.090 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 6.102  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 7     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.285       ; 60         ; 0.000 ; 1.919 ;
+;    Cell                ;        ; 3     ; 1.495       ; 40         ; 0.265 ; 0.757 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 15    ; 2.748       ; 45         ; 0.000 ; 0.645 ;
+;    Cell                ;        ; 16    ; 3.354       ; 55         ; 0.000 ; 0.643 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 2.179       ; 60         ; 0.000 ; 1.832 ;
+;    Cell                ;        ; 3     ; 1.425       ; 40         ; 0.247 ; 0.749 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                                     ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location             ; Element                                                                                               ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                      ; launch edge time                                                                                      ;
+; 3.780   ; 3.780   ;    ;      ;        ;                      ; clock path                                                                                            ;
+;   0.000 ;   0.000 ;    ;      ;        ;                      ; source latency                                                                                        ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20             ; clk125                                                                                                ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|i                                                                                        ;
+;   0.757 ;   0.757 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18    ; clk125~input|o                                                                                        ;
+;   1.123 ;   0.366 ; RR ; IC   ; 1      ; CLKCTRL_G6           ; clk125~inputCLKENA0|inclk                                                                             ;
+;   1.388 ;   0.265 ; RR ; CELL ; 6761   ; CLKCTRL_G6           ; clk125~inputCLKENA0|outclk                                                                            ;
+;   3.307 ;   1.919 ; RR ; IC   ; 1      ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|clk                                         ;
+;   3.780 ;   0.473 ; RR ; CELL ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+; 9.882   ; 6.102   ;    ;      ;        ;                      ; data path                                                                                             ;
+;   3.780 ;   0.000 ;    ; uTco ; 1      ; FF_X63_Y56_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]     ;
+;   3.780 ;   0.000 ; RR ; CELL ; 14     ; FF_X63_Y56_N26       ; u_dut|u_frontend_trigger_engine|geom_stage_size_random[7]|q                                           ;
+;   4.348 ;   0.568 ; RR ; IC   ; 1      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|datac                                           ;
+;   4.770 ;   0.422 ; RF ; CELL ; 5      ; MLABCELL_X64_Y56_N57 ; u_dut|u_frontend_trigger_engine|random_size_clamped~2|combout                                         ;
+;   5.233 ;   0.463 ; FF ; IC   ; 3      ; MLABCELL_X62_Y56_N36 ; u_dut|u_frontend_trigger_engine|Add13~13|datad                                                        ;
+;   5.876 ;   0.643 ; FR ; CELL ; 1      ; MLABCELL_X62_Y56_N36 ; u_dut|u_frontend_trigger_engine|Add13~13|cout                                                         ;
+;   5.876 ;   0.000 ; RR ; IC   ; 2      ; MLABCELL_X62_Y56_N39 ; u_dut|u_frontend_trigger_engine|Add13~9|cin                                                           ;
+;   5.876 ;   0.000 ; RR ; CELL ; 1      ; MLABCELL_X62_Y56_N39 ; u_dut|u_frontend_trigger_engine|Add13~9|cout                                                          ;
+;   5.876 ;   0.000 ; RR ; IC   ; 2      ; MLABCELL_X62_Y56_N42 ; u_dut|u_frontend_trigger_engine|Add13~5|cin                                                           ;
+;   6.194 ;   0.318 ; RF ; CELL ; 6      ; MLABCELL_X62_Y56_N42 ; u_dut|u_frontend_trigger_engine|Add13~5|sumout                                                        ;
+;   6.532 ;   0.338 ; FF ; IC   ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|datad                                                     ;
+;   6.842 ;   0.310 ; FR ; CELL ; 1      ; MLABCELL_X62_Y56_N12 ; u_dut|u_frontend_trigger_engine|LessThan5~8|combout                                                   ;
+;   7.061 ;   0.219 ; RR ; IC   ; 1      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|dataf                                                     ;
+;   7.150 ;   0.089 ; RF ; CELL ; 6      ; MLABCELL_X62_Y56_N6  ; u_dut|u_frontend_trigger_engine|LessThan5~7|combout                                                   ;
+;   7.795 ;   0.645 ; FF ; IC   ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|datac                                                  ;
+;   8.174 ;   0.379 ; FF ; CELL ; 1      ; LABCELL_X63_Y55_N45  ; u_dut|u_frontend_trigger_engine|start_value~14|combout                                                ;
+;   8.394 ;   0.220 ; FF ; IC   ; 3      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|datad                                                        ;
+;   9.037 ;   0.643 ; FR ; CELL ; 1      ; LABCELL_X63_Y55_N6   ; u_dut|u_frontend_trigger_engine|Add15~21|cout                                                         ;
+;   9.037 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cin                                                          ;
+;   9.037 ;   0.000 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N9   ; u_dut|u_frontend_trigger_engine|Add15~17|cout                                                         ;
+;   9.037 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|cin                                                          ;
+;   9.079 ;   0.042 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N12  ; u_dut|u_frontend_trigger_engine|Add15~13|cout                                                         ;
+;   9.079 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N15  ; u_dut|u_frontend_trigger_engine|Add15~9|cin                                                           ;
+;   9.079 ;   0.000 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N15  ; u_dut|u_frontend_trigger_engine|Add15~9|cout                                                          ;
+;   9.079 ;   0.000 ; RR ; IC   ; 2      ; LABCELL_X63_Y55_N18  ; u_dut|u_frontend_trigger_engine|Add15~5|cin                                                           ;
+;   9.121 ;   0.042 ; RR ; CELL ; 1      ; LABCELL_X63_Y55_N18  ; u_dut|u_frontend_trigger_engine|Add15~5|cout                                                          ;
+;   9.121 ;   0.000 ; RR ; IC   ; 1      ; LABCELL_X63_Y55_N21  ; u_dut|u_frontend_trigger_engine|Add15~1|cin                                                           ;
+;   9.249 ;   0.128 ; RF ; CELL ; 1      ; LABCELL_X63_Y55_N21  ; u_dut|u_frontend_trigger_engine|Add15~1|sumout                                                        ;
+;   9.544 ;   0.295 ; FF ; IC   ; 1      ; LABCELL_X63_Y55_N24  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~0|dataf                                    ;
+;   9.619 ;   0.075 ; FF ; CELL ; 1      ; LABCELL_X63_Y55_N24  ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high~0|combout                                  ;
+;   9.619 ;   0.000 ; FF ; IC   ; 1      ; FF_X63_Y55_N26       ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[7]|d                                       ;
+;   9.882 ;   0.263 ; FF ; CELL ; 1      ; FF_X63_Y55_N26       ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[7] ;
++---------+---------+----+------+--------+----------------------+-------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                                  ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; Total    ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                               ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+; 7.273    ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                                       ;
+; 10.963   ; 3.690   ;    ;      ;        ;                   ; clock path                                                                                            ;
+;   7.273  ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                        ;
+;   7.273  ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                                ;
+;   7.273  ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                        ;
+;   8.022  ;   0.749 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                        ;
+;   8.369  ;   0.347 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                             ;
+;   8.616  ;   0.247 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                            ;
+;   10.448 ;   1.832 ; RR ; IC   ; 1      ; FF_X63_Y55_N26    ; u_dut|u_frontend_trigger_engine|launch_stage_cluster0_high[7]|clk                                     ;
+;   10.877 ;   0.429 ; RR ; CELL ; 1      ; FF_X63_Y55_N26    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[7] ;
+;   10.963 ;   0.086 ;    ;      ;        ;                   ; clock pessimism removed                                                                               ;
+; 10.913   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                                     ;
+; 10.913   ; 0.000   ;    ; uTsu ; 1      ; FF_X63_Y55_N26    ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[7] ;
++----------+---------+----+------+--------+-------------------+-------------------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.

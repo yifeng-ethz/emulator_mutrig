@@ -1,13 +1,65 @@
-# Signoff — emulator_mutrig
+# Signoff - emulator_mutrig
 
-**DUT family:** `emulator_mutrig` &nbsp; **Date:** `2026-04-18` &nbsp;
-**Release under check:** `26.1.9.0418`
+**DUT family:** `emulator_mutrig` &nbsp; **Date:** `2026-05-11` &nbsp;
+**Release under check:** `26.3.0.0506`
 
-This is the master signoff dashboard for the compact MuTRiG refresh. Detailed DV
-evidence lives in [../tb/DV_REPORT.md](../tb/DV_REPORT.md); detailed standalone
-synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
+This page records the current standalone Quartus timing refresh for the latest
+committed IP head. Detailed DV evidence lives in
+[../tb/DV_REPORT.md](../tb/DV_REPORT.md); older compact-bank synthesis history
+lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 
-## Health
+## Current Standalone STA Verdict
+
+| status | field | value |
+|:---:|---|---|
+| PASS | packaged_version | `26.3.0.0506` from `emulator_mutrig_hw.tcl` and `rtl/emulator_mutrig.sv` |
+| PASS | git_head_under_test | `8152797ee106eb6d74a8f6a437e62491c057e31c` |
+| PASS | standalone_project | `syn/quartus/emulator_mutrig_syn.qpf`, revision `emulator_mutrig_syn`, top `emulator_mutrig_syn_top` |
+| PASS | compile | `quartus_sh --flow compile emulator_mutrig_syn -c emulator_mutrig_syn` completed with `0 errors, 145 warnings` |
+| PASS | target_device | `5AGXBA7D4F31C5` |
+| PASS | signoff_clock | `clk125` constrained to `7.273 ns`, `137.5 MHz = 1.1 x 125 MHz` |
+| PASS | worst_setup_slack | `+1.003 ns` at `Slow 1100mV 85C` |
+| PASS | setup_corners | all four available Quartus TimeQuest operating conditions reported setup slack >= `0 ns` |
+| PASS | static_screen | Questa static screen: Lint `Error (0)`, CDC `Violations (0)`, RDC `Violation (0)` |
+
+The requested `900mV` / `100C` corner names are not available for the checked
+Arria V `5AGXBA7D4F31C5` Quartus 18.1 device model. The operating-condition
+probe reports exactly these four available corners:
+
+- `5_H4_slow_1100mv_85c`
+- `5_H4_slow_1100mv_0c`
+- `MIN_fast_1100mv_85c`
+- `MIN_fast_1100mv_0c`
+
+Evidence:
+
+- Compile summary: `syn/quartus/output_files/emulator_mutrig_syn.flow.rpt`, flow timestamp `Mon May 11 10:54:25 2026`
+- Fitter summary: `syn/quartus/output_files/emulator_mutrig_syn.fit.summary`
+- STA summary: `syn/quartus/output_files/emulator_mutrig_syn.sta.summary`
+- Operating-condition log: `syn/quartus/sta_reports/emulator_mutrig_syn_20260511_operating_conditions.log`
+- Four-corner setup log: `syn/quartus/sta_reports/emulator_mutrig_syn_20260511_4corner_setup.log`, report timestamp `Mon May 11 11:00:14 2026`
+- Four-corner setup summary: `syn/quartus/sta_reports/emulator_mutrig_syn_20260511_4corner_setup_summary.txt`
+- Static-screen transcript: `.questa_static_screen/emulator_mutrig_20260511_lint_cdc_rdc/questa_static_screen.log`
+
+## Current STA Corners
+
+| status | corner | worst setup slack | worst path | data delay | logic levels | report |
+|:---:|---|---:|---|---:|---:|---|
+| PASS | Slow 1100mV 85C | `+1.003 ns` | `geom_stage_size_random[7]` -> `launch_stage_cluster0_high[6]` | `6.134 ns` | `7` | `syn/quartus/sta_reports/emulator_mutrig_syn_20260511_slow_1100mv_85c_setup.rpt` |
+| PASS | Slow 1100mV 0C | `+1.053 ns` | `geom_stage_size_random[7]` -> `launch_stage_cluster1_high[6]` | `6.102 ns` | `6` | `syn/quartus/sta_reports/emulator_mutrig_syn_20260511_slow_1100mv_0c_setup.rpt` |
+| PASS | Fast 1100mV 85C | `+3.390 ns` | `pending_channel[7]` -> `ticket_mem[4].ts_a[8]` | `3.792 ns` | `3` | `syn/quartus/sta_reports/emulator_mutrig_syn_20260511_fast_1100mv_85c_setup.rpt` |
+| PASS | Fast 1100mV 0C | `+3.791 ns` | `pending_channel[7]` -> `ticket_mem[4].ts_a[8]` | `3.396 ns` | `3` | `syn/quartus/sta_reports/emulator_mutrig_syn_20260511_fast_1100mv_0c_setup.rpt` |
+
+Worst overall setup path:
+
+- From: `emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]`
+- To: `emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6]`
+- Corner: `Slow 1100mV 85C`
+- Slack: `+1.003 ns`
+- Data delay: `6.134 ns`
+- Logic depth: `7`
+
+## Historical 26.1.9 Compact-Bank Health
 
 | status | field | value |
 |:---:|---|---|
@@ -24,7 +76,7 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 | PARTIAL | cross_mode_dv | continuous-frame evidence not refreshed |
 | PARTIAL | gate_level | not rerun in this refresh |
 
-## Verification
+## Historical Verification
 
 | status | area | result | source |
 |:---:|---|---|---|
@@ -35,7 +87,7 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 | PASS | Poisson timestamp study | short-mode corrected frame-marker sweep from `0%` to `100%` raw offered load captured | [../tb/poisson_delay/results/POISSON_DELAY_REPORT.md](../tb/poisson_delay/results/POISSON_DELAY_REPORT.md) |
 | PARTIAL | code coverage | isolated merged UCDB refreshed, multi-mode coverage still open | [../tb/DV_COV.md](../tb/DV_COV.md) |
 
-## Synthesis
+## Historical Synthesis
 
 | status | item | value |
 |:---:|---|---|
@@ -48,7 +100,7 @@ synthesis evidence lives in [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md).
 | PASS | hold timing | worst hold slack `+0.142 ns` or better |
 | PARTIAL | harness constraints | standalone wrapper leaves many non-core I/O paths unconstrained |
 
-## Queueing Characterization
+## Historical Queueing Characterization
 
 Supplemental short-mode Poisson characterization shows:
 
@@ -67,7 +119,7 @@ Supplemental short-mode Poisson characterization shows:
 - the high-load distribution does not become a flat `0 .. 1820` cycle box; the
   surviving-hit population is biased toward newer visible hits near saturation
 
-## Fixes In Scope
+## Historical Fixes In Scope
 
 | status | class | summary |
 |:---:|---|---|
@@ -92,7 +144,7 @@ Supplemental short-mode Poisson characterization shows:
 - [RTL_PLAN.md](RTL_PLAN.md)
 - [rtl_note.md](rtl_note.md)
 
-## Verdict
+## Historical Verdict
 
 Overall signoff for `26.1.9.0418` is `PASS` for the active compact-bank scope:
 

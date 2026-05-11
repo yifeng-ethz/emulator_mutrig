@@ -1,0 +1,504 @@
+----------------
+; Command Info ;
+----------------
+Report Timing: Found 5 setup paths (0 violated).  Worst case slack is 3.390
+
+Tcl Command:
+    report_timing -setup -file sta_reports/emulator_mutrig_syn_20260511_fast_1100mv_85c_setup.rpt -from_clock [get_clocks {clk125}] -to_clock [get_clocks {clk125}] -npaths 5 -detail full_path
+
+Options:
+    -from_clock [get_clocks {clk125}]
+    -to_clock [get_clocks {clk125}]
+    -setup
+    -npaths 5
+    -detail full_path
+    -file {sta_reports/emulator_mutrig_syn_20260511_fast_1100mv_85c_setup.rpt}
+
+Delay Model:
+    Fast 1100mV 85C Model
+
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Summary of Paths                                                                                                                                                                                                                                                             ;
++-------+---------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+--------------+-------------+--------------+------------+------------+
+; Slack ; From Node                                                                                   ; To Node                                                                                          ; Launch Clock ; Latch Clock ; Relationship ; Clock Skew ; Data Delay ;
++-------+---------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+--------------+-------------+--------------+------------+------------+
+; 3.390 ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8]    ; clk125       ; clk125      ; 7.273        ; -0.041     ; 3.792      ;
+; 3.395 ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8]    ; clk125       ; clk125      ; 7.273        ; -0.045     ; 3.783      ;
+; 3.429 ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ch_high[2] ; clk125       ; clk125      ; 7.273        ; -0.047     ; 3.747      ;
+; 3.454 ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|sig_offer_lane_q[2] ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8]    ; clk125       ; clk125      ; 7.273        ; -0.045     ; 3.724      ;
+; 3.459 ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|sig_offer_lane_q[2] ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8]    ; clk125       ; clk125      ; 7.273        ; -0.049     ; 3.715      ;
++-------+---------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------+--------------+-------------+--------------+------------+------------+
+
+Path #1: Setup slack is 3.390
+===============================================================================
++--------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                       ;
++--------------------+-----------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                         ;
++--------------------+-----------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]      ;
+; To Node            ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8] ;
+; Launch Clock       ; clk125                                                                                        ;
+; Latch Clock        ; clk125                                                                                        ;
+; Data Arrival Time  ; 5.889                                                                                         ;
+; Data Required Time ; 9.279                                                                                         ;
+; Slack              ; 3.390                                                                                         ;
++--------------------+-----------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.041 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 3.792  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 3     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.367       ; 65         ; 0.000 ; 1.168 ;
+;    Cell                ;        ; 3     ; 0.730       ; 35         ; 0.142 ; 0.352 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 4     ; 3.005       ; 79         ; 0.149 ; 1.226 ;
+;    Cell                ;        ; 5     ; 0.787       ; 21         ; 0.000 ; 0.273 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.320       ; 65         ; 0.000 ; 1.125 ;
+;    Cell                ;        ; 3     ; 0.703       ; 35         ; 0.134 ; 0.343 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                            ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location            ; Element                                                                                       ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                     ; launch edge time                                                                              ;
+; 2.097   ; 2.097   ;    ;      ;        ;                     ; clock path                                                                                    ;
+;   0.000 ;   0.000 ;    ;      ;        ;                     ; source latency                                                                                ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20            ; clk125                                                                                        ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|i                                                                                ;
+;   0.352 ;   0.352 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|o                                                                                ;
+;   0.551 ;   0.199 ; RR ; IC   ; 1      ; CLKCTRL_G6          ; clk125~inputCLKENA0|inclk                                                                     ;
+;   0.693 ;   0.142 ; RR ; CELL ; 6761   ; CLKCTRL_G6          ; clk125~inputCLKENA0|outclk                                                                    ;
+;   1.861 ;   1.168 ; RR ; IC   ; 1      ; FF_X59_Y57_N26      ; u_dut|u_frontend_bkg_generator|pending_channel[7]|clk                                         ;
+;   2.097 ;   0.236 ; RR ; CELL ; 1      ; FF_X59_Y57_N26      ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]      ;
+; 5.889   ; 3.792   ;    ;      ;        ;                     ; data path                                                                                     ;
+;   2.097 ;   0.000 ;    ; uTco ; 1      ; FF_X59_Y57_N26      ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]      ;
+;   2.097 ;   0.000 ; FF ; CELL ; 9      ; FF_X59_Y57_N26      ; u_dut|u_frontend_bkg_generator|pending_channel[7]|q                                           ;
+;   2.246 ;   0.149 ; FF ; IC   ; 1      ; LABCELL_X59_Y57_N0  ; u_dut|u_frontend_ticket_distributor|Decoder1~1|datac                                          ;
+;   2.432 ;   0.186 ; FF ; CELL ; 4      ; LABCELL_X59_Y57_N0  ; u_dut|u_frontend_ticket_distributor|Decoder1~1|combout                                        ;
+;   3.658 ;   1.226 ; FF ; IC   ; 1      ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|dataa                                          ;
+;   3.864 ;   0.206 ; FF ; CELL ; 40     ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|combout                                        ;
+;   4.695 ;   0.831 ; FF ; IC   ; 1      ; MLABCELL_X38_Y49_N3 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ts_a[8]~8|datae                         ;
+;   4.817 ;   0.122 ; FF ; CELL ; 8      ; MLABCELL_X38_Y49_N3 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ts_a[8]~8|combout                       ;
+;   5.616 ;   0.799 ; FF ; IC   ; 1      ; FF_X37_Y51_N41      ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8]|asdata                                 ;
+;   5.889 ;   0.273 ; FF ; CELL ; 1      ; FF_X37_Y51_N41      ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8] ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                         ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                       ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+; 7.273   ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                               ;
+; 9.329   ; 2.056   ;    ;      ;        ;                   ; clock path                                                                                    ;
+;   7.273 ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                ;
+;   7.273 ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                        ;
+;   7.273 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                ;
+;   7.616 ;   0.343 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                ;
+;   7.811 ;   0.195 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                     ;
+;   7.945 ;   0.134 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                    ;
+;   9.070 ;   1.125 ; RR ; IC   ; 1      ; FF_X37_Y51_N41    ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8]|clk                                    ;
+;   9.296 ;   0.226 ; RR ; CELL ; 1      ; FF_X37_Y51_N41    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8] ;
+;   9.329 ;   0.033 ;    ;      ;        ;                   ; clock pessimism removed                                                                       ;
+; 9.279   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                             ;
+; 9.279   ; 0.000   ;    ; uTsu ; 1      ; FF_X37_Y51_N41    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8] ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.
+
+
+Path #2: Setup slack is 3.395
+===============================================================================
++--------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                       ;
++--------------------+-----------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                         ;
++--------------------+-----------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]      ;
+; To Node            ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8] ;
+; Launch Clock       ; clk125                                                                                        ;
+; Latch Clock        ; clk125                                                                                        ;
+; Data Arrival Time  ; 5.880                                                                                         ;
+; Data Required Time ; 9.275                                                                                         ;
+; Slack              ; 3.395                                                                                         ;
++--------------------+-----------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.045 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 3.783  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 3     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.367       ; 65         ; 0.000 ; 1.168 ;
+;    Cell                ;        ; 3     ; 0.730       ; 35         ; 0.142 ; 0.352 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 4     ; 2.997       ; 79         ; 0.149 ; 1.226 ;
+;    Cell                ;        ; 5     ; 0.786       ; 21         ; 0.000 ; 0.272 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.320       ; 65         ; 0.000 ; 1.125 ;
+;    Cell                ;        ; 3     ; 0.699       ; 35         ; 0.134 ; 0.343 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                            ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location            ; Element                                                                                       ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                     ; launch edge time                                                                              ;
+; 2.097   ; 2.097   ;    ;      ;        ;                     ; clock path                                                                                    ;
+;   0.000 ;   0.000 ;    ;      ;        ;                     ; source latency                                                                                ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20            ; clk125                                                                                        ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|i                                                                                ;
+;   0.352 ;   0.352 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|o                                                                                ;
+;   0.551 ;   0.199 ; RR ; IC   ; 1      ; CLKCTRL_G6          ; clk125~inputCLKENA0|inclk                                                                     ;
+;   0.693 ;   0.142 ; RR ; CELL ; 6761   ; CLKCTRL_G6          ; clk125~inputCLKENA0|outclk                                                                    ;
+;   1.861 ;   1.168 ; RR ; IC   ; 1      ; FF_X59_Y57_N26      ; u_dut|u_frontend_bkg_generator|pending_channel[7]|clk                                         ;
+;   2.097 ;   0.236 ; RR ; CELL ; 1      ; FF_X59_Y57_N26      ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]      ;
+; 5.880   ; 3.783   ;    ;      ;        ;                     ; data path                                                                                     ;
+;   2.097 ;   0.000 ;    ; uTco ; 1      ; FF_X59_Y57_N26      ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]      ;
+;   2.097 ;   0.000 ; FF ; CELL ; 9      ; FF_X59_Y57_N26      ; u_dut|u_frontend_bkg_generator|pending_channel[7]|q                                           ;
+;   2.246 ;   0.149 ; FF ; IC   ; 1      ; LABCELL_X59_Y57_N0  ; u_dut|u_frontend_ticket_distributor|Decoder1~1|datac                                          ;
+;   2.432 ;   0.186 ; FF ; CELL ; 4      ; LABCELL_X59_Y57_N0  ; u_dut|u_frontend_ticket_distributor|Decoder1~1|combout                                        ;
+;   3.658 ;   1.226 ; FF ; IC   ; 1      ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|dataa                                          ;
+;   3.864 ;   0.206 ; FF ; CELL ; 40     ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|combout                                        ;
+;   4.695 ;   0.831 ; FF ; IC   ; 1      ; MLABCELL_X38_Y49_N3 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ts_a[8]~8|datae                         ;
+;   4.817 ;   0.122 ; FF ; CELL ; 8      ; MLABCELL_X38_Y49_N3 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ts_a[8]~8|combout                       ;
+;   5.608 ;   0.791 ; FF ; IC   ; 1      ; FF_X37_Y51_N26      ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8]|asdata                                 ;
+;   5.880 ;   0.272 ; FF ; CELL ; 1      ; FF_X37_Y51_N26      ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8] ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                         ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                       ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+; 7.273   ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                               ;
+; 9.325   ; 2.052   ;    ;      ;        ;                   ; clock path                                                                                    ;
+;   7.273 ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                ;
+;   7.273 ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                        ;
+;   7.273 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                ;
+;   7.616 ;   0.343 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                ;
+;   7.811 ;   0.195 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                     ;
+;   7.945 ;   0.134 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                    ;
+;   9.070 ;   1.125 ; RR ; IC   ; 1      ; FF_X37_Y51_N26    ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8]|clk                                    ;
+;   9.292 ;   0.222 ; RR ; CELL ; 1      ; FF_X37_Y51_N26    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8] ;
+;   9.325 ;   0.033 ;    ;      ;        ;                   ; clock pessimism removed                                                                       ;
+; 9.275   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                             ;
+; 9.275   ; 0.000   ;    ; uTsu ; 1      ; FF_X37_Y51_N26    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8] ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.
+
+
+Path #3: Setup slack is 3.429
+===============================================================================
++-----------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                          ;
++--------------------+--------------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                            ;
++--------------------+--------------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]         ;
+; To Node            ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ch_high[2] ;
+; Launch Clock       ; clk125                                                                                           ;
+; Latch Clock        ; clk125                                                                                           ;
+; Data Arrival Time  ; 5.844                                                                                            ;
+; Data Required Time ; 9.273                                                                                            ;
+; Slack              ; 3.429                                                                                            ;
++--------------------+--------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.047 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 3.747  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 3     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.367       ; 65         ; 0.000 ; 1.168 ;
+;    Cell                ;        ; 3     ; 0.730       ; 35         ; 0.142 ; 0.352 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 4     ; 2.898       ; 77         ; 0.149 ; 1.226 ;
+;    Cell                ;        ; 5     ; 0.849       ; 23         ; 0.000 ; 0.252 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.316       ; 65         ; 0.000 ; 1.121 ;
+;    Cell                ;        ; 3     ; 0.701       ; 35         ; 0.134 ; 0.343 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                               ;
++---------+---------+----+------+--------+---------------------+--------------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location            ; Element                                                                                          ;
++---------+---------+----+------+--------+---------------------+--------------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                     ; launch edge time                                                                                 ;
+; 2.097   ; 2.097   ;    ;      ;        ;                     ; clock path                                                                                       ;
+;   0.000 ;   0.000 ;    ;      ;        ;                     ; source latency                                                                                   ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20            ; clk125                                                                                           ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|i                                                                                   ;
+;   0.352 ;   0.352 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|o                                                                                   ;
+;   0.551 ;   0.199 ; RR ; IC   ; 1      ; CLKCTRL_G6          ; clk125~inputCLKENA0|inclk                                                                        ;
+;   0.693 ;   0.142 ; RR ; CELL ; 6761   ; CLKCTRL_G6          ; clk125~inputCLKENA0|outclk                                                                       ;
+;   1.861 ;   1.168 ; RR ; IC   ; 1      ; FF_X59_Y57_N26      ; u_dut|u_frontend_bkg_generator|pending_channel[7]|clk                                            ;
+;   2.097 ;   0.236 ; RR ; CELL ; 1      ; FF_X59_Y57_N26      ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]         ;
+; 5.844   ; 3.747   ;    ;      ;        ;                     ; data path                                                                                        ;
+;   2.097 ;   0.000 ;    ; uTco ; 1      ; FF_X59_Y57_N26      ; emulator_mutrig:u_dut|frontend_bkg_generator:u_frontend_bkg_generator|pending_channel[7]         ;
+;   2.097 ;   0.000 ; FF ; CELL ; 9      ; FF_X59_Y57_N26      ; u_dut|u_frontend_bkg_generator|pending_channel[7]|q                                              ;
+;   2.246 ;   0.149 ; FF ; IC   ; 1      ; LABCELL_X59_Y57_N0  ; u_dut|u_frontend_ticket_distributor|Decoder1~1|datac                                             ;
+;   2.432 ;   0.186 ; FF ; CELL ; 4      ; LABCELL_X59_Y57_N0  ; u_dut|u_frontend_ticket_distributor|Decoder1~1|combout                                           ;
+;   3.658 ;   1.226 ; FF ; IC   ; 1      ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|dataa                                             ;
+;   3.864 ;   0.206 ; FF ; CELL ; 40     ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|combout                                           ;
+;   4.561 ;   0.697 ; FF ; IC   ; 1      ; LABCELL_X39_Y50_N12 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ch_high[2]~0|datab                         ;
+;   4.766 ;   0.205 ; FF ; CELL ; 8      ; LABCELL_X39_Y50_N12 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ch_high[2]~0|combout                       ;
+;   5.592 ;   0.826 ; FF ; IC   ; 1      ; FF_X41_Y51_N26      ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[4].ch_high[2]|asdata                                 ;
+;   5.844 ;   0.252 ; FF ; CELL ; 1      ; FF_X41_Y51_N26      ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ch_high[2] ;
++---------+---------+----+------+--------+---------------------+--------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                            ;
++---------+---------+----+------+--------+-------------------+--------------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                          ;
++---------+---------+----+------+--------+-------------------+--------------------------------------------------------------------------------------------------+
+; 7.273   ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                                  ;
+; 9.323   ; 2.050   ;    ;      ;        ;                   ; clock path                                                                                       ;
+;   7.273 ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                   ;
+;   7.273 ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                           ;
+;   7.273 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                   ;
+;   7.616 ;   0.343 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                   ;
+;   7.811 ;   0.195 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                        ;
+;   7.945 ;   0.134 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                       ;
+;   9.066 ;   1.121 ; RR ; IC   ; 1      ; FF_X41_Y51_N26    ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[4].ch_high[2]|clk                                    ;
+;   9.290 ;   0.224 ; RR ; CELL ; 1      ; FF_X41_Y51_N26    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ch_high[2] ;
+;   9.323 ;   0.033 ;    ;      ;        ;                   ; clock pessimism removed                                                                          ;
+; 9.273   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                                ;
+; 9.273   ; 0.000   ;    ; uTsu ; 1      ; FF_X41_Y51_N26    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ch_high[2] ;
++---------+---------+----+------+--------+-------------------+--------------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.
+
+
+Path #4: Setup slack is 3.454
+===============================================================================
++--------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                       ;
++--------------------+-----------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                         ;
++--------------------+-----------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|sig_offer_lane_q[2]   ;
+; To Node            ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8] ;
+; Launch Clock       ; clk125                                                                                        ;
+; Latch Clock        ; clk125                                                                                        ;
+; Data Arrival Time  ; 5.825                                                                                         ;
+; Data Required Time ; 9.279                                                                                         ;
+; Slack              ; 3.454                                                                                         ;
++--------------------+-----------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.045 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 3.724  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 3     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.367       ; 65         ; 0.000 ; 1.168 ;
+;    Cell                ;        ; 3     ; 0.734       ; 35         ; 0.142 ; 0.352 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 4     ; 2.987       ; 80         ; 0.157 ; 1.200 ;
+;    Cell                ;        ; 5     ; 0.737       ; 20         ; 0.000 ; 0.273 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.320       ; 65         ; 0.000 ; 1.125 ;
+;    Cell                ;        ; 3     ; 0.703       ; 35         ; 0.134 ; 0.343 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                            ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location            ; Element                                                                                       ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                     ; launch edge time                                                                              ;
+; 2.101   ; 2.101   ;    ;      ;        ;                     ; clock path                                                                                    ;
+;   0.000 ;   0.000 ;    ;      ;        ;                     ; source latency                                                                                ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20            ; clk125                                                                                        ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|i                                                                                ;
+;   0.352 ;   0.352 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|o                                                                                ;
+;   0.551 ;   0.199 ; RR ; IC   ; 1      ; CLKCTRL_G6          ; clk125~inputCLKENA0|inclk                                                                     ;
+;   0.693 ;   0.142 ; RR ; CELL ; 6761   ; CLKCTRL_G6          ; clk125~inputCLKENA0|outclk                                                                    ;
+;   1.861 ;   1.168 ; RR ; IC   ; 1      ; FF_X59_Y57_N14      ; u_dut|u_frontend_trigger_engine|sig_offer_lane_q[2]|clk                                       ;
+;   2.101 ;   0.240 ; RR ; CELL ; 1      ; FF_X59_Y57_N14      ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|sig_offer_lane_q[2]   ;
+; 5.825   ; 3.724   ;    ;      ;        ;                     ; data path                                                                                     ;
+;   2.101 ;   0.000 ;    ; uTco ; 1      ; FF_X59_Y57_N14      ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|sig_offer_lane_q[2]   ;
+;   2.101 ;   0.000 ; RR ; CELL ; 17     ; FF_X59_Y57_N14      ; u_dut|u_frontend_trigger_engine|sig_offer_lane_q[2]|q                                         ;
+;   2.258 ;   0.157 ; RR ; IC   ; 1      ; LABCELL_X59_Y57_N48 ; u_dut|u_frontend_ticket_distributor|Equal0~0|datab                                            ;
+;   2.467 ;   0.209 ; RF ; CELL ; 9      ; LABCELL_X59_Y57_N48 ; u_dut|u_frontend_ticket_distributor|Equal0~0|combout                                          ;
+;   3.667 ;   1.200 ; FF ; IC   ; 1      ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|datad                                          ;
+;   3.800 ;   0.133 ; FF ; CELL ; 40     ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|combout                                        ;
+;   4.631 ;   0.831 ; FF ; IC   ; 1      ; MLABCELL_X38_Y49_N3 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ts_a[8]~8|datae                         ;
+;   4.753 ;   0.122 ; FF ; CELL ; 8      ; MLABCELL_X38_Y49_N3 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ts_a[8]~8|combout                       ;
+;   5.552 ;   0.799 ; FF ; IC   ; 1      ; FF_X37_Y51_N41      ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8]|asdata                                 ;
+;   5.825 ;   0.273 ; FF ; CELL ; 1      ; FF_X37_Y51_N41      ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8] ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                         ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                       ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+; 7.273   ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                               ;
+; 9.329   ; 2.056   ;    ;      ;        ;                   ; clock path                                                                                    ;
+;   7.273 ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                ;
+;   7.273 ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                        ;
+;   7.273 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                ;
+;   7.616 ;   0.343 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                ;
+;   7.811 ;   0.195 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                     ;
+;   7.945 ;   0.134 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                    ;
+;   9.070 ;   1.125 ; RR ; IC   ; 1      ; FF_X37_Y51_N41    ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8]|clk                                    ;
+;   9.296 ;   0.226 ; RR ; CELL ; 1      ; FF_X37_Y51_N41    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8] ;
+;   9.329 ;   0.033 ;    ;      ;        ;                   ; clock pessimism removed                                                                       ;
+; 9.279   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                             ;
+; 9.279   ; 0.000   ;    ; uTsu ; 1      ; FF_X37_Y51_N41    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[4].ts_a[8] ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.
+
+
+Path #5: Setup slack is 3.459
+===============================================================================
++--------------------------------------------------------------------------------------------------------------------+
+; Path Summary                                                                                                       ;
++--------------------+-----------------------------------------------------------------------------------------------+
+; Property           ; Value                                                                                         ;
++--------------------+-----------------------------------------------------------------------------------------------+
+; From Node          ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|sig_offer_lane_q[2]   ;
+; To Node            ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8] ;
+; Launch Clock       ; clk125                                                                                        ;
+; Latch Clock        ; clk125                                                                                        ;
+; Data Arrival Time  ; 5.816                                                                                         ;
+; Data Required Time ; 9.275                                                                                         ;
+; Slack              ; 3.459                                                                                         ;
++--------------------+-----------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------+
+; Statistics                                                                         ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Property               ; Value  ; Count ; Total Delay ; % of Total ; Min   ; Max   ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+; Setup Relationship     ; 7.273  ;       ;             ;            ;       ;       ;
+; Clock Skew             ; -0.049 ;       ;             ;            ;       ;       ;
+; Data Delay             ; 3.715  ;       ;             ;            ;       ;       ;
+; Number of Logic Levels ;        ; 3     ;             ;            ;       ;       ;
+; Physical Delays        ;        ;       ;             ;            ;       ;       ;
+;  Arrival Path          ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.367       ; 65         ; 0.000 ; 1.168 ;
+;    Cell                ;        ; 3     ; 0.734       ; 35         ; 0.142 ; 0.352 ;
+;   Data                 ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 4     ; 2.979       ; 80         ; 0.157 ; 1.200 ;
+;    Cell                ;        ; 5     ; 0.736       ; 20         ; 0.000 ; 0.272 ;
+;    uTco                ;        ; 1     ; 0.000       ; 0          ; 0.000 ; 0.000 ;
+;  Required Path         ;        ;       ;             ;            ;       ;       ;
+;   Clock                ;        ;       ;             ;            ;       ;       ;
+;    IC                  ;        ; 3     ; 1.320       ; 65         ; 0.000 ; 1.125 ;
+;    Cell                ;        ; 3     ; 0.699       ; 35         ; 0.134 ; 0.343 ;
++------------------------+--------+-------+-------------+------------+-------+-------+
+Note: Negative delays are omitted from totals when calculating percentages
+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Arrival Path                                                                                                                                            ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location            ; Element                                                                                       ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+; 0.000   ; 0.000   ;    ;      ;        ;                     ; launch edge time                                                                              ;
+; 2.101   ; 2.101   ;    ;      ;        ;                     ; clock path                                                                                    ;
+;   0.000 ;   0.000 ;    ;      ;        ;                     ; source latency                                                                                ;
+;   0.000 ;   0.000 ;    ;      ; 1      ; PIN_AK20            ; clk125                                                                                        ;
+;   0.000 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|i                                                                                ;
+;   0.352 ;   0.352 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18   ; clk125~input|o                                                                                ;
+;   0.551 ;   0.199 ; RR ; IC   ; 1      ; CLKCTRL_G6          ; clk125~inputCLKENA0|inclk                                                                     ;
+;   0.693 ;   0.142 ; RR ; CELL ; 6761   ; CLKCTRL_G6          ; clk125~inputCLKENA0|outclk                                                                    ;
+;   1.861 ;   1.168 ; RR ; IC   ; 1      ; FF_X59_Y57_N14      ; u_dut|u_frontend_trigger_engine|sig_offer_lane_q[2]|clk                                       ;
+;   2.101 ;   0.240 ; RR ; CELL ; 1      ; FF_X59_Y57_N14      ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|sig_offer_lane_q[2]   ;
+; 5.816   ; 3.715   ;    ;      ;        ;                     ; data path                                                                                     ;
+;   2.101 ;   0.000 ;    ; uTco ; 1      ; FF_X59_Y57_N14      ; emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|sig_offer_lane_q[2]   ;
+;   2.101 ;   0.000 ; RR ; CELL ; 17     ; FF_X59_Y57_N14      ; u_dut|u_frontend_trigger_engine|sig_offer_lane_q[2]|q                                         ;
+;   2.258 ;   0.157 ; RR ; IC   ; 1      ; LABCELL_X59_Y57_N48 ; u_dut|u_frontend_ticket_distributor|Equal0~0|datab                                            ;
+;   2.467 ;   0.209 ; RF ; CELL ; 9      ; LABCELL_X59_Y57_N48 ; u_dut|u_frontend_ticket_distributor|Equal0~0|combout                                          ;
+;   3.667 ;   1.200 ; FF ; IC   ; 1      ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|datad                                          ;
+;   3.800 ;   0.133 ; FF ; CELL ; 40     ; LABCELL_X39_Y53_N42 ; u_dut|u_frontend_ticket_distributor|Decoder1~7|combout                                        ;
+;   4.631 ;   0.831 ; FF ; IC   ; 1      ; MLABCELL_X38_Y49_N3 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ts_a[8]~8|datae                         ;
+;   4.753 ;   0.122 ; FF ; CELL ; 8      ; MLABCELL_X38_Y49_N3 ; u_dut|u_frontend_ticket_distributor|fe_ticket_data[7].ts_a[8]~8|combout                       ;
+;   5.544 ;   0.791 ; FF ; IC   ; 1      ; FF_X37_Y51_N26      ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8]|asdata                                 ;
+;   5.816 ;   0.272 ; FF ; CELL ; 1      ; FF_X37_Y51_N26      ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8] ;
++---------+---------+----+------+--------+---------------------+-----------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Data Required Path                                                                                                                                         ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+; Total   ; Incr    ; RF ; Type ; Fanout ; Location          ; Element                                                                                       ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+; 7.273   ; 7.273   ;    ;      ;        ;                   ; latch edge time                                                                               ;
+; 9.325   ; 2.052   ;    ;      ;        ;                   ; clock path                                                                                    ;
+;   7.273 ;   0.000 ;    ;      ;        ;                   ; source latency                                                                                ;
+;   7.273 ;   0.000 ;    ;      ; 1      ; PIN_AK20          ; clk125                                                                                        ;
+;   7.273 ;   0.000 ; RR ; IC   ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|i                                                                                ;
+;   7.616 ;   0.343 ; RR ; CELL ; 1      ; IOIBUF_X56_Y0_N18 ; clk125~input|o                                                                                ;
+;   7.811 ;   0.195 ; RR ; IC   ; 1      ; CLKCTRL_G6        ; clk125~inputCLKENA0|inclk                                                                     ;
+;   7.945 ;   0.134 ; RR ; CELL ; 6761   ; CLKCTRL_G6        ; clk125~inputCLKENA0|outclk                                                                    ;
+;   9.070 ;   1.125 ; RR ; IC   ; 1      ; FF_X37_Y51_N26    ; u_dut|lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8]|clk                                    ;
+;   9.292 ;   0.222 ; RR ; CELL ; 1      ; FF_X37_Y51_N26    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8] ;
+;   9.325 ;   0.033 ;    ;      ;        ;                   ; clock pessimism removed                                                                       ;
+; 9.275   ; -0.050  ;    ;      ;        ;                   ; clock uncertainty                                                                             ;
+; 9.275   ; 0.000   ;    ; uTsu ; 1      ; FF_X37_Y51_N26    ; emulator_mutrig:u_dut|be_mutrig_lane_emitter:lane_gen[7].u_lane_emitter|ticket_mem[5].ts_a[8] ;
++---------+---------+----+------+--------+-------------------+-----------------------------------------------------------------------------------------------+
+
+----------------------------
+; Extra Fitter Information ;
+----------------------------
+HTML report is unavailable in plain text report export.

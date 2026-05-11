@@ -1,0 +1,31 @@
+emulator_mutrig_syn 4-corner setup report
+Generated: 2026-05-11 11:00:13 CEST
+Project: emulator_mutrig_syn
+Revision: emulator_mutrig_syn
+Clock: clk125, period 7.273 ns, signoff frequency 137.5 MHz
+
+Corner results:
+slow_1100mv_85c: slack 1.003 ns, data delay 6.134 ns, logic levels 7
+slow_1100mv_0c:  slack 1.053 ns, data delay 6.102 ns, logic levels 6
+fast_1100mv_85c: slack 3.390 ns, data delay 3.792 ns, logic levels 3
+fast_1100mv_0c:  slack 3.791 ns, data delay 3.396 ns, logic levels 3
+
+Worst overall path:
+from: emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|geom_stage_size_random[7]
+to:   emulator_mutrig:u_dut|frontend_trigger_engine:u_frontend_trigger_engine|launch_stage_cluster0_high[6]
+corner: slow_1100mv_85c
+slack: 1.003 ns
+data_delay: 6.134 ns
+logic_levels: 7
+
+## slow_1100mv_85c (5_H4_slow_1100mv_85c)
+detail_report: sta_reports/emulator_mutrig_syn_20260511_slow_1100mv_85c_setup.rpt
+
+## slow_1100mv_0c (5_H4_slow_1100mv_0c)
+detail_report: sta_reports/emulator_mutrig_syn_20260511_slow_1100mv_0c_setup.rpt
+
+## fast_1100mv_85c (MIN_fast_1100mv_85c)
+detail_report: sta_reports/emulator_mutrig_syn_20260511_fast_1100mv_85c_setup.rpt
+
+## fast_1100mv_0c (MIN_fast_1100mv_0c)
+detail_report: sta_reports/emulator_mutrig_syn_20260511_fast_1100mv_0c_setup.rpt

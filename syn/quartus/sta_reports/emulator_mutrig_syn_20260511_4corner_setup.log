@@ -1,0 +1,65 @@
+Info: *******************************************************************
+Info: Running Quartus Prime Timing Analyzer
+    Info: Version 18.1.0 Build 625 09/12/2018 SJ Standard Edition
+    Info: Copyright (C) 2018  Intel Corporation. All rights reserved.
+    Info: Your use of Intel Corporation's design tools, logic functions
+    Info: and other software and tools, and its AMPP partner logic
+    Info: functions, and any output files from any of the foregoing
+    Info: (including device programming or simulation files), and any
+    Info: associated documentation or information are expressly subject
+    Info: to the terms and conditions of the Intel Program License
+    Info: Subscription Agreement, the Intel Quartus Prime License Agreement,
+    Info: the Intel FPGA IP License Agreement, or other applicable license
+    Info: agreement, including, without limitation, that your use is for
+    Info: the sole purpose of programming logic devices manufactured by
+    Info: Intel and sold by Intel or its authorized distributors.  Please
+    Info: refer to the applicable agreement for further details.
+    Info: Processing started: Mon May 11 11:00:11 2026
+Info: Command: quartus_sta -t report_emulator_mutrig_syn_4corner_setup.tcl
+Info (20032): Parallel compilation is enabled and will use up to 4 processors
+Info (21076): High junction temperature operating condition is not set. Assuming a default value of '85'.
+Info (21076): Low junction temperature operating condition is not set. Assuming a default value of '0'.
+Info (332104): Reading SDC File: 'emulator_mutrig_syn.sdc'
+Analyzing slow_1100mv_85c (5_H4_slow_1100mv_85c)
+Info (332143): No user constrained clock uncertainty found in the design. Calling "derive_clock_uncertainty"
+Info (332123): Deriving Clock Uncertainty. Please refer to report_sdc in the Timing Analyzer to see clock uncertainties.
+Info (332115): Report Timing: Found 5 setup paths (0 violated).  Worst case slack is 1.003
+    Info (332115): -from_clock [get_clocks {clk125}]
+    Info (332115): -to_clock [get_clocks {clk125}]
+    Info (332115): -setup
+    Info (332115): -npaths 5
+    Info (332115): -detail full_path
+    Info (332115): -file {sta_reports/emulator_mutrig_syn_20260511_slow_1100mv_85c_setup.rpt}
+Analyzing slow_1100mv_0c (5_H4_slow_1100mv_0c)
+Info (332123): Deriving Clock Uncertainty. Please refer to report_sdc in the Timing Analyzer to see clock uncertainties.
+Info (332115): Report Timing: Found 5 setup paths (0 violated).  Worst case slack is 1.053
+    Info (332115): -from_clock [get_clocks {clk125}]
+    Info (332115): -to_clock [get_clocks {clk125}]
+    Info (332115): -setup
+    Info (332115): -npaths 5
+    Info (332115): -detail full_path
+    Info (332115): -file {sta_reports/emulator_mutrig_syn_20260511_slow_1100mv_0c_setup.rpt}
+Analyzing fast_1100mv_85c (MIN_fast_1100mv_85c)
+Info (332123): Deriving Clock Uncertainty. Please refer to report_sdc in the Timing Analyzer to see clock uncertainties.
+Info (332115): Report Timing: Found 5 setup paths (0 violated).  Worst case slack is 3.390
+    Info (332115): -from_clock [get_clocks {clk125}]
+    Info (332115): -to_clock [get_clocks {clk125}]
+    Info (332115): -setup
+    Info (332115): -npaths 5
+    Info (332115): -detail full_path
+    Info (332115): -file {sta_reports/emulator_mutrig_syn_20260511_fast_1100mv_85c_setup.rpt}
+Analyzing fast_1100mv_0c (MIN_fast_1100mv_0c)
+Info (332123): Deriving Clock Uncertainty. Please refer to report_sdc in the Timing Analyzer to see clock uncertainties.
+Info (332115): Report Timing: Found 5 setup paths (0 violated).  Worst case slack is 3.791
+    Info (332115): -from_clock [get_clocks {clk125}]
+    Info (332115): -to_clock [get_clocks {clk125}]
+    Info (332115): -setup
+    Info (332115): -npaths 5
+    Info (332115): -detail full_path
+    Info (332115): -file {sta_reports/emulator_mutrig_syn_20260511_fast_1100mv_0c_setup.rpt}
+Info (23030): Evaluation of Tcl script report_emulator_mutrig_syn_4corner_setup.tcl was successful
+Info: Quartus Prime Timing Analyzer was successful. 0 errors, 0 warnings
+    Info: Peak virtual memory: 1204 megabytes
+    Info: Processing ended: Mon May 11 11:00:14 2026
+    Info: Elapsed time: 00:00:03
+    Info: Total CPU time (on all processors): 00:00:03

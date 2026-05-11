@@ -1,8 +1,9 @@
-# Emulator MuTRiG — RTL Plan
+# Emulator MuTRiG - RTL Plan
 
 **IP family:** `emulator_mutrig`
-**Active release:** `26.1.9.0418`
-**Area-signoff vehicle:** `rtl/emulator_mutrig_bank8.sv`
+**Active release:** `26.3.0.0506`
+**Current standalone timing vehicle:** `syn/quartus/emulator_mutrig_syn.qpf`
+**Historical area-signoff vehicle:** `rtl/emulator_mutrig_bank8.sv`
 **Companion reports:** [../tb/DV_PLAN.md](../tb/DV_PLAN.md), [../tb/DV_REPORT.md](../tb/DV_REPORT.md), [../syn/SYN_REPORT.md](../syn/SYN_REPORT.md), [SIGNOFF.md](SIGNOFF.md)
 
 ## 1. Scope
@@ -74,7 +75,24 @@ Interpretation:
 Standalone signoff uses the tightened `137.5 MHz` clock (`7.273 ns`), matching
 the `1.1 x 125 MHz` policy used elsewhere in this repo.
 
-Current result:
+Current `26.3.0.0506` standalone result from `syn/quartus/emulator_mutrig_syn`
+on 2026-05-11:
+
+- standalone project: `syn/quartus/emulator_mutrig_syn.qpf`
+- revision: `emulator_mutrig_syn`
+- device: `5AGXBA7D4F31C5`
+- signoff clock: `137.5 MHz` / `7.273 ns`
+- all four available TimeQuest operating conditions: `PASS`
+- worst setup slack: `+1.003 ns` at `Slow 1100mV 85C`
+- worst setup path: `frontend_trigger_engine.geom_stage_size_random[7]` to
+  `frontend_trigger_engine.launch_stage_cluster0_high[6]`
+- evidence: `syn/quartus/sta_reports/emulator_mutrig_syn_20260511_4corner_setup_summary.txt`
+
+The `emulator_mutrig_bank8_syn` project is retained as the historical compact
+bank area study. It is not the current packaged-IP timing signoff vehicle for
+the `26.3.0.0506` central-trigger RTL.
+
+Historical compact-bank result:
 
 - area goal: `PASS`
 - tightened timing: `PASS`
