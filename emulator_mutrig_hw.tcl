@@ -26,9 +26,9 @@ set RUN_CONTROL_WIDTH_CONST     9
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 3
-set VERSION_PATCH_DEFAULT_CONST 1
-set BUILD_DEFAULT_CONST         513
-set VERSION_DATE_DEFAULT_CONST  20260513
+set VERSION_PATCH_DEFAULT_CONST 2
+set BUILD_DEFAULT_CONST         515
+set VERSION_DATE_DEFAULT_CONST  20260515
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -235,8 +235,12 @@ proc validate {} {
 
 proc elaborate {} {
     compute_derived_values
+    set byte_stream_enable [get_parameter_value BYTE_STREAM_ENABLE]
+
     set_parameter_property FIFO_DEPTH ALLOWED_RANGES {16 32 64 128 256}
     set_parameter_property DEBUG_LEVEL ENABLED true
+    set_interface_property hit_type0 ENABLED [expr {!$byte_stream_enable}]
+    set_interface_property tx8b1k ENABLED [expr {$byte_stream_enable}]
     set_interface_property debug_fifo_fill ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 1}]
     set_interface_property hit_debug_metadata ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
     set_interface_property hit_type0_debug ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]

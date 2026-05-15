@@ -40,6 +40,26 @@ Historical formal note:
 | [BUG-003-R](#bug-003-r-registered-signal-offer-replays-one-ticket-after-ready-accept) | R | hard stuck error | common (single-lane signal inject with ready asserted) | fixed 2026-05-06 / phase sweep passed | 2026-05-06 / tb_int PROF-INT-002 pre-rbCAM diagnostic | 1849caa | the registered signal-offer path replayed the same pending ticket for one cycle after downstream ready accepted it, so one fixed two-channel injection produced four emitted hits instead of two. |
 | [BUG-004-R](#bug-004-r-l2-fifo-write-request-asserts-while-full) | R | soft error | corner-only (sustained high-rate 4-channel clusters or stalled L2 drain) | open 2026-05-08 | 2026-05-08 / MuTRiG Poisson 4-channel + dark-noise rate scan | 8e5c901 / 205f3be | the locally added 26.2.x lane backend can assert the lane L2 FIFO write request while the FIFO is full; this violates the no-write-when-full contract and correlates with FIFO saturation and channel-hit loss in the rate scan. |
 | [BUG-005-H](#bug-005-h-packaged-csr-addr-width-hid-upper-live-csr-words) | H | soft error | common (board CSR read/write above word 0x0F) | fixed 2026-05-13 / pulserdrop FEB board readback passed | 2026-05-13 / pulserdrop arb-STP recompile | pending | `emulator_mutrig_hw.tcl` exported `CSR_ADDR_WIDTH=4` while the RTL CSR map uses upper words including `LANE_ENABLE` at word 0x12; board builds therefore hid/aliased those registers until the packaged width was raised to 6. |
+| [BUG-006-H](#bug-006-h-byte-stream-mode-left-direct-hit-stream-enabled-in-qsys) | H | non-datapath-refactor | common (FEB v3 Platform Designer open/generate) | fixed 2026-05-15 / Qsys package gating | 2026-05-15 / FEB v3 Qsys GUI cleanup | this commit | byte-stream emulator instances still advertised the direct `hit_type0` stream, so Platform Designer reported the intentionally unused interface as unconnected. |
+
+## 2026-05-15
+
+### BUG-006-H: byte-stream mode left direct hit stream enabled in Qsys
+
+- First seen in: 2026-05-15 FEB v3 `quartus_systems/feb_system_v3.qsys` Platform Designer open/generate cleanup.
+- Symptom: emulator instances configured for the byte-stream path still exposed the direct `hit_type0` Avalon-ST source, so Platform Designer reported intentionally unused direct-hit streams as unconnected.
+- Root cause: `emulator_mutrig_hw.tcl` did not gate `hit_type0` and `tx8b1k` according to `BYTE_STREAM_ENABLE`.
+- Fix status: fixed / package metadata now enables `tx8b1k` for byte-stream mode and disables `hit_type0` in that same mode; package version bumped to 26.3.2.0515.
+
+**Mechanism:** the Qsys elaboration callback reads `BYTE_STREAM_ENABLE` and sets the mutually exclusive stream-interface `ENABLED` properties before Platform Designer validates the system. The RTL datapath selection is unchanged; the package now matches the selected integration mode.
+
+**Observed evidence:** `qsys-generate quartus_systems/feb_system_v3.qsys --synthesis=VERILOG` exited with status 0, no `Error:` lines, and 82 remaining warnings in `/tmp/qsys_generate_feb_v3_top_20260515_121600.log`.
+
+**Reproducer:** open or generate FEB v3 with emulator instances in byte-stream mode before this package fix. Platform Designer reports the direct hit interface even though the top-level integration consumes the byte stream.
+
+**Potential hazard:** low. The change is package metadata gating only and keeps the direct-hit interface enabled for non-byte-stream configurations.
+
+**Claude Opus 4.7 xhigh review decision:** pending.
 
 ## 2026-05-13
 
