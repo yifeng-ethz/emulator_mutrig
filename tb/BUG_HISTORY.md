@@ -39,6 +39,26 @@ Historical formal note:
 | [BUG-002-R](#bug-002-r-periodic-at-rate0xffff-stalls) | R | soft error | rare (only at Periodic rate=0xFFFF in short windows) | mitigated 2026-05-02 | 2026-05-02 / make central_basic | bf47f16 | INTERNAL+Periodic at rate=0xFFFF needs a longer settle window than 1000 cycles to push the first hit through the 4-stage pipeline + 6-cycle pacer; mitigated by extending B049 to 5000 cycles. Root-cause RTL trace is a follow-up to confirm the phase accumulator is not dropping fires under engine-busy. |
 | [BUG-003-R](#bug-003-r-registered-signal-offer-replays-one-ticket-after-ready-accept) | R | hard stuck error | common (single-lane signal inject with ready asserted) | fixed 2026-05-06 / phase sweep passed | 2026-05-06 / tb_int PROF-INT-002 pre-rbCAM diagnostic | 1849caa | the registered signal-offer path replayed the same pending ticket for one cycle after downstream ready accepted it, so one fixed two-channel injection produced four emitted hits instead of two. |
 | [BUG-004-R](#bug-004-r-l2-fifo-write-request-asserts-while-full) | R | soft error | corner-only (sustained high-rate 4-channel clusters or stalled L2 drain) | open 2026-05-08 | 2026-05-08 / MuTRiG Poisson 4-channel + dark-noise rate scan | 8e5c901 / 205f3be | the locally added 26.2.x lane backend can assert the lane L2 FIFO write request while the FIFO is full; this violates the no-write-when-full contract and correlates with FIFO saturation and channel-hit loss in the rate scan. |
+| [BUG-005-H](#bug-005-h-packaged-csr-addr-width-hid-upper-live-csr-words) | H | soft error | common (board CSR read/write above word 0x0F) | fixed 2026-05-13 / pulserdrop FEB board readback passed | 2026-05-13 / pulserdrop arb-STP recompile | pending | `emulator_mutrig_hw.tcl` exported `CSR_ADDR_WIDTH=4` while the RTL CSR map uses upper words including `LANE_ENABLE` at word 0x12; board builds therefore hid/aliased those registers until the packaged width was raised to 6. |
+
+## 2026-05-13
+
+### BUG-005-H: packaged CSR addr width hid upper live CSR words
+
+- First seen in: 2026-05-13 pulserdrop FEB `arb_hit_type0_supercore` restoration and RN.BASIC.001 board debug
+- Symptom: FEB slow-control access to `emulator_mutrig` upper CSR words was not reliable; `LANE_ENABLE` at live word address `0x08812` could not be used as a normal board read/write surface before repackaging
+- Root cause: the Platform Designer packaging metadata exported `CSR_ADDR_WIDTH=4` even though the emulator RTL exposes a wider CSR word map
+- Fix status: fixed / `_hw.tcl` packaging metadata updated to `CSR_ADDR_WIDTH=6`, VERSION 26.3.1 build 513
+
+**Mechanism:** generated Qsys address decoding used the packaged CSR width when instantiating the emulator lanes. With width 4, only the low 16 CSR words were visible through the live board aperture; words above `0x0F` were hidden or aliased even though the source RTL implemented them. The pulserdrop board flow needed `LANE_ENABLE` at word `0x12` to verify and hold all eight emulator lanes enabled during RN.BASIC.001.
+
+**Observed evidence:** after regenerating pulserdrop Qsys through the Tcl flow and recompiling the FEB debug image, live slow-control readback showed emulator UID `0x454D5554`, version `0x1A0301FA`, and `LANE_ENABLE=0x000000FF` at `0x08812`. The same image restored the downstream arb CSR surface at `0x088A0`, and the RN.BASIC.001 host run produced nonzero arb ingress/egress emulator counters with zero arb drops.
+
+**Reproducer:** in a board build with the old packaged metadata, write/read word `0x12` in the emulator CSR aperture. The bad image does not provide a stable upper-word readback; the fixed image reads back the written lane-enable mask.
+
+**Potential hazard:** this is a packaging/source metadata fix, not an RTL functional change. Any cached generated Qsys tree must be regenerated through the script flow; hand-editing generated Qsys XML or synthesis output would not fix future regenerations.
+
+**Claude Opus 4.7 xhigh review decision:** pending.
 
 ## 2026-05-08
 
