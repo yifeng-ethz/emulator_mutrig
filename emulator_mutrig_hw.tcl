@@ -26,7 +26,7 @@ set RUN_CONTROL_WIDTH_CONST     9
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 3
-set VERSION_PATCH_DEFAULT_CONST 2
+set VERSION_PATCH_DEFAULT_CONST 3
 set BUILD_DEFAULT_CONST         515
 set VERSION_DATE_DEFAULT_CONST  20260515
 set VERSION_GIT_DEFAULT_CONST   0
@@ -54,7 +54,7 @@ set INSTANCE_ID_DEFAULT_CONST     0
 set_module_property NAME                    emulator_mutrig
 set_module_property DISPLAY_NAME            "MuTRiG Emulator Mu3e IP"
 set_module_property VERSION                 $VERSION_STRING_DEFAULT_CONST
-set_module_property DESCRIPTION             "MuTRiG Emulator Mu3e IP Core"
+set_module_property DESCRIPTION             "MuTRiG Emulator Mu3e IP Core; packaged Type-0 output only"
 set_module_property GROUP                   "Mu3e Emulators/Modules"
 set_module_property AUTHOR                  "Yifeng Wang"
 set_module_property ICON_PATH               ../firmware_builds/misc/logo/mu3e_logo.png
@@ -183,6 +183,7 @@ proc validate {} {
     set ver_date     [get_parameter_value VERSION_DATE]
     set ver_git      [get_parameter_value VERSION_GIT]
     set instance_id  [get_parameter_value INSTANCE_ID]
+    set byte_stream_enable [get_parameter_value BYTE_STREAM_ENABLE]
     set debug_level  [get_parameter_value DEBUG_LEVEL]
     set cluster_cross [get_parameter_value CLUSTER_CROSS_ASIC_DEFAULT]
     set cluster_center [get_parameter_value CLUSTER_CENTER_GLOBAL_DEFAULT]
@@ -219,6 +220,9 @@ proc validate {} {
     if {$debug_level < 0 || $debug_level > 2} {
         send_message error "DEBUG_LEVEL must stay in the range 0..2."
     }
+    if {$byte_stream_enable} {
+        send_message error "BYTE_STREAM_ENABLE is permanently disabled in this package. Route emulator traffic from hit_type0 after MuTRiG frame deassembly through arb_hit_type0; do not connect tx8b1k into decoded-lane logic."
+    }
     if {$cluster_cross < 0 || $cluster_cross > 1} {
         send_message error "CLUSTER_CROSS_ASIC_DEFAULT must stay in the range 0..1."
     }
@@ -235,12 +239,13 @@ proc validate {} {
 
 proc elaborate {} {
     compute_derived_values
-    set byte_stream_enable [get_parameter_value BYTE_STREAM_ENABLE]
 
     set_parameter_property FIFO_DEPTH ALLOWED_RANGES {16 32 64 128 256}
+    set_parameter_property BYTE_STREAM_ENABLE ENABLED false
+    catch {set_parameter_property BYTE_STREAM_ENABLE VISIBLE true}
     set_parameter_property DEBUG_LEVEL ENABLED true
-    set_interface_property hit_type0 ENABLED [expr {!$byte_stream_enable}]
-    set_interface_property tx8b1k ENABLED [expr {$byte_stream_enable}]
+    set_interface_property hit_type0 ENABLED true
+    set_interface_property tx8b1k ENABLED false
     set_interface_property debug_fifo_fill ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 1}]
     set_interface_property hit_debug_metadata ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
     set_interface_property hit_type0_debug ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
@@ -345,10 +350,10 @@ set_parameter_property CLUSTER_LANE_COUNT_DEFAULT HDL_PARAMETER true
 set_parameter_property CLUSTER_LANE_COUNT_DEFAULT DESCRIPTION {Reset value of BURST_CFG[29:26]. Number of emulated MuTRiG lanes participating in the shared cluster domain.}
 
 add_parameter BYTE_STREAM_ENABLE BOOLEAN false
-set_parameter_property BYTE_STREAM_ENABLE DISPLAY_NAME "Enable 8b/1k Byte Stream"
+set_parameter_property BYTE_STREAM_ENABLE DISPLAY_NAME "8b/1k Byte Stream Permanently Disabled"
 set_parameter_property BYTE_STREAM_ENABLE UNITS None
 set_parameter_property BYTE_STREAM_ENABLE HDL_PARAMETER true
-set_parameter_property BYTE_STREAM_ENABLE DESCRIPTION {When enabled, the emulator drains the lane FIFO through tx8b1k for legacy decoded-lane consumers. When disabled, the direct hit_type0 stream owns the FIFO drain.}
+set_parameter_property BYTE_STREAM_ENABLE DESCRIPTION {Permanent false. The FEB v3 debug plane routes emulator traffic as hit_type0 atoms after MuTRiG frame deassembly through arb_hit_type0. The legacy tx8b1k decoded-lane path is not a supported integration mode.}
 
 add_parameter DEBUG_LEVEL NATURAL 0
 set_parameter_property DEBUG_LEVEL DISPLAY_NAME "Debug Level"
@@ -454,7 +459,7 @@ add_html_text "Hit Generation" hitgen_html "<html><b>Hit FIFO</b><br/>Updated by
 
 add_html_text "Frame Assembly" frame_html "<html><b>Frame format</b><br/>Updated by the validation callback.</html>"
 add_display_item "Debug" DEBUG_LEVEL parameter
-add_html_text "Debug" debug_html {<html><b>Debug control</b><br/><b>DEBUG_LEVEL=0</b> keeps only the nominal hit_type0 and tx8b1k interfaces. <b>DEBUG_LEVEL=1</b> additionally exports packed ticket/L2 FIFO fill levels. <b>DEBUG_LEVEL=2</b> also emits a parallel per-hit metadata stream for simulation scoreboards; the nominal 45-bit hit_type0 stream is unchanged.</html>}
+add_html_text "Debug" debug_html {<html><b>Debug control</b><br/><b>DEBUG_LEVEL=0</b> keeps only the nominal hit_type0 interface. <b>DEBUG_LEVEL=1</b> additionally exports packed ticket/L2 FIFO fill levels. <b>DEBUG_LEVEL=2</b> also emits a parallel per-hit metadata stream for simulation scoreboards; the nominal 45-bit hit_type0 stream is unchanged.</html>}
 
 # ========================================================================
 # GUI — Tab 2: Identity
@@ -492,6 +497,10 @@ and CSR logic.
 
 add_html_text "Data Path" datapath_html {<html>
 <b>tx8b1k</b> &mdash; 9-bit Avalon-ST source<br/>
+Permanently disabled in this package. FEB v3 integrations must use the
+<b>hit_type0</b> source and arbitrate against real frame-deassembly hit atoms.
+The legacy decoded-lane byte-stream integration is intentionally rejected by
+validation.<br/><br/>
 <table border="1" cellpadding="3" width="100%">
 <tr><th>Bits</th><th>Field</th><th>Description</th></tr>
 <tr><td>8</td><td>is_k</td><td>K-character flag (1 for K28.0/K28.4/K28.5)</td></tr>
