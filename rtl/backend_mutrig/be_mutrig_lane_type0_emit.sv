@@ -4,9 +4,11 @@
 // Version : 26.3.0
 // Date    : 20260506
 // Change  : Add DEBUG_LEVEL metadata emitted one-to-one with hit_type0 payloads.
+//           Keep package imports outside the module header for Quartus 18.1.
+
+import be_mutrig_pkg::*;
 
 module be_mutrig_lane_type0_emit
-    import be_mutrig_pkg::*;
 #(
     parameter int FIFO_COUNT_WIDTH = 10,
     parameter int DEBUG_LEVEL = 0

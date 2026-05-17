@@ -4,9 +4,11 @@
 // Version: 26.2.0
 // Date   : 20260502
 // Change : Add folded 256-channel IID background generator.
+//          Keep package imports outside the module header for Quartus 18.1.
+
+import frontend_ticket_bus_pkg::*;
 
 module frontend_bkg_generator
-    import frontend_ticket_bus_pkg::*;
 #(
     parameter int LANE_COUNT = 8
 ) (

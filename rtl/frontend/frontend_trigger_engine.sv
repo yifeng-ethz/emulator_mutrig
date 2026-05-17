@@ -5,10 +5,12 @@
 // Date    : 20260517
 // Change  : Advance serialized signal-ticket timestamps by the per-lane
 //           dispatch cycle so header-sync mimic hits have a common latency.
+//           Keep package imports outside the module header for Quartus 18.1.
+
+import frontend_ticket_bus_pkg::*;
+import be_mutrig_pkg::*;
 
 module frontend_trigger_engine
-    import frontend_ticket_bus_pkg::*;
-    import be_mutrig_pkg::*;
 #(
     parameter int LANE_COUNT = 8
 ) (
