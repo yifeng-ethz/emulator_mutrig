@@ -1,9 +1,10 @@
 // emulator_mutrig.sv
 // Packaged MuTRiG emulator top with central trigger frontend and per-lane backend.
 // Author: Yifeng Wang
-// Version : 26.3.0
-// Date    : 20260506
-// Change  : Add DEBUG_LEVEL FIFO observability and per-hit metadata sidebands.
+// Version : 26.3.3
+// Date    : 20260517
+// Change  : Carry lane-dispatch timestamp correction from frontend trigger
+//           engine for generated-Qsys header-sync delay validation.
 
 module emulator_mutrig
 #(
@@ -12,9 +13,9 @@ module emulator_mutrig
     parameter logic [31:0] IP_UID = 32'h454D5554,
     parameter int VERSION_MAJOR = 26,
     parameter int VERSION_MINOR = 3,
-    parameter int VERSION_PATCH = 0,
-    parameter int BUILD = 506,
-    parameter int VERSION_DATE = 20260506,
+    parameter int VERSION_PATCH = 3,
+    parameter int BUILD = 517,
+    parameter int VERSION_DATE = 20260517,
     parameter logic [31:0] VERSION_GIT = 32'h0,
     parameter logic [31:0] INSTANCE_ID = 32'h0,
     parameter logic [3:0] ASIC_ID_BASE_DEFAULT = 4'd0,

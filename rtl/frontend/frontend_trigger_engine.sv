@@ -1,12 +1,16 @@
 // frontend_trigger_engine.sv
 // Central signal trigger engine for emulator_mutrig.
 // Author: Yifeng Wang
-// Version : 26.2.0
-// Date    : 20260502
-// Change  : Pipeline signal launch geometry before per-lane ticket shred.
+// Version : 26.2.1
+// Date    : 20260517
+// Change  : Advance serialized signal-ticket timestamps by the per-lane
+//           dispatch cycle so header-sync mimic hits have a common latency.
+//           Keep package imports outside the module header for Quartus 18.1.
+
+import frontend_ticket_bus_pkg::*;
+import be_mutrig_pkg::*;
 
 module frontend_trigger_engine
-    import frontend_ticket_bus_pkg::*;
 #(
     parameter int LANE_COUNT = 8
 ) (
@@ -308,6 +312,14 @@ module frontend_trigger_engine
             // cycle, not the combinational dispatch_lane.
             if (sig_offer_valid_q && sig_offer_ready) begin
                 pending_mask[sig_offer_lane_q] <= 1'b0;
+                pending_tcc <= be_mutrig_pkg::prbs15_step_n(
+                    pending_tcc,
+                    be_mutrig_pkg::MUTRIG_COARSE_STEPS_PER_CYCLE_CONST
+                );
+                pending_ecc <= be_mutrig_pkg::prbs15_step_n(
+                    pending_ecc,
+                    be_mutrig_pkg::MUTRIG_COARSE_STEPS_PER_CYCLE_CONST
+                );
             end
 
             if (shred_stage_valid) begin

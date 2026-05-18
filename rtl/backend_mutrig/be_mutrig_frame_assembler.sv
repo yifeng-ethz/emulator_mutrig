@@ -4,9 +4,11 @@
 // Version : 26.2.0
 // Date    : 20260502
 // Change  : Add backend-namespaced wrapper of the proven legacy frame assembler.
+//           Keep package imports outside the module header for Quartus 18.1.
+
+import be_mutrig_pkg::*;
 
 module be_mutrig_frame_assembler
-    import be_mutrig_pkg::*;
 #(
     parameter int MAX_EVENTS_PER_FRAME = 120
 ) (
