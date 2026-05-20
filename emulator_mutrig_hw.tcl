@@ -26,9 +26,9 @@ set RUN_CONTROL_WIDTH_CONST     9
 set IP_UID_DEFAULT_CONST        1162696020 ;# ASCII "EMUT" = 0x454D5554
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 3
-set VERSION_PATCH_DEFAULT_CONST 3
-set BUILD_DEFAULT_CONST         517
-set VERSION_DATE_DEFAULT_CONST  20260517
+set VERSION_PATCH_DEFAULT_CONST 6
+set BUILD_DEFAULT_CONST         520
+set VERSION_DATE_DEFAULT_CONST  20260520
 set VERSION_GIT_DEFAULT_CONST   0
 set VERSION_GIT_SHORT_DEFAULT_CONST "unknown"
 set VERSION_GIT_DESCRIBE_DEFAULT_CONST "unknown"
@@ -54,7 +54,7 @@ set INSTANCE_ID_DEFAULT_CONST     0
 set_module_property NAME                    emulator_mutrig
 set_module_property DISPLAY_NAME            "MuTRiG Emulator Mu3e IP"
 set_module_property VERSION                 $VERSION_STRING_DEFAULT_CONST
-set_module_property DESCRIPTION             "MuTRiG Emulator Mu3e IP Core; packaged Type-0 output only"
+set_module_property DESCRIPTION             "MuTRiG Emulator Mu3e IP Core; eight independent Type-0 lane sources"
 set_module_property GROUP                   "Mu3e Emulators/Modules"
 set_module_property AUTHOR                  "Yifeng Wang"
 set_module_property ICON_PATH               ../firmware_builds/misc/logo/mu3e_logo.png
@@ -244,8 +244,9 @@ proc elaborate {} {
     set_parameter_property BYTE_STREAM_ENABLE ENABLED false
     catch {set_parameter_property BYTE_STREAM_ENABLE VISIBLE true}
     set_parameter_property DEBUG_LEVEL ENABLED true
-    set_interface_property hit_type0 ENABLED true
-    set_interface_property tx8b1k ENABLED false
+    for {set lane 0} {$lane < 8} {incr lane} {
+        set_interface_property hit_type0_${lane} ENABLED true
+    }
     set_interface_property debug_fifo_fill ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 1}]
     set_interface_property hit_debug_metadata ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
     set_interface_property hit_type0_debug ENABLED [expr {[get_parameter_value DEBUG_LEVEL] >= 2}]
@@ -261,7 +262,7 @@ proc elaborate {} {
 # File sets
 # ========================================================================
 add_fileset QUARTUS_SYNTH QUARTUS_SYNTH "" ""
-set_fileset_property QUARTUS_SYNTH TOP_LEVEL emulator_mutrig_qsys_lane
+set_fileset_property QUARTUS_SYNTH TOP_LEVEL emulator_mutrig_qsys8
 set_fileset_property QUARTUS_SYNTH ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property QUARTUS_SYNTH ENABLE_FILE_OVERWRITE_MODE false
 add_fileset_file frontend_ticket_bus_pkg.sv        SYSTEM_VERILOG PATH rtl/common/frontend_ticket_bus_pkg.sv
@@ -278,10 +279,10 @@ add_fileset_file be_mutrig_lane_emitter.sv         SYSTEM_VERILOG PATH rtl/backe
 add_fileset_file be_mutrig_lane_type0_emit.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv
 add_fileset_file be_mutrig_frame_assembler.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_frame_assembler.sv
 add_fileset_file emulator_mutrig.sv                SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv
-add_fileset_file emulator_mutrig_qsys_lane.sv      SYSTEM_VERILOG PATH rtl/emulator_mutrig_qsys_lane.sv TOP_LEVEL_FILE
+add_fileset_file emulator_mutrig_qsys8.sv          SYSTEM_VERILOG PATH rtl/emulator_mutrig_qsys8.sv TOP_LEVEL_FILE
 
 add_fileset SIM_VERILOG SIM_VERILOG "" ""
-set_fileset_property SIM_VERILOG TOP_LEVEL emulator_mutrig_qsys_lane
+set_fileset_property SIM_VERILOG TOP_LEVEL emulator_mutrig_qsys8
 set_fileset_property SIM_VERILOG ENABLE_RELATIVE_INCLUDE_PATHS false
 set_fileset_property SIM_VERILOG ENABLE_FILE_OVERWRITE_MODE false
 add_fileset_file frontend_ticket_bus_pkg.sv        SYSTEM_VERILOG PATH rtl/common/frontend_ticket_bus_pkg.sv
@@ -298,7 +299,7 @@ add_fileset_file be_mutrig_lane_emitter.sv         SYSTEM_VERILOG PATH rtl/backe
 add_fileset_file be_mutrig_lane_type0_emit.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_lane_type0_emit.sv
 add_fileset_file be_mutrig_frame_assembler.sv      SYSTEM_VERILOG PATH rtl/backend_mutrig/be_mutrig_frame_assembler.sv
 add_fileset_file emulator_mutrig.sv                SYSTEM_VERILOG PATH rtl/emulator_mutrig.sv
-add_fileset_file emulator_mutrig_qsys_lane.sv      SYSTEM_VERILOG PATH rtl/emulator_mutrig_qsys_lane.sv TOP_LEVEL_FILE
+add_fileset_file emulator_mutrig_qsys8.sv          SYSTEM_VERILOG PATH rtl/emulator_mutrig_qsys8.sv TOP_LEVEL_FILE
 
 # ========================================================================
 # Parameters — HDL
@@ -628,24 +629,31 @@ set_interface_property data_reset synchronousEdges DEASSERT
 set_interface_property data_reset ENABLED true
 add_interface_port data_reset i_rst reset Input 1
 
-# Avalon-ST source [hit_type0] — direct hit stream to source mux
-add_interface hit_type0 avalon_streaming source
-set_interface_property hit_type0 associatedClock data_clock
-set_interface_property hit_type0 associatedReset data_reset
-set_interface_property hit_type0 dataBitsPerSymbol $HIT_TYPE0_WIDTH_CONST
-set_interface_property hit_type0 firstSymbolInHighOrderBits true
-set_interface_property hit_type0 maxChannel 15
-set_interface_property hit_type0 symbolsPerBeat 1
-set_interface_property hit_type0 readyLatency 0
-set_interface_property hit_type0 errorDescriptor "hiterr frameerr overflow"
-set_interface_property hit_type0 ENABLED true
-add_interface_port hit_type0 aso_hit_type0_data          data          Output $HIT_TYPE0_WIDTH_CONST
-add_interface_port hit_type0 aso_hit_type0_valid         valid         Output 1
-add_interface_port hit_type0 aso_hit_type0_error         error         Output 3
-add_interface_port hit_type0 aso_hit_type0_channel       channel       Output 4
-add_interface_port hit_type0 aso_hit_type0_startofpacket startofpacket Output 1
-add_interface_port hit_type0 aso_hit_type0_endofpacket   endofpacket   Output 1
-add_interface_port hit_type0 aso_hit_type0_endofrun      endofrun      Output 1
+# Avalon-ST sources [hit_type0_0 .. hit_type0_7] — eight independent
+# asic-tagged hit streams, one per emulated MuTRiG lane. Lane k carries
+# asic_id = cfg_asic_id_base + k inside the core, so the eight ASICs are
+# independently addressable. Each source feeds arb_hit_type0_supercore_0
+# emu_in_k directly (no broadcast fanout).
+for {set lane 0} {$lane < 8} {incr lane} {
+    set iface "hit_type0_${lane}"
+    add_interface $iface avalon_streaming source
+    set_interface_property $iface associatedClock data_clock
+    set_interface_property $iface associatedReset data_reset
+    set_interface_property $iface dataBitsPerSymbol $HIT_TYPE0_WIDTH_CONST
+    set_interface_property $iface firstSymbolInHighOrderBits true
+    set_interface_property $iface maxChannel 15
+    set_interface_property $iface symbolsPerBeat 1
+    set_interface_property $iface readyLatency 0
+    set_interface_property $iface errorDescriptor "hiterr frameerr overflow"
+    set_interface_property $iface ENABLED true
+    add_interface_port $iface aso_hit_type0_${lane}_data          data          Output $HIT_TYPE0_WIDTH_CONST
+    add_interface_port $iface aso_hit_type0_${lane}_valid         valid         Output 1
+    add_interface_port $iface aso_hit_type0_${lane}_error         error         Output 3
+    add_interface_port $iface aso_hit_type0_${lane}_channel       channel       Output 4
+    add_interface_port $iface aso_hit_type0_${lane}_startofpacket startofpacket Output 1
+    add_interface_port $iface aso_hit_type0_${lane}_endofpacket   endofpacket   Output 1
+    add_interface_port $iface aso_hit_type0_${lane}_endofrun      endofrun      Output 1
+}
 
 # Conduit source [debug_fifo_fill] — packed ticket/L2 FIFO fill levels.
 # [9:0] = L2 FIFO level, [13:10] = ticket FIFO level.
@@ -681,21 +689,11 @@ add_interface_port hit_type0_debug aso_hit_debug_startofpacket startofpacket Out
 add_interface_port hit_type0_debug aso_hit_debug_endofpacket   endofpacket   Output 1
 add_interface_port hit_type0_debug aso_hit_debug_endofrun      endofrun      Output 1
 
-# Avalon-ST source [tx8b1k] — 8b/1k output to frame_rcv_ip
-add_interface tx8b1k avalon_streaming source
-set_interface_property tx8b1k associatedClock data_clock
-set_interface_property tx8b1k associatedReset data_reset
-set_interface_property tx8b1k dataBitsPerSymbol $TX8B1K_WIDTH_CONST
-set_interface_property tx8b1k firstSymbolInHighOrderBits true
-set_interface_property tx8b1k maxChannel 15
-set_interface_property tx8b1k symbolsPerBeat 1
-set_interface_property tx8b1k readyLatency 0
-set_interface_property tx8b1k errorDescriptor "loss_sync_pattern parity_error decode_error"
-set_interface_property tx8b1k ENABLED true
-add_interface_port tx8b1k aso_tx8b1k_data    data    Output $TX8B1K_WIDTH_CONST
-add_interface_port tx8b1k aso_tx8b1k_valid   valid   Output 1
-add_interface_port tx8b1k aso_tx8b1k_channel channel Output 4
-add_interface_port tx8b1k aso_tx8b1k_error   error   Output 3
+# Avalon-ST source [tx8b1k] — permanently disabled and NOT exported.
+# The 8-lane wrapper (emulator_mutrig_qsys8) sinks the core's per-lane
+# tx8b1k arrays internally; the legacy decoded-lane byte-stream path is
+# rejected by validation, so this wrapper exposes no tx8b1k ports. The
+# interface is intentionally absent from the component boundary.
 
 # Avalon-ST sink [ctrl] — run control timing
 add_interface ctrl avalon_streaming sink

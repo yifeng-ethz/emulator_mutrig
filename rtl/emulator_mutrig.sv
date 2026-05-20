@@ -1,10 +1,24 @@
 // emulator_mutrig.sv
 // Packaged MuTRiG emulator top with central trigger frontend and per-lane backend.
 // Author: Yifeng Wang
-// Version : 26.3.3
-// Date    : 20260517
-// Change  : Carry lane-dispatch timestamp correction from frontend trigger
-//           engine for generated-Qsys header-sync delay validation.
+// Version : 26.3.6
+// Date    : 20260520
+// Change  : Add SIGNAL single-channel mode wiring: pass cfg_single_channel_mode,
+//           cfg_single_channel, and cfg_lane_enable_mask to the trigger engine
+//           so periodic single-channel injection targets exactly one (ASIC,CH)
+//           picked by LANE_ENABLE mask + SIGNAL.single_channel, gated at the
+//           last frontend stage (robust vs the cluster-shred/round-robin path
+//           that fired all 8 lanes on silicon). Prior change retained below.
+//           Fix asic-field X on every emitted hit_type0 beat. The per-lane
+//           asic_id was passed as an inline lane_asic_id() automatic-function
+//           call inside each emit port map; Questa did not re-evaluate that
+//           function-in-port-context after cfg_asic_id_base settled, so
+//           data[44:41] (the histogram ASIC tag) latched as X for the whole
+//           run while cfg_asic_id_base itself was a defined 0. Replaced with
+//           an explicit per-lane continuous-assign net (lane_asic_id_w) and
+//           removed the now-unused function. Synthesis logic is identical
+//           ({1'b0, (cfg_asic_id_base+lane)[2:0]}); the fix is sim-correctness
+//           and removes the X that collapsed every TYPE0 histogram key to bin 0.
 
 module emulator_mutrig
 #(
@@ -13,9 +27,9 @@ module emulator_mutrig
     parameter logic [31:0] IP_UID = 32'h454D5554,
     parameter int VERSION_MAJOR = 26,
     parameter int VERSION_MINOR = 3,
-    parameter int VERSION_PATCH = 3,
-    parameter int BUILD = 517,
-    parameter int VERSION_DATE = 20260517,
+    parameter int VERSION_PATCH = 6,
+    parameter int BUILD = 520,
+    parameter int VERSION_DATE = 20260520,
     parameter logic [31:0] VERSION_GIT = 32'h0,
     parameter logic [31:0] INSTANCE_ID = 32'h0,
     parameter logic [3:0] ASIC_ID_BASE_DEFAULT = 4'd0,
@@ -68,6 +82,8 @@ module emulator_mutrig
     logic cfg_hit_mode_sig;
     logic cfg_internal_sub_mode;
     logic cfg_cluster_geom_mode;
+    logic cfg_single_channel_mode;
+    logic [4:0] cfg_single_channel;
     logic cfg_hit_mode_bkg;
     logic cfg_short_mode;
     logic cfg_gen_idle;
@@ -165,13 +181,6 @@ module emulator_mutrig
     logic [7:0] clear_fifo_full_sticky;
     logic [7:0] clear_ticket_overflow_sticky;
 
-    function automatic logic [3:0] lane_asic_id(input int lane_idx);
-        logic [4:0] asic_sum;
-
-        asic_sum = {1'b0, cfg_asic_id_base} + 5'(lane_idx);
-        return {1'b0, asic_sum[2:0]};
-    endfunction
-
     function automatic logic [14:0] prbs15_step(input logic [14:0] state);
         return {state[13:0], ~(state[14] ^ state[13])};
     endfunction
@@ -215,6 +224,8 @@ module emulator_mutrig
         .cfg_signal_hit_mode_sig                         (cfg_hit_mode_sig),
         .cfg_signal_internal_sub_mode                    (cfg_internal_sub_mode),
         .cfg_signal_cluster_geom_mode                    (cfg_cluster_geom_mode),
+        .cfg_signal_single_channel_mode                  (cfg_single_channel_mode),
+        .cfg_signal_single_channel                       (cfg_single_channel),
         .cfg_bkg_hit_mode_bkg                            (cfg_hit_mode_bkg),
         .cfg_mutrig_format_short_mode                    (cfg_short_mode),
         .cfg_mutrig_format_gen_idle                      (cfg_gen_idle),
@@ -300,6 +311,9 @@ module emulator_mutrig
         .cfg_hit_mode_sig       (cfg_hit_mode_sig),
         .cfg_internal_sub_mode  (cfg_internal_sub_mode),
         .cfg_cluster_geom_mode  (cfg_cluster_geom_mode),
+        .cfg_single_channel_mode(cfg_single_channel_mode),
+        .cfg_single_channel     (cfg_single_channel),
+        .cfg_lane_enable_mask   (cfg_lane_enable_mask[LANE_COUNT-1:0]),
         .cfg_hit_rate           (cfg_hit_rate),
         .cfg_hit_channel_low    (cfg_hit_channel_low),
         .cfg_hit_channel_high   (cfg_hit_channel_high),
@@ -352,6 +366,27 @@ module emulator_mutrig
         .fe_ticket_valid (fe_ticket_valid),
         .fe_ticket_ready (fe_ticket_ready)
     );
+
+    // Per-lane asic_id, computed with an explicit continuous assign rather
+    // than an inline lane_asic_id() function call in each emit port map.
+    // An automatic function with a local variable (asic_sum) called directly
+    // in a generate-loop port-connection expression is not re-evaluated by
+    // Questa when the module signal it reads (cfg_asic_id_base) settles, so
+    // the asic field (data[44:41]) latched into aso_hit_type0_data stays X
+    // for the whole run while cfg_asic_id_base itself is a defined 0. Driving
+    // a real net here removes the function-in-port-context hazard; synthesis
+    // is unchanged (same {1'b0, (base+lane)[2:0]} expression).
+    logic [3:0] lane_asic_id_w [LANE_COUNT];
+    logic [4:0] lane_asic_sum_w [LANE_COUNT];
+    genvar asic_lane_idx;
+    generate
+        for (asic_lane_idx = 0; asic_lane_idx < LANE_COUNT; asic_lane_idx++) begin : lane_asic_id_gen
+            assign lane_asic_sum_w[asic_lane_idx] =
+                {1'b0, cfg_asic_id_base} + 5'(asic_lane_idx);
+            assign lane_asic_id_w[asic_lane_idx] =
+                {1'b0, lane_asic_sum_w[asic_lane_idx][2:0]};
+        end
+    endgenerate
 
     genvar lane_idx;
     generate
@@ -407,7 +442,7 @@ module emulator_mutrig
                 .run_terminating             (ctrl_state_q[4]),
                 .run_idle                    (ctrl_state_q[0]),
                 .cfg_short_mode              (cfg_short_mode),
-                .asic_id                     (lane_asic_id(lane_idx)),
+                .asic_id                     (lane_asic_id_w[lane_idx]),
                 .error_inject_mask           (cfg_type0_error_inject_mask),
                 .error_target_lane           (cfg_lane_error_target_mask[lane_idx]),
                 .l2_empty                    (lane_l2_empty[lane_idx]),
@@ -464,7 +499,7 @@ module emulator_mutrig
                 assign aso_tx8b1k_valid[lane_idx] = 1'b0;
             end
 
-            assign aso_tx8b1k_channel[lane_idx] = lane_asic_id(lane_idx);
+            assign aso_tx8b1k_channel[lane_idx] = lane_asic_id_w[lane_idx];
             assign aso_tx8b1k_error[lane_idx] = 3'b000;
         end
 

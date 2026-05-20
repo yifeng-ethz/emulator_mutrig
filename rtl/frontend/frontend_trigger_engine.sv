@@ -1,11 +1,22 @@
 // frontend_trigger_engine.sv
 // Central signal trigger engine for emulator_mutrig.
 // Author: Yifeng Wang
-// Version : 26.2.1
-// Date    : 20260517
-// Change  : Advance serialized signal-ticket timestamps by the per-lane
-//           dispatch cycle so header-sync mimic hits have a common latency.
-//           Keep package imports outside the module header for Quartus 18.1.
+// Version : 26.3.6
+// Date    : 20260520
+// Change  : Add single-channel mode. When cfg_single_channel_mode=1, the
+//           launch->shred last frontend stage IGNORES the cluster global
+//           position and instead shreds to exactly the lanes in
+//           cfg_lane_enable_mask, each with local channel
+//           cfg_single_channel. This makes periodic single-channel
+//           injection isolate to one (ASIC,CH) -> one histogram bin:
+//           ASIC is picked by the LANE_ENABLE mask, local CH by
+//           SIGNAL.single_channel. Robust vs the cluster-overlap shred +
+//           round-robin dispatch, which fired all 8 lanes on silicon for
+//           cluster[0,0]. Cluster/multi-ASIC geometry (mode=0) unchanged.
+//           Prior change retained: advance serialized signal-ticket
+//           timestamps by the per-lane dispatch cycle so header-sync
+//           mimic hits have a common latency. Keep package imports
+//           outside the module header for Quartus 18.1.
 
 import frontend_ticket_bus_pkg::*;
 import be_mutrig_pkg::*;
@@ -22,6 +33,9 @@ module frontend_trigger_engine
     input  logic             cfg_hit_mode_sig,
     input  logic             cfg_internal_sub_mode,
     input  logic             cfg_cluster_geom_mode,
+    input  logic             cfg_single_channel_mode,
+    input  logic [4:0]       cfg_single_channel,
+    input  logic [LANE_COUNT-1:0] cfg_lane_enable_mask,
     input  logic [15:0]      cfg_hit_rate,
     input  logic [7:0]       cfg_hit_channel_low,
     input  logic [7:0]       cfg_hit_channel_high,
@@ -384,30 +398,48 @@ module frontend_trigger_engine
                     shred_stage_ch_low[lane_idx] <= '0;
                     shred_stage_ch_high[lane_idx] <= '0;
 
-                    lane_base = lane_idx * 32;
-                    lane_limit = lane_base + 31;
+                    if (cfg_single_channel_mode) begin
+                        // Single-channel mode: the LANE_ENABLE mask picks the
+                        // ASIC(s); SIGNAL.single_channel picks the LOCAL
+                        // channel. The cluster global position is ignored
+                        // entirely. Each enabled lane emits exactly one hit
+                        // at local channel cfg_single_channel, so the type0
+                        // key {asic_id, channel} -> exactly one histogram bin
+                        // per enabled lane. This is the last-stage gate that
+                        // makes per-(ASIC,CH) injection deterministic and
+                        // independent of the cluster-overlap shred and the
+                        // round-robin dispatch.
+                        if (cfg_lane_enable_mask[lane_idx]) begin
+                            shred_stage_mask[lane_idx] <= 1'b1;
+                            shred_stage_ch_low[lane_idx] <= cfg_single_channel;
+                            shred_stage_ch_high[lane_idx] <= cfg_single_channel;
+                        end
+                    end else begin
+                        lane_base = lane_idx * 32;
+                        lane_limit = lane_base + 31;
 
-                    if ((int'(launch_stage_cluster0_low) <= lane_limit) &&
-                        (int'(launch_stage_cluster0_high) >= lane_base)) begin
-                        overlap_low = (int'(launch_stage_cluster0_low) > lane_base) ?
-                            int'(launch_stage_cluster0_low) : lane_base;
-                        overlap_high = (int'(launch_stage_cluster0_high) < lane_limit) ?
-                            int'(launch_stage_cluster0_high) : lane_limit;
-                        shred_stage_mask[lane_idx] <= 1'b1;
-                        shred_stage_ch_low[lane_idx] <= 5'(overlap_low - lane_base);
-                        shred_stage_ch_high[lane_idx] <= 5'(overlap_high - lane_base);
-                    end
+                        if ((int'(launch_stage_cluster0_low) <= lane_limit) &&
+                            (int'(launch_stage_cluster0_high) >= lane_base)) begin
+                            overlap_low = (int'(launch_stage_cluster0_low) > lane_base) ?
+                                int'(launch_stage_cluster0_low) : lane_base;
+                            overlap_high = (int'(launch_stage_cluster0_high) < lane_limit) ?
+                                int'(launch_stage_cluster0_high) : lane_limit;
+                            shred_stage_mask[lane_idx] <= 1'b1;
+                            shred_stage_ch_low[lane_idx] <= 5'(overlap_low - lane_base);
+                            shred_stage_ch_high[lane_idx] <= 5'(overlap_high - lane_base);
+                        end
 
-                    if (launch_stage_cluster1_valid &&
-                        (int'(launch_stage_cluster1_low) <= lane_limit) &&
-                        (int'(launch_stage_cluster1_high) >= lane_base)) begin
-                        overlap_low = (int'(launch_stage_cluster1_low) > lane_base) ?
-                            int'(launch_stage_cluster1_low) : lane_base;
-                        overlap_high = (int'(launch_stage_cluster1_high) < lane_limit) ?
-                            int'(launch_stage_cluster1_high) : lane_limit;
-                        shred_stage_mask[lane_idx] <= 1'b1;
-                        shred_stage_ch_low[lane_idx] <= 5'(overlap_low - lane_base);
-                        shred_stage_ch_high[lane_idx] <= 5'(overlap_high - lane_base);
+                        if (launch_stage_cluster1_valid &&
+                            (int'(launch_stage_cluster1_low) <= lane_limit) &&
+                            (int'(launch_stage_cluster1_high) >= lane_base)) begin
+                            overlap_low = (int'(launch_stage_cluster1_low) > lane_base) ?
+                                int'(launch_stage_cluster1_low) : lane_base;
+                            overlap_high = (int'(launch_stage_cluster1_high) < lane_limit) ?
+                                int'(launch_stage_cluster1_high) : lane_limit;
+                            shred_stage_mask[lane_idx] <= 1'b1;
+                            shred_stage_ch_low[lane_idx] <= 5'(overlap_low - lane_base);
+                            shred_stage_ch_high[lane_idx] <= 5'(overlap_high - lane_base);
+                        end
                     end
                 end
 

@@ -1,9 +1,15 @@
 // frontend_csr.sv
 // CSR bank for the emulator_mutrig frontend.
 // Author: Yifeng Wang
-// Version : 26.2.0
-// Date    : 20260502
-// Change  : Add frontend CSR map and lane status aperture.
+// Version : 26.3.6
+// Date    : 20260520
+// Change  : Add SIGNAL single-channel mode (bit3 enable, bits[12:8] local
+//           channel). In single-channel mode the per-(ASIC,CH) target is
+//           picked by LANE_ENABLE mask (ASIC) + SIGNAL.single_channel
+//           (local CH), gated at the last frontend stage. This makes
+//           periodic single-channel injection isolate to exactly one
+//           (ASIC,CH) -> one histogram bin, independent of the fragile
+//           cluster-shred / round-robin dispatch that diverged on silicon.
 
 module frontend_csr #(
     parameter logic [31:0] IP_UID        = 32'h454D_5554,
@@ -30,6 +36,8 @@ module frontend_csr #(
     output logic              cfg_signal_hit_mode_sig,
     output logic              cfg_signal_internal_sub_mode,
     output logic              cfg_signal_cluster_geom_mode,
+    output logic              cfg_signal_single_channel_mode,
+    output logic [4:0]        cfg_signal_single_channel,
     output logic              cfg_bkg_hit_mode_bkg,
     output logic              cfg_mutrig_format_short_mode,
     output logic              cfg_mutrig_format_gen_idle,
@@ -137,7 +145,10 @@ module frontend_csr #(
             ADDR_CENTRAL_CONST:      csr_readdata = {31'b0, cfg_central_global_enable};
             ADDR_SIGNAL_CONST: begin
                 csr_readdata = {
-                    29'b0,
+                    19'b0,
+                    cfg_signal_single_channel,
+                    3'b0,
+                    cfg_signal_single_channel_mode,
                     cfg_signal_cluster_geom_mode,
                     cfg_signal_internal_sub_mode,
                     cfg_signal_hit_mode_sig
@@ -214,6 +225,8 @@ module frontend_csr #(
             cfg_signal_hit_mode_sig                        <= 1'b0;
             cfg_signal_internal_sub_mode                   <= 1'b0;
             cfg_signal_cluster_geom_mode                   <= 1'b0;
+            cfg_signal_single_channel_mode                 <= 1'b0;
+            cfg_signal_single_channel                      <= 5'd0;
             cfg_bkg_hit_mode_bkg                           <= 1'b0;
             cfg_mutrig_format_short_mode                   <= 1'b0;
             cfg_mutrig_format_gen_idle                     <= 1'b1;
@@ -278,6 +291,8 @@ module frontend_csr #(
                         cfg_signal_hit_mode_sig         <= avs_csr_writedata[0];
                         cfg_signal_internal_sub_mode    <= avs_csr_writedata[1];
                         cfg_signal_cluster_geom_mode    <= avs_csr_writedata[2];
+                        cfg_signal_single_channel_mode  <= avs_csr_writedata[3];
+                        cfg_signal_single_channel       <= avs_csr_writedata[12:8];
                     end
                     ADDR_BACKGROUND_CONST: begin
                         cfg_bkg_hit_mode_bkg    <= avs_csr_writedata[0];
